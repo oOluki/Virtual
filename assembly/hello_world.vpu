@@ -1,0 +1,27 @@
+%include "eulers_number.vpu"
+
+STATIC  "hello world"
+POP  RB
+SYS  0
+
+MOVV RE 1
+
+
+
+loop:
+
+;; (RB -> char*)
+READ8 RC RB
+
+PUTC RC RA
+
+ADD RB RE
+
+;%unlabel loop
+
+JMPF RC loop
+
+MOVV RC 10
+PUTC RC RA
+
+HALT
