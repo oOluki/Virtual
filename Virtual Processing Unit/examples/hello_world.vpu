@@ -1,4 +1,3 @@
-%include "eulers_number.vpu"
 
 STATIC  "hello world"
 POP  RB
@@ -16,8 +15,6 @@ READ8 RC RB
 PUTC RC RA
 
 ADD RB RE
-
-;%unlabel loop
 
 JMPF RC loop
 

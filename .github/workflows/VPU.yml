@@ -21,17 +21,17 @@ jobs:
       id: strings
       shell: bash
       run: |
-        echo build dir = ${{ github.workspace }}/build
-        echo example dir = ${{ github.workspace }}/build/examples
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "examples-dir=${{ github.workspace }}/build/examples" >> "$GITHUB_OUTPUT"
+        echo build dir = ${{ github.workspace }}/Virtual\ Processing\ Unit/build
+        echo example dir = ${{ github.workspace }}/Virtual\ Processing\ Unit/build/examples
+        echo "build-output-dir=${{ github.workspace }}/Virtual\ Processing\ Unit/build" >> "$GITHUB_OUTPUT"
+        echo "examples-dir=${{ github.workspace }}/Virtual\ Processing\ Unit/build/examples" >> "$GITHUB_OUTPUT"
 
     - name: Build (Windows)
       run: |
         mkdir ${{ steps.strings.outputs.build-output-dir }}
 
-        cl ${{ github.workspace }}/compiler.c /Fe:${{ steps.strings.outputs.build-output-dir }}/fiction
-        cl ${{ github.workspace }}/virtual_emulator.c /Fe:${{ steps.strings.outputs.build-output-dir }}/vimulator
+        cl ${{ github.workspace }}/Virtual\ Processing\ Unit/compiler.c /Fe:${{ steps.strings.outputs.build-output-dir }}/compile
+        cl ${{ github.workspace }}/Virtual\ Processing\ Unit/vpu.c /Fe:${{ steps.strings.outputs.build-output-dir }}/VPU
     
 
     - name: Test (Windows)
@@ -45,26 +45,10 @@ jobs:
             if ($file.Extension -eq ".fiction") {
               $filename_without_extension = [System.IO.Path]::GetFileNameWithoutExtension($file.FullName)
               echo $filename_without_extension example
-              .\fiction $file.FullName "examples/$filename_without_extension.bin"
-              .\vimulator "examples/$filename_without_extension.bin"
+              .\compile $file.FullName -o "examples/$filename_without_extension.bin"
+              .\VPU "examples/$filename_without_extension.bin"
             }            
         }
-      # keeping this here just in case (doesn't work though)
-      #shell: cmd
-      #run: |
-      #  mkdir examples
-      #  setlocal EnableDelayedExpansion
-      #  for %%f in (..\examples\*) do (
-      #    set "file=%%f"
-      #    for %%i in ("!file!") do (
-      #      set "filename_without_extension=%%~ni"
-      #      set "extension=%%~xi"
-      #    )
-      #    if /i "!extension!"==".fiction" (
-      #      .\fictiler.exe "!file!" examples\!filename_without_extension!.virtual
-      #    )
-      #  )
-      #  endlocal
       
 
 
@@ -106,14 +90,14 @@ jobs:
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "examples-dir=${{ github.workspace }}/build/examples" >> "$GITHUB_OUTPUT"
+        echo "build-output-dir=${{ github.workspace }}/Virtual\ Processing\ Unit/build" >> "$GITHUB_OUTPUT"
+        echo "examples-dir=${{ github.workspace }}/Virtual\ Processing\ Unit/examples" >> "$GITHUB_OUTPUT"
 
     - name: Build (Linux and MacOS)
       run: |
         mkdir ${{ steps.strings.outputs.build-output-dir }}
-        ${{ matrix.c_compiler }} ${{ github.workspace }}/compiler.c -o ${{ steps.strings.outputs.build-output-dir }}/fiction
-        ${{ matrix.c_compiler }} ${{ github.workspace }}/virtual_emulator.c -o ${{ steps.strings.outputs.build-output-dir }}/vimulator
+        ${{ matrix.c_compiler }} ${{ github.workspace }}/Virtual\ Processing\ Unit/src/compiler.c -o ${{ steps.strings.outputs.build-output-dir }}/compiler
+        ${{ matrix.c_compiler }} ${{ github.workspace }}/Virtual\ Processing\ Unit/src/vpu.c -o ${{ steps.strings.outputs.build-output-dir }}/VPU
       
     - name: Test (Linux and MacOS)
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
@@ -127,8 +111,8 @@ jobs:
 
           if [[ "$extension" == "fiction" ]]; then
             echo "$filename" example
-            ./fiction "../examples/$file" "examples/$(basename "$filename").virtual"
-            ./vimulator "examples/$(basename "$filename").virtual"
+            ./compile "../examples/$file" "examples/$(basename "$filename").virtual"
+            ./VPU "examples/$(basename "$filename").virtual"
             
           fi
 

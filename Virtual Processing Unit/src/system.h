@@ -4,8 +4,6 @@
 #include "stdio.h"
 #include "core.h"
 
-#include <dlfcn.h>
-
 typedef enum SysCall{
 
     SYS_GET_SPECIAL_ADDRESS = 0,
