@@ -251,7 +251,7 @@ uint64_t parse_hexadecimal(const char* str){
 }
 
 uint64_t parse_uint(const char* str){
-    size_t size = 0;
+    int size = 0;
     for(; str[size]; size+=1);
 
     uint64_t _10n = 1;
@@ -274,7 +274,7 @@ uint64_t parse_uint(const char* str){
 }
 
 double parse_float(const char* str){
-    size_t size = 0;
+    int size = 0;
     int dot_pos = -1;
     for(; str[size]; size+=1){
         if(str[size] == '.'){
@@ -427,10 +427,10 @@ Operand parse_operand(const char* token, int hint){
     else if(token[0] == '-'){
         switch (hint)
         {
-        case HINT_8BIT : v.as_int8  = (int8_t )(-parse_uint(token + 1)); break;
-        case HINT_16BIT: v.as_int16 = (int16_t)(-parse_uint(token + 1)); break;
-        case HINT_32BIT: v.as_int32 = (int32_t)(-parse_uint(token + 1)); break;
-        default:         v.as_int64 = (int64_t)(-parse_uint(token + 1)); break;
+        case HINT_8BIT : v.as_int8  = -((int8_t )parse_uint(token + 1)); break;
+        case HINT_16BIT: v.as_int16 = -((int16_t)parse_uint(token + 1)); break;
+        case HINT_32BIT: v.as_int32 = -((int32_t)parse_uint(token + 1)); break;
+        default:         v.as_int64 = -((int64_t)parse_uint(token + 1)); break;
         }
         type = TKN_LIT | TKN_INT;
     }
@@ -942,7 +942,7 @@ int parse_file_recusive(Mc_stream_t* program, Mc_stream_t* static_memory, Mc_str
                 ss = program->size;
                 buffer[digits] = '\0';
                 for(int d = digits - 1; d > -1; d-=1){
-                    const int digit = ss - 10 * (uint64_t)(ss / 10);
+                    const int digit = (int)(ss - 10 * (uint64_t)(ss / 10));
                     buffer[d] = get_char_digit(digit);
                     ss /= 10;
                 }

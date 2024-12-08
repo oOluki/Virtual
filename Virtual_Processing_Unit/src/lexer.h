@@ -203,7 +203,7 @@ static inline Mc_int_t mc_sfind_chars(Mc_string_t str, Mc_string_t charbuffstr, 
 /                                 /
 /--------------------------------*/
 
-typedef unsigned char Mc_byte_t;
+typedef char Mc_byte_t;
 
 
 typedef struct Mc_stream_t{
@@ -365,7 +365,7 @@ static inline void add_token(Mc_stream_t* stream, Mc_stream_t* tokens, const cha
 // \param __special_characters the characters that should be considered tokens on their own
 // \param __line_comment the string that represents a line comment
 // \returns the number of tokenized tokens
-unsigned int mc_tokenize(Mc_token_t** token_buffer_pointer, unsigned int buff_pos, const char* string,
+size_t mc_tokenize(Mc_token_t** token_buffer_pointer, size_t buff_pos, const char* string,
     const char* __ignored, const char* __special_characters, const char* __line_comment, char str_sep){
 
         Mc_token_t* token_buffer = *token_buffer_pointer;
@@ -532,7 +532,7 @@ char* read_file(Mc_stream_t* stream, const char* path, const char* modes){
         return NULL;
     }
 
-    __ssize_t size = ftell(file);
+    long size = ftell(file);
 
     if(fseek(file, 0, 0)){
         fclose(file);

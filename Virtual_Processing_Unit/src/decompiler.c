@@ -1,6 +1,7 @@
 #include "core.h"
 #include "lexer.h"
 #include <stdio.h>
+#include <inttypes.h>
 
 static char buff1[10];
 static char buff2[10];
@@ -125,14 +126,14 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         return 3;
     case INST_MOVV:{
         Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
-        printf("MOVV %s (%02lX; u: %lu; i: %li; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        printf("MOVV %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 10;
     case INST_PUSH:
         printf("PUSH %s\n", get_reg_str(data[0], buff1));
         return 2;
     case INST_PUSHV:{
         Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
-        printf("PUSHV (%02lX; u: %lu; i: %li; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        printf("PUSHV (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 9;
     case INST_POP:
         printf("POP %s\n", get_reg_str(data[0], buff1));
@@ -147,7 +148,7 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("GSP %s\n", get_reg_str(data[0], buff1));
         return 2;
     case INST_STATIC:
-        printf("STATIC %lu \"%*s\"...\n", *(uint64_t*)(data), 10, static_memory + *(uint64_t*)(data));
+        printf("STATIC %"PRIx64" \"%*s\"...\n", *(uint64_t*)(data), 10, static_memory + *(uint64_t*)(data));
         return 9;
     case INST_READ8:
         printf("READ8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
@@ -201,10 +202,10 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("JMP %s\n", get_reg_str(data[0], buff1));
         return 9;
     case INST_JMPIF:
-        printf("JMPIF %s %lu\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
+        printf("JMPIF %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
         return 10;
     case INST_JMPIFN:
-        printf("JMPIFN %s %lu\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
+        printf("JMPIFN %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
         return 10;
     case INST_CALL:
         printf("CALL %s\n", get_reg_str(data[0], buff1));
@@ -328,7 +329,7 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("DISREG %s\n", get_reg_str(data[0], buff1));
         return 2;
     case INST_SYS:
-        printf("SYS %02lx\n", *(uint64_t*)data);
+        printf("SYS %02"PRIx64"\n", *(uint64_t*)data);
         return 9;
     
     
