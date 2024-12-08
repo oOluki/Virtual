@@ -46,15 +46,6 @@ int sys_call(VPU* vpu, uint64_t call){
     case SYS_GET_SYSTEM_SPECIFICATIONS:
         vpu->registers[RA / 8].as_uint64 = is_little_endian();
         break;
-    case SYS_DLOPEN:
-        vpu->registers[RA / 8].as_ptr = dlopen(vpu->registers[RA / 8].as_ptr, op_mask);
-        break;
-    case SYS_DLSYM:
-        vpu->registers[RA / 8].as_ptr = dlsym(vpu->registers[RA / 8].as_ptr, vpu->registers[RB / 8].as_ptr);
-        break;
-    case SYS_DLCLOSE:
-        vpu->registers[RA / 8].as_int32 = dlclose(vpu->registers[RA / 8].as_ptr);
-        break;
     case SYS_CALL_EXT:
         #define FUN (vpu->stack[--vpu->registers[RSP / 8].as_uint64])
         #define RAREG vpu->registers[RA / 8].as_uint64

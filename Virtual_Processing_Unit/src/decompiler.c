@@ -378,6 +378,7 @@ int main(int argc, char** argv){
 
     printf(
         "\nX====X (SPECIFICATIONS) X====X\n"
+        "\tname = %s\n"
         "\ttotal size     = %zu\n"
         "\tprogram size   = %zu\n"
         "\tflags          = %02x\n"
@@ -385,6 +386,7 @@ int main(int argc, char** argv){
         "\tstatic_memory = { position = %zu, pointer = %p, size = %zu }\n"
         "\tentry point    = %zu\n"
         "X====X (SPECIFICATIONS) X====X\n\n\n",
+        argv[1],
         (size_t)stream.size,
         program_size,
         flags,
