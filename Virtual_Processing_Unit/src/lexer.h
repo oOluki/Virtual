@@ -203,7 +203,7 @@ static inline Mc_int_t mc_sfind_chars(Mc_string_t str, Mc_string_t charbuffstr, 
 /                                 /
 /--------------------------------*/
 
-typedef char Mc_byte_t;
+typedef unsigned char Mc_byte_t;
 
 
 typedef struct Mc_stream_t{

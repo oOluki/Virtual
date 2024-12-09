@@ -202,10 +202,10 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("JMP %s\n", get_reg_str(data[0], buff1));
         return 9;
     case INST_JMPIF:
-        printf("JMPIF %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
+        printf("JMPF %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
         return 10;
     case INST_JMPIFN:
-        printf("JMPIFN %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
+        printf("JMPFN %s %"PRIu64"\n", get_reg_str(data[0], buff1), *(uint64_t*)(data + 1));
         return 10;
     case INST_CALL:
         printf("CALL %s\n", get_reg_str(data[0], buff1));
