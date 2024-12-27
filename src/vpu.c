@@ -324,7 +324,7 @@ static inline size_t perform_inst(Inst inst, const char* data){
     default:
         fprintf(stderr, "[ERROR] Unknwon Instruction '%u'\n", (unsigned int)inst);
         exit(1);
-        return 0xFFFFFFFFFFFFFFFFUL;
+        return 0xFFFFFFFF;
     }
 
 }
@@ -373,8 +373,8 @@ int main(int argc, char** argv){
         vpu.registers[RIP / 8].as_uint64 = 0;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(
-            stream.data[vpu.registers[RIP / 8].as_uint64 + start],
-            stream.data + vpu.registers[RIP / 8].as_uint64 + start + 1
+            ((char*)stream.data)[vpu.registers[RIP / 8].as_uint64 + start],
+            (char*)(stream.data) + vpu.registers[RIP / 8].as_uint64 + start + 1
         )
     );
 
