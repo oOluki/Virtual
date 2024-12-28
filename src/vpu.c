@@ -318,7 +318,7 @@ static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
         }
         return 9;
     case INST_DISREG:
-        printf("(%02lX; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+        printf("(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
         return 2;
     
     
@@ -366,7 +366,7 @@ int main(int argc, char** argv){
 
     const size_t start = 24 + meta_data_size + entry_point;
 
-    vpu.register_space = (char*)vpu.registers;
+    vpu.register_space = (uint8_t*)vpu.registers;
 
     vpu.stack = (uint64_t*)malloc(1024);
 

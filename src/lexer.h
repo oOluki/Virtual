@@ -24,15 +24,17 @@ typedef struct Tokenizer
     int      column;
 } Tokenizer;
 
+typedef union TokenValue{
+    char*    as_str;
+    uint64_t as_uint;
+    int64_t  as_int;
+    double   as_float;
+    char     as_char;
+} TokenValue;
+
 typedef struct Token
 {
-    union {
-        char*    as_str;
-        uint64_t as_uint;
-        int64_t  as_int;
-        double   as_float;
-        char     as_char;
-    } value;
+    TokenValue  value;
     int         size;
     int         line;
     int         column;
@@ -56,7 +58,7 @@ enum TokenTypes{
     TKN_ERROR = 255,
 };
 
-#define MKTKN(STR) ((Token){STR, sizeof(STR) - 1, 0, 0})
+#define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .line = 0, .column = 0, .type = TKN_STR})
 
 #define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
 
@@ -280,7 +282,7 @@ void set_tokenizer_pos(Tokenizer* tokenizer, size_t pos){
 
 void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
 
-    for(size_t i = 0; tokenizer->data[tokenizer->pos]; tokenizer->pos+=1){
+    for(; tokenizer->data[tokenizer->pos]; tokenizer->pos+=1){
         if(mc_compare_str(tokenizer->data + tokenizer->pos, dest, 1)){
             break;
         }
@@ -296,7 +298,6 @@ void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
 
 Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
-    const char* ignored = " \t\n";
     const char* special_characters = ":";
     const char line_comment = ';';
     const char* dividers = " \t\n;:";
@@ -332,7 +333,7 @@ Token get_next_token(Tokenizer* tokenizer){
         if(c == line_comment){
             int skip = mc_find_char(string + tokenizer->pos + 1, '\n', 0);
             if(skip < 0){
-                return (Token){NULL, 0, 0, 0};
+                return (Token){.value.as_str = NULL, .size = 0, .type = TKN_NONE};
             }
             tokenizer->pos += skip;
             tokenizer->column += skip + 1;
@@ -424,13 +425,13 @@ char* read_file(Mc_stream_t* stream, const char* path, const char* modes){
         free(odata);
     }
 
-    stream->size += fread(stream->data + stream->size, 1, size, file);
+    stream->size += fread((uint8_t*)(stream->data) + stream->size, 1, size, file);
 
     ((char*)stream->data)[stream->size++] = '\0';
 
     fclose(file);
 
-    return stream->data + issize;
+    return (char*)((uint8_t*)(stream->data) + issize);
 }
 
 #endif

@@ -517,9 +517,7 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
     }
     else if(COMP_TKN(macro, MKTKN("%label"))){
         const Token arg1 = get_next_token(parser->tokenizer);
-        const Tokenizer previous_tokenizer_state = *parser->tokenizer;
-        const Token arg2 = get_next_token(parser->tokenizer);
-        if(arg1.value.as_str == NULL){
+        if(arg1.type == TKN_NONE){
             REPORT_ERROR(parser, "Missing Label Identifier%c\n", ' ');
             return 1;
         }

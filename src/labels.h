@@ -17,7 +17,10 @@ Label* get_label(Mc_stream_t* labels, const Token label_tkn){
         //const uint32_t label_pos = *(uint32_t*)((uint8_t*)(labels->data) + i);
         Label* const label = (Label*)((uint8_t*)(labels->data) + i);
         if(mc_compare_token(
-                (Token){(char*)(labels->data) + label->str, label->str_size, 0, 0},
+                (Token){
+                    .value.as_str = (char*)(labels->data) + label->str,
+                    .size = label->str_size
+                },
                 label_tkn,
                 0
             )

@@ -103,7 +103,7 @@ char* get_reg_str(int reg, char* output){
 
 #define READ_AS(TYPE, PDATA) *(TYPE*)(PDATA)
 
-int print_inst(uint8_t inst, const char* data, char* static_memory){
+int print_inst(uint8_t inst, const uint8_t* data, const uint8_t* static_memory){
     switch (inst)
     {
     case INST_NOP:
@@ -373,27 +373,27 @@ int main(int argc, char** argv){
         }
         i+=size;
     }
-    const size_t static_memory_size = (size_t)(*(uint64_t*)(static_memory));
+    const uint64_t static_memory_size = *(uint64_t*)(static_memory);
 
-    const size_t program_size = stream.size - 24 - meta_data_size;
+    const uint64_t program_size = stream.size - 24 - meta_data_size;
 
     printf(
         "\nX====X (SPECIFICATIONS) X====X\n"
         "\tname = %s\n"
-        "\ttotal size     = %zu\n"
-        "\tprogram size   = %zu\n"
-        "\tflags          = %02x\n"
-        "\tmeta_data_size = %zu\n"
-        "\tstatic_memory = { position = %zu, pointer = %p, size = %zu }\n"
-        "\tentry point    = %zu\n"
+        "\ttotal size     = %"PRIu64"\n"
+        "\tprogram size   = %"PRIu64"\n"
+        "\tflags          = %02"PRIx32"\n"
+        "\tmeta_data_size = %"PRIu64"\n"
+        "\tstatic_memory = { position = %"PRIu64", pointer = %p, size = %"PRIu64" }\n"
+        "\tentry point    = %"PRIu64"\n"
         "X====X (SPECIFICATIONS) X====X\n\n\n",
         argv[1],
-        (size_t)stream.size,
+        stream.size,
         program_size,
         flags,
-        (size_t)(meta_data_size),
-        (size_t)(static_memory - (uint8_t*)stream.data), static_memory, static_memory_size,
-        (size_t)(entry_point)
+        meta_data_size,
+        (uint64_t)(size_t)(static_memory - (uint8_t*)stream.data), static_memory, static_memory_size,
+        entry_point
     );
 
     const size_t start = 24 + meta_data_size + entry_point;
