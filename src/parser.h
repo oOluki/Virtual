@@ -42,6 +42,15 @@ enum OpHint{
 
 };
 
+enum Expects{
+    EXPECT_NONE = 0,
+    EXPECT_INST,
+    EXPECT_OP_REG,
+    EXPECT_OP_LIT,
+    EXPECT_OP_STR,
+    EXPECT_IDENTIFIER,
+};
+
 typedef struct Operand{
     
     Register value;
@@ -64,11 +73,12 @@ typedef struct Parser
     int flags;
     uint64_t entry_point;
     InstProfile current_inst;
-    int num_of_expected_operands;
+    int expects;
 } Parser;
 
 
-InstProfile get_inst_type(const Token inst_token){
+InstProfile parse_inst(const Token inst_token){
+    if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 
     if(COMP_TKN(inst_token, MKTKN("NOP")))    return (InstProfile){INST_NOP   , OP_PROFILE_NONE};
     if(COMP_TKN(inst_token, MKTKN("HALT")))   return (InstProfile){INST_HALT  , OP_PROFILE_NONE};
@@ -260,6 +270,8 @@ int get_major_reg_identifier(const Token token){
 }
 
 int get_reg(const Token token){
+    if(token.type == TKN_REG) return (int)token.value.as_uint;
+    if(token.type != TKN_RAW) return -1;
     const int reg = get_major_reg_identifier(token);
     if(reg >= 0){
         if(token.size == 2){
@@ -276,18 +288,27 @@ int get_reg(const Token token){
     return -1;
 }
 
-Operand parse_operand(Parser* parser, Token token, int hint){
+uint64_t get_expectations(int inst_profile){
+    switch (inst_profile)
+    {
+    case OP_PROFILE_NONE: return EXPECT_INST;
+    case OP_PROFILE_R:    return EXPECT_OP_REG;
+    case OP_PROFILE_RR :  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF);
+    case OP_PROFILE_RRR:  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF) | ((EXPECT_OP_REG << 16) & ~0XFFFF);
+    case OP_PROFILE_RL:   return EXPECT_OP_REG | ((EXPECT_OP_LIT << 8) & ~0XFF);
+    case OP_PROFILE_L:    return EXPECT_OP_LIT;
+    default:              return EXPECT_NONE;
+    }
+    return EXPECT_NONE;
+}
 
-    if((token.type == TKN_ERROR) || (token.type == TKN_NONE))
-        return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+Operand parse_op_literal(Parser* parser, Token token, int hint){
     
-    if(token.type == TKN_LABEL_REF){
-        token = resolve_token(parser->labels, token);
-        if(token.type == TKN_ERROR){
-            REPORT_ERROR(parser, "Could Not Resolve Label '%.*s'\n", token.size, token.value.as_str);
-            return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
-        }
+    if((token.type == TKN_FLIT) || (token.type == TKN_ILIT) || (token.type == TKN_ULIT)){
         return (Operand){.value.as_uint64 = token.value.as_uint, .type = token.type};
+    }
+    if(token.type != TKN_RAW){
+        return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
     }
 
     if(token.value.as_str[0] == '0'){
@@ -301,22 +322,6 @@ Operand parse_operand(Parser* parser, Token token, int hint){
             return (Operand){.value.as_uint64 = hex, .type = TKN_ULIT};
         }
     }
-
-    const int reg = get_major_reg_identifier(token);
-    if(reg >= 0){
-        if(token.size == 2){
-            return (Operand){.value.as_uint8 = reg, .type = TKN_REG};
-        }
-        if(token.size == 3){
-            const int i = get_digit(token.value.as_str[2]);
-            if((i < 0) || (i > 8)){
-                return (Operand){.value.as_uint8 = 0, .type = TKN_ERROR};
-            }
-            return (Operand){.value.as_uint8 = reg + i, .type = TKN_REG};
-        }
-        return (Operand){.value.as_uint8 = 0, .type = TKN_ERROR};
-    }
-
 
     int is_float = 0;
 
@@ -362,135 +367,6 @@ Operand parse_operand(Parser* parser, Token token, int hint){
     parser->flags &= ~FLAG_TEST;
     
     return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
-}
-
-// \return 0 on success or 1 on error
-int parse_instruction(Parser* parser, const Token inst_token, Mc_stream_t* streambuff, Mc_stream_t* static_memory){
-
-    const InstProfile inst = parser->current_inst;
-
-    const int hint =
-        (inst.inst == INST_MOV8 ) * HINT_8BIT  +
-        (inst.inst == INST_MOV16) * HINT_16BIT +
-        (inst.inst == INST_MOV32) * HINT_32BIT;
-
-    Register op1;
-    Register op2;
-    Register op3;
-    Operand op;
-
-    int op_count = 0;
-
-    Token token;
-
-
-    switch (inst.profile)
-    {
-    case OP_PROFILE_RRR:
-        token = get_next_token(parser->tokenizer);
-        op = parse_operand(parser, token, HINT_NONE);
-        if(op.type != TKN_REG){
-            REPORT_ERROR(
-                parser,
-                "Argument %i Of Instruction '%.*s' Should Be A Register, Got '%.*s' Instead\n\n",
-                op_count + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
-            );
-            return 1;
-        }
-        op3.as_uint8 = op.value.as_uint8;
-        op_count += 1;
-    case OP_PROFILE_RR:
-        token = get_next_token(parser->tokenizer);
-        op = parse_operand(parser, token, HINT_NONE);
-        if(op.type != TKN_REG){
-            REPORT_ERROR(
-                parser,
-                "Argument %i Of Instruction '%.*s' Should Be A Register, Got '%.*s' Instead\n\n",
-                op_count + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
-            );
-            return 1;
-        }
-        op2.as_uint8 = op.value.as_uint8;
-        op_count += 1;
-    case OP_PROFILE_R:
-        token = get_next_token(parser->tokenizer);
-        op = parse_operand(parser, token, HINT_NONE);
-        if(op.type != TKN_REG){
-            REPORT_ERROR(
-                parser,
-                "Argument %i Of Instruction '%.*s' Should Be A Register, Got '%.*s' Instead\n\n",
-                op_count + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
-            );
-            return 1;
-        }
-        op1.as_uint8 = op.value.as_uint8;
-        op_count += 1;
-        break;
-    case OP_PROFILE_RL:
-        token = get_next_token(parser->tokenizer);
-        op = parse_operand(parser, token, HINT_NONE);
-        if(op.type != TKN_REG){
-            REPORT_ERROR(
-                parser,
-                "Argument %i Of Instruction '%.*s' Should Be A Register, Got '%.*s' Instead\n\n",
-                op_count + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
-            );
-            return 1;
-        }
-        op2.as_uint8 = op.value.as_uint8;
-        op_count += 1;
-    case OP_PROFILE_L:
-        token = get_next_token(parser->tokenizer);
-        if(token.type == TKN_STR){
-            if(inst.inst != INST_STATIC){
-                REPORT_ERROR(
-                    parser,
-                    "Argument %i Of Instruction '%.*s' Can't Be A String\n\n",
-                    op_count + 1, inst_token.size, inst_token.value.as_str
-                );
-                return 1;
-            }
-            op1.as_uint64 = static_memory->size;
-            if(token.value.as_str[token.size - 1] != '\"'){
-                REPORT_ERROR(parser, "Missing Closing %c\n\n", '\"');
-                return 1;
-            }
-            mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
-            mc_stream_str(static_memory, "");
-            break;
-        }
-        op = parse_operand(parser, token, hint);
-        if(op.type != TKN_ULIT && op.type != TKN_ILIT && op.type != TKN_FLIT){
-            REPORT_ERROR(
-                parser,
-                "Argument %i Of Instruction '%.*s' Should Be A Literal, Got '%.*s' Instead\n\n",
-                op_count + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
-            );
-            return 1;
-        }
-        op1.as_uint64 = op.value.as_uint64;
-        break;
-    
-    default:
-        break;
-    }
-
-    mc_stream(streambuff, &inst.inst, 1);
-    
-    switch (inst.profile)
-    {
-    case OP_PROFILE_RRR: mc_stream(streambuff, &op3.as_uint8, 1);
-    case OP_PROFILE_RR:  mc_stream(streambuff, &op2.as_uint8, 1);
-    case OP_PROFILE_R:   mc_stream(streambuff, &op1.as_uint8, 1); break;
-
-    case OP_PROFILE_RL: mc_stream(streambuff, &op2.as_uint8, 1);
-    case OP_PROFILE_L:  mc_stream(streambuff, &op1.as_uint64, 8); break;        
-    
-    default:
-        break;
-    }
-
-    return 0;    
 }
 
 int parse_macro(Parser* parser, const Token macro, Token* include_path){
@@ -585,6 +461,12 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
 // \returns the relative path to the next file
 int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, const char* path){
 
+    Operand operand;
+    int opv = 0;
+    InstProfile inst;
+    Token inst_token;
+    uint64_t expects = EXPECT_INST;
+
     for(Token token = get_next_token(parser->tokenizer);
         (token.type != TKN_NONE);
         token = get_next_token(parser->tokenizer)){
@@ -592,45 +474,101 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         if(token.type == TKN_ERROR){
             return 1;
         }
-
-        if(token.type == TKN_MACRO_INST){
-            if(parse_macro(parser, token, NULL)){
+        if(token.type == TKN_LABEL_REF){
+            token = resolve_token(parser->labels, token);
+            if(token.type == TKN_ERROR){
+                REPORT_ERROR(parser, "Could Not Resolve Label '%.*s'\n\n", token.value.as_str, token.size);
                 return 1;
             }
-            continue;
         }
+
+        switch (expects & 0XFF)
         {
-            const Tokenizer pvr_tokenizer_state = *(parser->tokenizer);
-            const Token next_token = get_next_token(parser->tokenizer);
-            if(COMP_TKN(next_token, MKTKN(":"))){
-                if(
-                    add_label(
-                        parser->labels, token,
-                        (Token){.value.as_uint = program->size,
-                        .type = TKN_ULIT},
-                        0
-                    )
-                ) {
-                    REPORT_ERROR(
-                        parser,
-                        "Could Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
-                        token.size, token.value.as_str
-                    );
+        default:
+            if(token.type == TKN_MACRO_INST){
+                fprintf(stderr, "[ERROR] Macros Are Not Implemented\n");
+                exit(1);
+                if(parse_macro(parser, token, NULL)){
                     return 1;
                 }
                 continue;
             }
-            *(parser->tokenizer) = pvr_tokenizer_state;
-        }
-        
-        parser->current_inst = get_inst_type(token);
-        if(parser->current_inst.inst == INST_ERROR){
-            REPORT_ERROR(parser, "Invalid Instruction '%.*s'\n\n", token.size, token.value.as_str);
-            return 1;
-        }
-
-        if(parse_instruction(parser, token, program, static_memory)){
-            return 1;
+        case EXPECT_INST:
+            inst = parse_inst(token);
+            if(inst.inst == INST_ERROR){
+                const Token next_token = get_next_token(parser->tokenizer);
+                if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
+                    if(COMP_TKN(next_token, MKTKN(":"))){
+                        if(
+                            add_label(
+                                parser->labels, token,
+                                (Token){.value.as_uint = program->size,
+                                .type = TKN_ULIT},
+                                0
+                            )
+                        ) {
+                            REPORT_ERROR(
+                                parser,
+                                "Could Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
+                                token.size, token.value.as_str
+                            );
+                            return 1;
+                        }
+                        break;
+                    }
+                }
+                REPORT_ERROR(parser, "Expected Instruction, Got '%.*s' Instead\n\n", token.size, token.value.as_str);
+                return 1;
+            }
+            opv = 0;
+            inst_token = token;
+            mc_stream(program, &inst.inst, 1);
+            expects = get_expectations(inst.profile);
+            break;
+        case EXPECT_OP_REG:
+            operand.value.as_int64 = get_reg(token);
+            if(operand.value.as_int64 < 0){
+                REPORT_ERROR(
+                    parser,
+                    "Argument %i Of Instruction %.*s Should Be Register, Got '%.*s' Instead\n\n",
+                    opv, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
+                );
+                return 1;
+            }
+            mc_stream(program, &(operand.value.as_uint8), 1);
+            opv += 1;
+            expects = (expects >> 8) & ~0XFF00000000000000;
+            break;
+        case EXPECT_OP_LIT:
+            if(token.type == TKN_STR){
+                if(inst.inst != INST_STATIC){
+                    REPORT_ERROR(parser, "Instruction %.*s Can't Take String As Argument\n\n", inst_token.size, inst_token.value.as_str);
+                    return 1;
+                }
+                if(token.value.as_str[token.size - 1] != '\"'){
+                    REPORT_ERROR(parser, "Missing Closing %c\n\n", '\"');
+                    return 1;
+                }
+                operand.value.as_uint64 = static_memory->size;
+                mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
+                mc_stream_str(static_memory, "");
+                mc_stream(program, &(operand.value.as_uint64), 8);
+                expects = (expects >> 8) & ~0XFF00000000000000;
+                break;
+            }
+            operand = parse_op_literal(parser, token, HINT_NONE);
+            if(operand.type == TKN_ERROR){
+                REPORT_ERROR(
+                    parser,
+                    "Argument %i Of Instruction %.*s Should Be A Literal, Got '%.*s' Instead\n\n",
+                    opv, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
+                );
+                return 1;
+            }
+            mc_stream(program, &(operand.value.as_uint64), 8);
+            opv += 1;
+            expects = (expects >> 8) & ~0XFF00000000000000;
+            break;
         }
 
     }
