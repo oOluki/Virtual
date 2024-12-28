@@ -214,7 +214,7 @@ void mc_stream(Mc_stream_t* stream, const void* data, size_t size){
         memcpy(stream->data, old_data, stream->size);
         free(old_data);
     }
-    memcpy(stream->data + stream->size, data, size);
+    memcpy((uint8_t*)(stream->data) + stream->size, data, size);
     stream->size += size;
 }
 

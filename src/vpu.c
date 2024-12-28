@@ -355,9 +355,9 @@ int main(int argc, char** argv){
     if(get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags)) return 1;
 
     for(size_t i = 16; i < 16 + meta_data_size; i+=1){
-        const uint64_t id = *(uint64_t*)(stream.data + i);
+        const uint64_t id = *(uint64_t*)((uint8_t*)(stream.data) + i);
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
-            vpu.static_memory = stream.data + i;
+            vpu.static_memory = (uint8_t*)(stream.data) + i;
             break;
         }
     }
