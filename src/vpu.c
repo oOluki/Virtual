@@ -6,7 +6,7 @@
 
 static VPU vpu;
 
-static inline size_t perform_inst(Inst inst, const char* data){
+static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
 
     // the first register operand
     #define R1 (*(Register*)(vpu.register_space + data[0]))
@@ -74,7 +74,7 @@ static inline size_t perform_inst(Inst inst, const char* data){
         R1.as_ptr = vpu.stack;
         return 2;
     case INST_STATIC:
-        vpu.stack[SP++] = (uint64_t)(vpu.static_memory + L1);
+        vpu.stack[SP++] = (uint64_t)(size_t)(vpu.static_memory + L1);
         return 9;
     case INST_READ8:
         R1.as_uint8 = *(uint8_t*)(R2.as_ptr);
@@ -373,8 +373,8 @@ int main(int argc, char** argv){
         vpu.registers[RIP / 8].as_uint64 = 0;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(
-            ((char*)stream.data)[vpu.registers[RIP / 8].as_uint64 + start],
-            (char*)(stream.data) + vpu.registers[RIP / 8].as_uint64 + start + 1
+            ((uint8_t*)stream.data)[vpu.registers[RIP / 8].as_uint64 + start],
+            (uint8_t*)(stream.data) + vpu.registers[RIP / 8].as_uint64 + start + 1
         )
     );
 

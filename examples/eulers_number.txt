@@ -12,7 +12,7 @@
         ADDF RA RF
         MOV  RF RB
         SMLF RF RC
-        JMPF RF loop
+        JMPF RF $loop
     
     DISREG RA
     HALT

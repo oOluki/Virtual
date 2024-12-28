@@ -103,7 +103,7 @@ char* get_reg_str(int reg, char* output){
 
 #define READ_AS(TYPE, PDATA) *(TYPE*)(PDATA)
 
-int print_inst(Inst inst, const char* data, char* static_memory){
+int print_inst(uint8_t inst, const char* data, char* static_memory){
     switch (inst)
     {
     case INST_NOP:
@@ -214,7 +214,7 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("RET\n");
         return 1;
     case INST_ADD:
-        printf("ADDI %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
+        printf("ADD %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_SUB:
         printf("SUB %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
@@ -398,7 +398,14 @@ int main(int argc, char** argv){
 
     const size_t start = 24 + meta_data_size + entry_point;
 
-    for(size_t i = 0; i < program_size; i += print_inst(stream.data[i + start], stream.data + i + start + 1, static_memory));
+    for(
+        size_t i = 0;
+        i < program_size;
+        i += print_inst(
+            ((unsigned char*)stream.data)[i + start],
+            stream.data + i + start + 1, static_memory
+        )
+    );
 
 
     return 0;
