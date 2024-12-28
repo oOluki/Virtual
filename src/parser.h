@@ -185,79 +185,7 @@ uint64_t parse_hexadecimal(Parser* parser, const Token token){
     return n;
 }
 
-uint64_t parse_uint(Parser* parser, const Token token){
-
-    uint64_t _10n = 1;
-    uint64_t output = 0;
-    
-    for(int i = token.size - 1; i > -1; i-=1){
-
-        const int digit = get_digit(token.value.as_str[i]);
-
-        if(digit < 0){
-            parser->flags |= FLAG_TEST;
-            return 0;
-        }
-
-        output += digit * _10n;
-        _10n *= 10;
-    }
-
-    return output;
-}
-
-double parse_float(Parser* parser, Token token){
-    int dot_pos = -1;
-    for(int i = 0; i < token.size; i+=1){
-        if(token.value.as_str[i] == '.'){
-            if(dot_pos != -1){
-                parser->flags |= FLAG_TEST;
-                return 0;
-            }
-            dot_pos = i;
-            break;
-        }
-    }
-
-    if(token.value.as_str[token.size - 1] == 'f') token.size -= 1;
-
-    uint64_t _10n = 1;
-    double output = 0;
-    
-    for(int i = token.size - 1; i > dot_pos; i-=1){
-
-        const int digit = get_digit(token.value.as_str[i]);
-
-        if(digit < 0){
-            parser->flags |= FLAG_TEST;
-            return 0;
-        }
-
-        output += digit * _10n;
-        _10n *= 10;
-    }
-
-    if(dot_pos < 0) return output;
-
-    output /= _10n;
-    _10n = 1;
-
-    for(int i = dot_pos - 1; i > -1; i-=1){
-        const int digit = get_digit(token.value.as_str[i]);
-
-        if(digit < 0){
-            parser->flags |= FLAG_TEST;
-            return 0;
-        }
-
-        output += digit * _10n;
-        _10n *= 10;
-    }
-
-    return output;
-}
-
-int get_major_reg_identifier(const Token token){
+static inline int get_major_reg_identifier(const Token token){
     if(mc_compare_token(token, MKTKN("RA"), 1))  return RA;
     if(mc_compare_token(token, MKTKN("RB"), 1))  return RB;
     if(mc_compare_token(token, MKTKN("RC"), 1))  return RC;
@@ -323,50 +251,74 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
         }
     }
 
-    int is_float = 0;
+    const int is_negative = (token.value.as_str[0] == '-');
+    uint64_t _10n1 = 1;
+    uint64_t _10n2 = 1;
+    uint64_t first_part = 0;
+    uint64_t second_part = 0;
+    int dot_position = -1;
+    const int float_identifier =
+        (token.value.as_str[token.size - 1] == 'f') ||
+        (token.value.as_str[token.size - 1] == 'F');
+    
+    for(int i = token.size - 1 - float_identifier; i > is_negative - 1; i-=1){
 
-    for(size_t i = 0; (i < token.size) && !is_float; i+=1){
-        is_float = (token.value.as_str[i] == '.');
+        const int digit = get_digit(token.value.as_str[i]);
+
+        if(digit < 0){
+            if(token.value.as_str[i] == '.'){
+                dot_position = i;
+                break;
+            }
+            return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+        }
+
+        first_part += digit * _10n1;
+        _10n1 *= 10;
     }
 
-    Register v;
-    int type = TKN_ERROR;
+    for(int i = dot_position - 1; i > is_negative - 1; i-= 1){
+        const int digit = get_digit(token.value.as_str[i]);
 
-    if(is_float){
-        if(hint == HINT_NONE)       v.as_float64 = (double)(parse_float(parser, token));
-        else if(hint == HINT_32BIT) v.as_float32 = (float )(parse_float(parser, token));
-        else                        return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
-        type = TKN_FLIT;
+        if(digit < 0){
+            return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+        }
+
+        second_part += digit * _10n2;
+        _10n2 *= 10;
     }
-    else if(token.value.as_str[0] == '-'){
+
+    if((dot_position < 0) && !float_identifier){
         switch (hint)
         {
-        case HINT_8BIT : v.as_int8  = -((int8_t )parse_uint(parser, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1})); break;
-        case HINT_16BIT: v.as_int16 = -((int16_t)parse_uint(parser, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1})); break;
-        case HINT_32BIT: v.as_int32 = -((int32_t)parse_uint(parser, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1})); break;
-        default:         v.as_int64 = -((int64_t)parse_uint(parser, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1})); break;
+        case HINT_8BIT:
+            return is_negative?
+                (Operand){.value.as_int8  = (int8_t)(-first_part), .type = TKN_ILIT}:
+                (Operand){.value.as_uint8 = (int8_t)( first_part), .type = TKN_ULIT};
+        case HINT_16BIT:
+            return is_negative?
+                (Operand){.value.as_int8  = (int16_t)(-first_part), .type = TKN_ILIT}:
+                (Operand){.value.as_uint8 = (int16_t)( first_part), .type = TKN_ULIT};
+        case HINT_32BIT:
+            return is_negative?
+                (Operand){.value.as_int8  = (int32_t)(-first_part), .type = TKN_ILIT}:
+                (Operand){.value.as_uint8 = (int32_t)( first_part), .type = TKN_ULIT};
+        default:
+            return is_negative?
+                (Operand){.value.as_int64  = (int64_t)(-first_part), .type = TKN_ILIT}:
+                (Operand){.value.as_uint64 =            first_part , .type = TKN_ULIT};
         }
-        type = TKN_ILIT;
+        
     }
-    else{
-        switch (hint)
-        {
-        case HINT_8BIT : v.as_uint8  = (uint8_t )(parse_uint(parser, token)); break;
-        case HINT_16BIT: v.as_uint16 = (uint16_t)(parse_uint(parser, token)); break;
-        case HINT_32BIT: v.as_uint32 = (uint32_t)(parse_uint(parser, token)); break;
-        default:         v.as_uint64 = (uint64_t)(parse_uint(parser, token)); break;
-        }
-        type = TKN_ULIT;
+    if(hint == HINT_32BIT){
+       const float output = (float)(second_part) + (float)(first_part) / (float)(_10n1);
+    
+        return (Operand){.value.as_float32 = is_negative? -output : output, .type = TKN_FLIT}; 
     }
 
+    const double output = (double)(second_part) + (double)(first_part) / (double)(dot_position);
     
-
-    if(!(parser->flags & FLAG_TEST)) 
-        return (Operand){.value = v, .type = type};
-
-    parser->flags &= ~FLAG_TEST;
-    
-    return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+    return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
 }
 
 int parse_macro(Parser* parser, const Token macro, Token* include_path){
@@ -524,6 +476,9 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             inst_token = token;
             mc_stream(program, &inst.inst, 1);
             expects = get_expectations(inst.profile);
+            if(inst.inst == INST_READ8){
+                printf("we here\n");
+            }
             break;
         case EXPECT_OP_REG:
             operand.value.as_int64 = get_reg(token);
@@ -556,7 +511,13 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                 expects = (expects >> 8) & ~0XFF00000000000000;
                 break;
             }
-            operand = parse_op_literal(parser, token, HINT_NONE);
+            operand = parse_op_literal(
+                parser,
+                token,
+                (inst.inst == INST_MOV8)  * HINT_8BIT  +
+                (inst.inst == INST_MOV16) * HINT_16BIT +
+                (inst.inst == INST_MOV32) * HINT_32BIT
+            );
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
                     parser,

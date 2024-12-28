@@ -300,7 +300,7 @@ Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
     const char* special_characters = ":";
     const char line_comment = ';';
-    const char* dividers = " \t\n;:";
+    const char* delimiters = " \t\n;:%";
 
     Token token = (Token){0};
     
@@ -349,7 +349,7 @@ Token get_next_token(Tokenizer* tokenizer){
             tokenizer->column += 1;
             return token;
         }
-        token.size = mc_find_chars(string + tokenizer->pos, dividers, 0);
+        token.size = mc_find_chars(string + tokenizer->pos, delimiters, 0);
         if(token.size < 0 && string[tokenizer->pos]){
             for(token.size = 0; string[token.size + tokenizer->pos]; token.size+=1);
         } else if(token.size < 0){

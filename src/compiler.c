@@ -38,6 +38,11 @@ int write_exe(Mc_stream_t* stream, const char* path, uint64_t entry_point, void*
 
 int main(int argc, char** argv){
 
+    // X==X (DEBUG) X==X
+    // argc = 2;
+    // argv = malloc(argc * sizeof(char*));
+    // argv[1] = "../examples/hello_world.txt";
+
     int input_file  = -1;
     int output_file = -1;
 

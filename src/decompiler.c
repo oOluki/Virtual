@@ -151,16 +151,16 @@ int print_inst(uint8_t inst, const uint8_t* data, const uint8_t* static_memory){
         printf("STATIC %"PRIx64" \"%*s\"...\n", *(uint64_t*)(data), 10, static_memory + *(uint64_t*)(data));
         return 9;
     case INST_READ8:
-        printf("READ8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ16:
-        printf("READ16 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ16 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ32:
-        printf("READ32 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ32 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ:
-        printf("READ %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_SET8:
         printf("SET8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
