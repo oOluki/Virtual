@@ -175,13 +175,13 @@ typedef union Register{
 
 typedef struct VPU
 {
-    char* static_memory;
+    uint8_t* static_memory;
 
-    char* internal_data;
+    uint8_t* internal_data;
 
     Register registers[8];
 
-    char* register_space;
+    uint8_t* register_space;
 
     uint64_t* stack;
     

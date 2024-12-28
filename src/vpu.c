@@ -3,6 +3,7 @@
 #include "system.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static VPU vpu;
 
@@ -317,7 +318,7 @@ static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
         }
         return 9;
     case INST_DISREG:
-        printf("(%02lX; u: %lu; i: %li; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+        printf("(%02lX; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
         return 2;
     
     

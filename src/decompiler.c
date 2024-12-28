@@ -362,13 +362,13 @@ int main(int argc, char** argv){
 
     if(get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags)) return 1;
 
-    char* static_memory = NULL;
+    uint8_t* static_memory = NULL;
 
     for(size_t i = 16; i + 8 < 16 + meta_data_size; ){
-        const uint64_t size = *(uint64_t*)(stream.data + i);
-        const uint64_t id   = *(uint64_t*)(stream.data + i + sizeof(uint64_t));
+        const uint64_t size = *(uint64_t*)((uint8_t*)(stream.data) + i);
+        const uint64_t id   = *(uint64_t*)((uint8_t*)(stream.data) + i + sizeof(uint64_t));
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
-            static_memory = stream.data + i;
+            static_memory = (uint8_t*)(stream.data) + i;
             break;
         }
         i+=size;
@@ -392,7 +392,7 @@ int main(int argc, char** argv){
         program_size,
         flags,
         (size_t)(meta_data_size),
-        (size_t)(static_memory - (char*)stream.data), static_memory, static_memory_size,
+        (size_t)(static_memory - (uint8_t*)stream.data), static_memory, static_memory_size,
         (size_t)(entry_point)
     );
 
@@ -403,7 +403,7 @@ int main(int argc, char** argv){
         i < program_size;
         i += print_inst(
             ((unsigned char*)stream.data)[i + start],
-            stream.data + i + start + 1, static_memory
+            (uint8_t*)(stream.data) + i + start + 1, static_memory
         )
     );
 

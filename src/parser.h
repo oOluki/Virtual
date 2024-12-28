@@ -294,7 +294,7 @@ Operand parse_operand(Parser* parser, Token token, int hint){
         if(token.value.as_str[1] == 'x' || token.value.as_str[1] == 'X'){
             const uint64_t hex = parse_hexadecimal(parser, token);
             if(parser->flags & FLAG_TEST){
-                REPORT_ERROR(parser, "Invalid Token '%,*s'\n", token.size, token.value.as_str);
+                REPORT_ERROR(parser, "Invalid Token '%.*s'\n", token.size, token.value.as_str);
                 parser->flags &= ~FLAG_TEST;
                 return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
             }
