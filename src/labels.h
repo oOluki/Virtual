@@ -1,5 +1,5 @@
 #ifndef VIRTUAL_LABLES_H
-#define VIRTUAL_LABELS_H
+#define VIRTUAL_LABLES_H
 
 #include "lexer.h"
 
@@ -41,7 +41,7 @@ Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
 int remove_label(Mc_stream_t* labels, const Token label_token){
     Label* label = get_label(labels, label_token);
     if(label == NULL) return 1;
-    const uint32_t ssize = labels->size - label->size - (size_t)((uint8_t*)(label) - (uint8_t*)(labels->data));
+    const size_t ssize = labels->size - label->size - (size_t)((uint8_t*)(label) - (uint8_t*)(labels->data));
     memmove(label, ((uint8_t*)label) + label->size, ssize);
     labels->size -= label->size;
     return 0;
