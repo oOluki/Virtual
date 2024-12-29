@@ -35,12 +35,13 @@ int write_exe(Mc_stream_t* stream, const char* path, uint64_t entry_point, void*
     return errstatus;
 }
 
-static Token token_from_cstr(char* cstr){
+static inline Token token_from_cstr(char* cstr){
     Token token;
     token.value.as_str = cstr;
     for(token.size = 0; cstr[token.size]; token.size+=1);
     return token;
 }
+
 
 
 int main(int argc, char** argv){
@@ -89,7 +90,15 @@ int main(int argc, char** argv){
 
     Mc_stream_t files = (Mc_stream_t){.data = malloc(1000), .size = 0, .capacity = 1000};
 
-    if(!read_file(&files, (input_file > 0)? argv[input_file] : "../examples/hello_world.vpu", "r")){
+    #ifdef _WIN32 // changing file separator to default '/'
+
+        for(int i = 0; argv[input_file][i]; i+=1){
+            if(argv[input_file][i] == '\\') argv[input_file][i] = '/';
+        }
+
+    #endif
+
+    if(!read_file(&files, argv[input_file], "r", 1)){
         fprintf(stderr, "[ERROR] Could Not Open/Read File '%s'\n", argv[input_file]);
         mc_destroy_stream(program);
         mc_destroy_stream(static_memory);
@@ -98,25 +107,22 @@ int main(int argc, char** argv){
         return 1;
     }
 
-    Tokenizer tokenizer = (Tokenizer){.data = files.data, .line = 0, .column = 0, .pos = 0};
+    Tokenizer tokenizer = (Tokenizer){
+        .data = (char*)((uint8_t*)(files.data) + sizeof(uint32_t) + *(uint32_t*)(files.data) + 1),
+        .line = 0, .column = 0, .pos = 0
+    };
 
     Parser parser;
-    parser.file_path = argv[input_file];
+    parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
+    parser.file_path_size = *(uint32_t*)(files.data);
     parser.labels = &labels;
     parser.tokenizer = &tokenizer;
     parser.entry_point = 0;
     parser.flags = FLAG_NONE;
     parser.macro_if_depth = 0;
     
-    int status = parse_file(
-        &parser, &program, &static_memory,
-        (input_file > 0)?
-            token_from_cstr(argv[input_file]) :
-            MKTKN("../examples/hello_world.vpu")
-    );
-    
+    int status = parse_file(&parser, &program, &static_memory, &files);
     if(status) goto defer;
-
 
     *(uint64_t*)(static_memory.data) = static_memory.size;
 

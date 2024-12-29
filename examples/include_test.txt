@@ -1,0 +1,11 @@
+%include "vstd/vstdio.in"
+
+
+%start
+    STATIC "test was successfull"
+    POP RB
+    SYS 0
+    MOVV RC $fprintf_str
+    CALL RC
+    HALT
+

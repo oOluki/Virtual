@@ -352,7 +352,7 @@ int main(int argc, char** argv){
 
     Mc_stream_t stream = mc_create_stream(1000);
 
-    if(!read_file(&stream, argv[1], "rb")){
+    if(!read_file(&stream, argv[1], "rb", 0)){
         fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
         mc_destroy_stream(stream);
         return 2;

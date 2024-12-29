@@ -8,7 +8,14 @@
 
 #define COMP_TKN(TKN1, TKN2) mc_compare_token(TKN1, TKN2, 0)
 
-#define REPORT_ERROR(PARSER, STR, ...) fprintf(stderr, "[ERROR] %s:%i:%i :  " STR, PARSER->file_path, PARSER->tokenizer->line + 1, PARSER->tokenizer->column + 1, __VA_ARGS__)
+#define REPORT_ERROR(PARSER, STR, ...) do{\
+    fprintf(\
+        stderr,\
+        "[ERROR] %s:%i:%i :  " STR,\
+        PARSER->file_path, PARSER->tokenizer->line + 1,\
+        PARSER->tokenizer->column + 1, __VA_ARGS__\
+    );\
+} while(0)
 
 #define REP_INVALID_REGID(PARSER, TOKEN) REPORT_ERROR(PARSER, "\n\tInvalid Register Identifier '%.*s', No Such Register\n", TOKEN.size, TOKEN.value.as_str)
 
@@ -56,14 +63,13 @@ typedef struct InstProfile{
 
 typedef struct Parser
 {
-    const char* file_path;
+    char* file_path;
+    int file_path_size;
     Mc_stream_t* labels;
     Tokenizer* tokenizer;
     uint32_t flags;
     int macro_if_depth;
     uint64_t entry_point;
-    InstProfile current_inst;
-    int expects;
 } Parser;
 
 
@@ -310,7 +316,7 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
 }
 
-int parse_macro(Parser* parser, const uint64_t program_position, const Token macro, Token* include_path){
+int parse_macro(Parser* parser, const uint64_t program_position, const Token macro, StringView* include_path){
     
     if(COMP_TKN(macro, MKTKN("%include"))){
         const Token arg = get_next_token(parser->tokenizer);
@@ -326,7 +332,7 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
             );
             return 1;
         }
-        if(arg.value.as_str[arg.size - 1] != '\"'){
+        if(arg.value.as_str[arg.size - 1] != '\"' || arg.size == 1){
             REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
             return 1;
         }
@@ -334,7 +340,7 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
             REPORT_ERROR(parser, "\n\tExpected Valid File Path String Literal, Got Empty String Instead%c\n\n", ' ');
             return 1;
         }
-        *include_path = arg;
+        *include_path = (StringView){.str = arg.value.as_str + 1, .size = arg.size - 2};
         return 0;
     }
     if(COMP_TKN(macro, MKTKN("%label"))){
@@ -428,8 +434,8 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
     return 1;
 }
 
-// \returns the relative path to the next file
-int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, Token path){
+// \return 1 on error or 0 otherwise
+int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, Mc_stream_t* files_stream){
 
     Operand operand;
     int opv = 0;
@@ -458,9 +464,46 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         {
         default:
             if(token.type == TKN_MACRO_INST){
-                Token next_path_sv = (Token){.value.as_str = NULL};
+                StringView next_path_sv = (StringView){.str = NULL};
                 if(parse_macro(parser, program->size, token, &next_path_sv)){
                     return 1;
+                }
+                if(next_path_sv.str != NULL){
+                    StringView mother_directory = (StringView){.str = parser->file_path, .size = parser->file_path_size};
+                    for(int i = 0; i < mother_directory.size; i+=1){
+                        const char c = mother_directory.str[mother_directory.size - i - 1];
+                        if(c == '/'){
+                            mother_directory.size -= i;
+                            break;
+                        }
+                    }
+                    const uint64_t previous_file_stream_size = files_stream->size;
+                    const char* const new_file = read_file_relative(files_stream, mother_directory, next_path_sv);
+                    if(new_file == NULL){
+                        REPORT_ERROR(
+                            parser, "Could Not Read File '%.*s%.*s', Invalid File Or File Path\n\n",
+                            mother_directory.size, mother_directory.str, next_path_sv.size, next_path_sv.str
+                        );
+                        return 1;
+                    }
+                    const Tokenizer previous_tokenizer_state = *(parser->tokenizer);
+                    const int macro_if_depth = parser->macro_if_depth;
+                    const size_t file_pos = (size_t)((uint8_t*)(parser->file_path) - (uint8_t*)(files_stream->data));
+                    const int previous_file_path_size = parser->file_path_size;
+                    parser->macro_if_depth = 0;
+                    *(parser->tokenizer) = (Tokenizer){
+                        .data = (char*)((uint8_t*)(new_file) + mother_directory.size + next_path_sv.size + 1 + sizeof(uint32_t)),
+                        .pos = 0, .line = 0, .column = 0
+                    };
+                    parser->file_path = (char*)((uint8_t*)(new_file) + sizeof(uint32_t));
+                    if(parse_file(parser, program, static_memory, files_stream))
+                        return 1;
+                    files_stream->size = previous_file_stream_size;
+                    parser->file_path = (char*)((uint8_t*)(files_stream->data) + file_pos);
+                    parser->file_path_size = previous_file_path_size;
+                    parser->macro_if_depth = macro_if_depth;
+                    *(parser->tokenizer) = previous_tokenizer_state;
+                    parser->tokenizer->data = (char*)((uint8_t*)(files_stream->data) + file_pos + parser->file_path_size + 1);
                 }
                 continue;
             }

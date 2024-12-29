@@ -59,6 +59,13 @@ enum TokenTypes{
     TKN_ERROR = 255,
 };
 
+typedef struct StringView
+{
+    char*    str;
+    uint32_t size;
+} StringView;
+
+
 #define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .line = 0, .column = 0, .type = TKN_RAW})
 
 #define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
@@ -394,7 +401,9 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
     return 1;
 }
 
-char* read_file(Mc_stream_t* stream, const char* path, const char* modes){
+// if include_file_path is NOT 0 then, on success, the file path will be streamed to the stream as streamview
+// (first size (uint32) then cstr (null terminated)) before the file contents
+char* read_file(Mc_stream_t* stream, const char* path, const char* modes, int include_file_path){
 
     FILE* file = fopen(path, modes);
     if(!file) return NULL;
@@ -416,13 +425,20 @@ char* read_file(Mc_stream_t* stream, const char* path, const char* modes){
         return NULL;
     }
 
-    const size_t issize = stream->size;
+    const uint64_t issize = stream->size;
+
+    if(include_file_path){
+        uint32_t path_str_size = 0;
+        for ( ; path[path_str_size]; path_str_size+=1);
+        mc_stream(stream, &path_str_size, sizeof(path_str_size));
+        mc_stream(stream, path, path_str_size + 1);
+    }
 
     if(stream->size + size + 1 > stream->capacity){
         stream->capacity = (size_t)(size + stream->size + 1);
         void* odata = stream->data;
         stream->data = (char*)malloc(stream->capacity);
-        memmove(stream->data, odata, stream->size);
+        memcpy(stream->data, odata, stream->size);
         free(odata);
     }
 
@@ -433,6 +449,29 @@ char* read_file(Mc_stream_t* stream, const char* path, const char* modes){
     fclose(file);
 
     return (char*)((uint8_t*)(stream->data) + issize);
+}
+
+// this automatically includes the concatonated file path as stringview (first size (uint32) then cstr (null terminated))
+// to the stream before the file contents, only if on success
+char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView relative_path){
+
+    const uint64_t ssize = stream->size;
+    const uint32_t path_str_size = mother_dir.size + relative_path.size;
+
+    mc_stream(stream, &path_str_size, sizeof(path_str_size));
+    mc_stream(stream, mother_dir.str, mother_dir.size);
+    mc_stream(stream, relative_path.str, relative_path.size);
+    const char nullterm_ = '\0';
+    mc_stream(stream, &nullterm_, sizeof(nullterm_));
+
+    char* const status = read_file(stream, (char*)((uint8_t*)(stream->data) + ssize + sizeof(path_str_size)), "r", 0);
+
+    if(status == NULL){
+        stream->size = ssize;
+        return NULL;
+    }
+
+    return (char*)((uint8_t*)(stream->data) + ssize);
 }
 
 #endif

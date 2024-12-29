@@ -341,7 +341,7 @@ int main(int argc, char** argv){
 
     Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
 
-    if(!read_file(&stream, argv[1], "rb")){
+    if(!read_file(&stream, argv[1], "rb", 0)){
         fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
         return 2;
     }
