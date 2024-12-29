@@ -15,8 +15,11 @@
 %endif
 
 say_hello:
+    DISREG RA
     STATIC $HELLO
+    DISREG RA
     POP RB
+    DISREG RA
     SYS 0
     MOVV RE 1
     
