@@ -120,7 +120,7 @@ int main(int argc, char** argv){
 
     *(uint64_t*)(static_memory.data) = static_memory.size;
 
-    status = write_exe(&program, (output_file > 0)? argv[output_file] : "output.bin", 0, static_memory.data, static_memory.size, EXE_DEFAULT);
+    status = write_exe(&program, (output_file > 0)? argv[output_file] : "output.bin", parser.entry_point, static_memory.data, static_memory.size, EXE_DEFAULT);
     if(status) goto defer;
 
     defer:
