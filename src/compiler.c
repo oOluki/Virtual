@@ -35,13 +35,20 @@ int write_exe(Mc_stream_t* stream, const char* path, uint64_t entry_point, void*
     return errstatus;
 }
 
+static Token token_from_cstr(char* cstr){
+    Token token;
+    token.value.as_str = cstr;
+    for(token.size = 0; cstr[token.size]; token.size+=1);
+    return token;
+}
+
 
 int main(int argc, char** argv){
 
     // X==X (DEBUG) X==X
     // argc = 2;
     // argv = malloc(argc * sizeof(char*));
-    // argv[1] = "../examples/hello_world.txt";
+    // argv[1] = "../examples/vstd_test.txt";
 
     int input_file  = -1;
     int output_file = -1;
@@ -100,7 +107,12 @@ int main(int argc, char** argv){
     parser.entry_point = 0;
     parser.flags = FLAG_NONE;
     
-    int status = parse_file(&parser, &program, &static_memory, (input_file > 0)? argv[input_file] : "../examples/hello_world.vpu");
+    int status = parse_file(
+        &parser, &program, &static_memory,
+        (input_file > 0)?
+            token_from_cstr(argv[input_file]) :
+            MKTKN("../examples/hello_world.vpu")
+    );
     
     if(status) goto defer;
 

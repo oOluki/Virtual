@@ -55,6 +55,7 @@ enum TokenTypes{
     TKN_SPECIAL_SYM,
     TKN_MACRO_INST,
     TKN_LABEL_REF,
+    TKN_EMPTY,
     TKN_ERROR = 255,
 };
 
@@ -300,7 +301,7 @@ Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
     const char* special_characters = ":";
     const char line_comment = ';';
-    const char* delimiters = " \t\n;:%";
+    const char* delimiters = " \t\n;:";
 
     Token token = (Token){0};
     
