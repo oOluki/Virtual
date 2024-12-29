@@ -28,7 +28,7 @@ Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
             return label;
         }
         if(label->size == 0){
-            fprintf(stderr, "[INTERNAL ERROR] The Labeler Got To An Invalid Label With Size 0.\n"
+            fprintf(stderr, "[INTERNAL ERROR] The Labeler Got To An Invalid Label With Size 0. "
             "If You're An User Beware That This May Be A Problem With The Compiler Implementation And Not With Your Usage\n\n");
             return NULL;
         }
@@ -41,7 +41,12 @@ Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
 int remove_label(Mc_stream_t* labels, const Token label_token){
     Label* label = get_label(labels, label_token);
     if(label == NULL) return 1;
-    const size_t ssize = labels->size - label->size - (size_t)((uint8_t*)(label) - (uint8_t*)(labels->data));
+    const int64_t ssize = (int64_t)((int64_t)(labels->size) - (int64_t)(label->size) - (int64_t)((uint8_t*)(label) - (uint8_t*)(labels->data)));
+    if(ssize < 0){
+        fprintf(stderr, "[INTERNAL ERROR] The Labeler Got A Negative Size To Remove From The Labels Stream. "
+        "If You're An User Beware That This May Be A Problem With The Compiler Implementation And Not With Your Usage\n\n");
+        return 1;
+    }
     memmove(label, ((uint8_t*)label) + label->size, ssize);
     labels->size -= label->size;
     return 0;
