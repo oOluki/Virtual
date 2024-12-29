@@ -8,26 +8,15 @@
 
 #define COMP_TKN(TKN1, TKN2) mc_compare_token(TKN1, TKN2, 0)
 
-#define REPORT_ERROR(PARSER, STR, ...)   fprintf(stderr, "[ERROR] In File '%s', On Line %i:\n\t" STR, PARSER->file_path, PARSER->tokenizer->line + 1, __VA_ARGS__)
+#define REPORT_ERROR(PARSER, STR, ...) fprintf(stderr, "[ERROR] %s:%i:%i :  " STR, PARSER->file_path, PARSER->tokenizer->line + 1, PARSER->tokenizer->column + 1, __VA_ARGS__)
 
-#define REPORT_WARNING(PARSER, STR, ...) fprintf(stderr, "[WARNING] In File '%s', On Line %i:\n\t" STR, PARSER->file_path, PARSER->tokenizer->line + 1, __VA_ARGS__)
+#define REP_INVALID_REGID(PARSER, TOKEN) REPORT_ERROR(PARSER, "\n\tInvalid Register Identifier '%.*s', No Such Register\n", TOKEN.size, TOKEN.value.as_str)
 
-#define REP_INVALID_REGID(PARSER, TOKEN) REPORT_ERROR(PARSER, "[ERROR] Invalid Register Identifier '%.*s', No Such Register\n", TOKEN.size, TOKEN.value.as_str)
-
-
-
-enum ArgFlags{
+enum ParsingFlags{
 
     FLAG_NONE = 0,
-
-    FLAG_EXPECT_INST = 1 << 0,
-    FLAG_EXPECT_REG  = 1 << 1,
-    FLAG_EXPECT_LIT  = 1 << 2,
-
-    FLAG_ERROR = 1 << 3,
-    FLAG_TEST  = 1 << 4,
-
-    FLAG_ADD_SYM_TABLE = 1 << 5
+    FLAG_TEST  = 1 << 0,
+    FLAG_ADD_SYM_TABLE = 1 << 1
 };
 
 enum OpHint{
@@ -70,7 +59,8 @@ typedef struct Parser
     const char* file_path;
     Mc_stream_t* labels;
     Tokenizer* tokenizer;
-    int flags;
+    uint32_t flags;
+    int macro_if_depth;
     uint64_t entry_point;
     InstProfile current_inst;
     int expects;
@@ -327,13 +317,21 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
         if(arg.type != TKN_STR){
             if(arg.type == TKN_RAW) REPORT_ERROR(
                 parser,
-                "Incorrect Usage For %s Macro, Expected String Got '%.*s' Instead\n\n",
+                "\n\tIncorrect Usage For %s Macro, Expected String Got '%.*s' Instead\n\n",
                 "%include", macro.size, macro.value.as_str
             );
             else REPORT_ERROR(
                 parser,
-                "Incorrect Usage For %s Macro, Expected String\n\n", "%include"
+                "\n\tIncorrect Usage For %s Macro, Expected String\n\n", "%include"
             );
+            return 1;
+        }
+        if(arg.value.as_str[arg.size - 1] != '\"'){
+            REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
+            return 1;
+        }
+        if(arg.size < 3){
+            REPORT_ERROR(parser, "\n\tExpected Valid File Path String Literal, Got Empty String Instead%c\n\n", ' ');
             return 1;
         }
         *include_path = arg;
@@ -343,16 +341,16 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
         const Token arg1 = get_next_token(parser->tokenizer);
         const Token arg2 = get_next_token(parser->tokenizer);
         if(arg1.type != TKN_RAW){
-            REPORT_ERROR(parser, "Label Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
         else if(arg2.type == TKN_NONE){
-            REPORT_ERROR(parser, "Missing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
+            REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
         }
         if(add_label(parser->labels, arg1, arg2, HINT_NONE)){
             REPORT_ERROR(
-                parser, "Invalid Label Or Definition '%s %.*s %.*s'\nNOT: You Can Not Redifined Already Labeled Labels\n\n",
+                parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifined Already Labeled Labels\n\n",
                 "%label",
                 arg1.size, arg1.value.as_str, arg2.size, arg2.value.as_str
             );
@@ -363,12 +361,12 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
     if(COMP_TKN(macro, MKTKN("%labelv"))){
         const Token arg1 = get_next_token(parser->tokenizer);
         if(arg1.type != TKN_RAW){
-            REPORT_ERROR(parser, "Label Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
         if(add_label(parser->labels, arg1, (Token){.type = TKN_EMPTY}, HINT_NONE)){
             REPORT_ERROR(
-                parser, "Invalid Label Or Definition '%s %.*s'\nNOTE: You Can Not Relabel\n\n",
+                parser, "\n\tInvalid Label Or Definition '%s %.*s'\n\tNOTE: You Can Not Relabel\n\n",
                 "%label", arg1.size, arg1.value.as_str
             );
             return 1;
@@ -378,11 +376,11 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
     if(COMP_TKN(macro, MKTKN("%unlabel"))){
         const Token arg = get_next_token(parser->tokenizer);
         if(arg.type != TKN_RAW){
-            REPORT_ERROR(parser, "Label Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
         if(remove_label(parser->labels, arg)){
-            REPORT_ERROR(parser, "Attempting To Unlabel '%.*s' While Label Does Not Exist\n\n", arg.size, arg.value.as_str);
+            REPORT_ERROR(parser, "\n\tAttempting To Unlabel '%.*s' While Label Does Not Exist\n\n", arg.size, arg.value.as_str);
             return 1;
         }
         return 0;
@@ -390,29 +388,39 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
     if(COMP_TKN(macro, MKTKN("%iflabel"))){
         const Token arg = get_next_token(parser->tokenizer);
         if(arg.type != TKN_RAW){
-            REPORT_ERROR(parser, "Label Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
         if(!get_label(parser->labels, arg)){
             tokenizer_goto(parser->tokenizer, "%endif");
             get_next_token(parser->tokenizer);
         }
+        parser->macro_if_depth += 1;
         return 0;
     }
     if(COMP_TKN(macro, MKTKN("%ifnlabel"))){
         const Token arg = get_next_token(parser->tokenizer);
         if(arg.type != TKN_RAW){
-            REPORT_ERROR(parser, "Label Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
         if(get_label(parser->labels, arg)){
             tokenizer_goto(parser->tokenizer, "%endif");
             get_next_token(parser->tokenizer);
         }
+        parser->macro_if_depth += 1;
+        return 0;
+    }
+    if(COMP_TKN(macro, MKTKN("%endif"))){
+        if(parser->macro_if_depth == 0){
+            REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %s\n\n", "%endif");
+            return 1;
+        }
+        parser->macro_if_depth -= 1;
         return 0;
     }
 
-    REPORT_ERROR(parser, "Unknown Macro Instruction%c\n\n", ' ');
+    REPORT_ERROR(parser, "\n\tInvalid Macro Instruction '%.*s'\n\n", macro.size, macro.value.as_str);
     return 1;
 }
 
@@ -436,7 +444,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
-                REPORT_ERROR(parser, "Could Not Resolve Label '%.*s'\n\n", token.size, token.value.as_str);
+                REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", token.size, token.value.as_str);
                 return 1;
             }
             token = tmp;
@@ -468,7 +476,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                         ) {
                             REPORT_ERROR(
                                 parser,
-                                "Could Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
+                                "\n\tCould Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
                                 token.size, token.value.as_str
                             );
                             return 1;
@@ -476,7 +484,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                         break;
                     }
                 }
-                REPORT_ERROR(parser, "Expected Instruction, Got '%.*s' Instead\n\n", token.size, token.value.as_str);
+                REPORT_ERROR(parser, "\n\tExpected Instruction, Got '%.*s' Instead\n\n", token.size, token.value.as_str);
                 return 1;
             }
             opv = 0;
@@ -489,7 +497,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             if(operand.value.as_int64 < 0){
                 REPORT_ERROR(
                     parser,
-                    "Argument %i Of Instruction %.*s Should Be Register, Got '%.*s' Instead\n\n",
+                    "\n\tArgument %i Of Instruction %.*s Should Be Register, Got '%.*s' Instead\n\n",
                     opv + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
                 );
                 return 1;
@@ -501,11 +509,11 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         case EXPECT_OP_LIT:
             if(token.type == TKN_STR){
                 if(inst.inst != INST_STATIC){
-                    REPORT_ERROR(parser, "Instruction %.*s Can't Take String As Argument\n\n", inst_token.size, inst_token.value.as_str);
+                    REPORT_ERROR(parser, "\n\tInstruction %.*s Can't Take String As Argument\n\n", inst_token.size, inst_token.value.as_str);
                     return 1;
                 }
                 if(token.value.as_str[token.size - 1] != '\"'){
-                    REPORT_ERROR(parser, "Missing Closing %c\n\n", '\"');
+                    REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return 1;
                 }
                 operand.value.as_uint64 = static_memory->size;
@@ -525,7 +533,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
                     parser,
-                    "Argument %i Of Instruction %.*s Should Be A Literal, Got '%.*s' Instead\n\n",
+                    "\n\tArgument %i Of Instruction %.*s Should Be A Literal, Got '%.*s' Instead\n\n",
                     opv + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
                 );
                 return 1;

@@ -59,7 +59,7 @@ enum TokenTypes{
     TKN_ERROR = 255,
 };
 
-#define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .line = 0, .column = 0, .type = TKN_STR})
+#define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .line = 0, .column = 0, .type = TKN_RAW})
 
 #define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
 

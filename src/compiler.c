@@ -106,6 +106,7 @@ int main(int argc, char** argv){
     parser.tokenizer = &tokenizer;
     parser.entry_point = 0;
     parser.flags = FLAG_NONE;
+    parser.macro_if_depth = 0;
     
     int status = parse_file(
         &parser, &program, &static_memory,

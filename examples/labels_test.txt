@@ -1,0 +1,38 @@
+%labelv X
+
+%unlabel X      ;; testing the label addition and deletion
+
+%iflabel X      ;; testing the if macros
+
+%label HELLO "hello from virtual"
+
+%endif
+
+%ifnlabel X
+
+%label HELLO "hello from label test"
+
+%endif
+
+say_hello:
+    STATIC $HELLO
+    POP RB
+    SYS 0
+    MOVV RE 1
+    
+    say_hello_loop:
+        READ8 RC RB
+        PUTC RC RA
+        ADD RB RE
+    JMPF RC $say_hello_loop
+
+    MOVV RC 10
+    PUTC RC RA
+    RET
+
+%unlabel say_hello_loop
+ 
+MOVV RA $say_hello
+CALL RA
+
+HALT
