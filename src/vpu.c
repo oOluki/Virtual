@@ -3,10 +3,11 @@
 #include "system.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static VPU vpu;
 
-static inline size_t perform_inst(Inst inst, const char* data){
+static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
 
     // the first register operand
     #define R1 (*(Register*)(vpu.register_space + data[0]))
@@ -68,13 +69,13 @@ static inline size_t perform_inst(Inst inst, const char* data){
         R1.as_uint64 = vpu.stack[SP - R2.as_uint64];
         return 10;
     case INST_WRITE:
-        vpu.stack[SP - R1.as_uint32] = R2.as_uint64;
+        vpu.stack[SP - L2] = R1.as_uint64;
         return 10;
     case INST_GSP:
         R1.as_ptr = vpu.stack;
         return 2;
     case INST_STATIC:
-        vpu.stack[SP++] = (uint64_t)(vpu.static_memory + L1);
+        vpu.stack[SP++] = (uint64_t)(size_t)(vpu.static_memory + L1);
         return 9;
     case INST_READ8:
         R1.as_uint8 = *(uint8_t*)(R2.as_ptr);
@@ -142,10 +143,10 @@ static inline size_t perform_inst(Inst inst, const char* data){
     case INST_CALL:
         vpu.stack[SP++] = IP + 2;
         IP = R1.as_uint64;
-        return 2;
+        return 0;
     case INST_RET:
         IP = vpu.stack[--SP];
-        return 1;
+        return 0;
 
 /*--------------------------------------------------------------------------------------------------------------/
 /                                                                                                               /
@@ -317,14 +318,14 @@ static inline size_t perform_inst(Inst inst, const char* data){
         }
         return 9;
     case INST_DISREG:
-        printf("(%02lX; u: %lu; i: %li; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+        printf("(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
         return 2;
     
     
     default:
         fprintf(stderr, "[ERROR] Unknwon Instruction '%u'\n", (unsigned int)inst);
         exit(1);
-        return 0xFFFFFFFFFFFFFFFFUL;
+        return 0xFFFFFFFF;
     }
 
 }
@@ -340,7 +341,7 @@ int main(int argc, char** argv){
 
     Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
 
-    if(!read_file(&stream, argv[1], "rb")){
+    if(!read_file(&stream, argv[1], "rb", 0)){
         fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
         return 2;
     }
@@ -354,27 +355,27 @@ int main(int argc, char** argv){
     if(get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags)) return 1;
 
     for(size_t i = 16; i < 16 + meta_data_size; i+=1){
-        const uint64_t id = *(uint64_t*)(stream.data + i);
+        const uint64_t id = *(uint64_t*)((uint8_t*)(stream.data) + i);
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
-            vpu.static_memory = stream.data + i;
+            vpu.static_memory = (uint8_t*)(stream.data) + i;
             break;
         }
     }
 
-    const size_t program_size = stream.size - 24 - meta_data_size;
+    const uint64_t program_size = stream.size - 24 - meta_data_size;
 
-    const size_t start = 24 + meta_data_size + entry_point;
+    const uint64_t start = 24 + meta_data_size;
 
-    vpu.register_space = (char*)vpu.registers;
+    vpu.register_space = (uint8_t*)vpu.registers;
 
     vpu.stack = (uint64_t*)malloc(1024);
 
     for(
-        vpu.registers[RIP / 8].as_uint64 = 0;
+        vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(
-            stream.data[vpu.registers[RIP / 8].as_uint64 + start],
-            stream.data + vpu.registers[RIP / 8].as_uint64 + start + 1
+            ((uint8_t*)stream.data)[vpu.registers[RIP / 8].as_uint64 + start],
+            (uint8_t*)(stream.data) + vpu.registers[RIP / 8].as_uint64 + start + 1
         )
     );
 

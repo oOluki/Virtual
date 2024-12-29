@@ -1,12 +1,11 @@
 # Set the minimum version of CMake
 cmake_minimum_required(VERSION 3.10.0)
-project(Virtual_Processing_Unit VERSION 1.0.1 LANGUAGES C CXX)
+project(Virtual_Processing_Unit VERSION 1.2.11 LANGUAGES C CXX)
 
 
 add_executable(compile src/compiler.c)
 add_executable(decompile src/decompiler.c)
 add_executable(VPU src/vpu.c)
-add_executable(tokenize tests/tokenizer.c)
 
 include_directories(examples)
 
@@ -24,7 +23,6 @@ foreach(FILE ${TXT_FILES})
     get_filename_component(FILENAME_WE ${FILE} NAME_WE)
     get_filename_component(FILENAME ${FILE} NAME)
     
-    add_test(NAME "VPU_TOKENIZE_${FILENAME_WE}" COMMAND tokenize ${FILE})
     add_test(NAME "VPU_COMPILE_${FILENAME_WE}" COMMAND compile ${FILE} -o ${CMAKE_BINARY_DIR}/${FILENAME_WE}.out)
     add_test(NAME "VPU_DECOMPILE_${FILENAME_WE}" COMMAND decompile ${CMAKE_BINARY_DIR}/${FILENAME_WE}.out)
     add_test(NAME "VPU_RUN_${FILENAME_WE}" COMMAND VPU ${CMAKE_BINARY_DIR}/${FILENAME_WE}.out)

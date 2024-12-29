@@ -3,7 +3,8 @@
 #include "parser.h"
 
 
-int write_exe(Mc_stream_t* stream, const char* path, void* meta_data, uint64_t meta_data_size, uint32_t flags){
+
+int write_exe(Mc_stream_t* stream, const char* path, uint64_t entry_point, void* meta_data, uint64_t meta_data_size, uint32_t flags){
 
     int errstatus = 0;
 
@@ -23,7 +24,7 @@ int write_exe(Mc_stream_t* stream, const char* path, void* meta_data, uint64_t m
 
     errstatus |= (fwrite(stream->data, 1, stream->size, file) != stream->size);
 
-    if(stream->data[stream->size - 1] != INST_HALT)
+    if(((char*)stream->data)[stream->size - 1] != INST_HALT)
         errstatus |= (fputc(INST_HALT, file) != INST_HALT);
 
     fclose(file);
@@ -34,8 +35,21 @@ int write_exe(Mc_stream_t* stream, const char* path, void* meta_data, uint64_t m
     return errstatus;
 }
 
+static inline Token token_from_cstr(char* cstr){
+    Token token;
+    token.value.as_str = cstr;
+    for(token.size = 0; cstr[token.size]; token.size+=1);
+    return token;
+}
+
+
 
 int main(int argc, char** argv){
+
+    // X==X (DEBUG) X==X
+    // argc = 2;
+    // argv = malloc(argc * sizeof(char*));
+    // argv[1] = "../examples/vstd_test.txt";
 
     int input_file  = -1;
     int output_file = -1;
@@ -59,10 +73,10 @@ int main(int argc, char** argv){
 
     }
 
-    //if(input_file < 0){
-    //    fprintf(stderr, "[ERROR] Missing Input File\n");
-    //    return 1;
-    //}
+    if(input_file < 0){
+        fprintf(stderr, "[ERROR] Missing Input File\n");
+        return 1;
+    }
 
     Mc_stream_t program = mc_create_stream(1000);
 
@@ -74,30 +88,52 @@ int main(int argc, char** argv){
 
     Mc_stream_t labels = mc_create_stream(1000);
 
-    Mc_stream_t label_definitions = mc_create_stream(1000);
+    Mc_stream_t files = (Mc_stream_t){.data = malloc(1000), .size = 0, .capacity = 1000};
 
-    flags = FLAG_EXPECT_INST;
+    #ifdef _WIN32 // changing file separator to default '/'
 
-    parse_file_recusive(&program, &static_memory, &labels, &label_definitions, (input_file > 0)? argv[input_file] : "../assembly/hello_world.vpu");
+        for(int i = 0; argv[input_file][i]; i+=1){
+            if(argv[input_file][i] == '\\') argv[input_file][i] = '/';
+        }
 
-    //for(size_t i = 0; i < token_count; i += parse_instruction(&program, &static_memory, token_buffer, i, token_count));
+    #endif
 
-    if(error_count){
+    if(!read_file(&files, argv[input_file], "r", 1)){
+        fprintf(stderr, "[ERROR] Could Not Open/Read File '%s'\n", argv[input_file]);
         mc_destroy_stream(program);
         mc_destroy_stream(static_memory);
         mc_destroy_stream(labels);
-        mc_destroy_stream(label_definitions);
+        mc_destroy_stream(files);
         return 1;
     }
 
+    Tokenizer tokenizer = (Tokenizer){
+        .data = (char*)((uint8_t*)(files.data) + sizeof(uint32_t) + *(uint32_t*)(files.data) + 1),
+        .line = 0, .column = 0, .pos = 0
+    };
+
+    Parser parser;
+    parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
+    parser.file_path_size = *(uint32_t*)(files.data);
+    parser.labels = &labels;
+    parser.tokenizer = &tokenizer;
+    parser.entry_point = 0;
+    parser.flags = FLAG_NONE;
+    parser.macro_if_depth = 0;
+    
+    int status = parse_file(&parser, &program, &static_memory, &files);
+    if(status) goto defer;
+
     *(uint64_t*)(static_memory.data) = static_memory.size;
 
-    const int status = write_exe(&program, (output_file > 0)? argv[output_file] : "output.bin", static_memory.data, static_memory.size, EXE_DEFAULT);
+    status = write_exe(&program, (output_file > 0)? argv[output_file] : "output.bin", parser.entry_point, static_memory.data, static_memory.size, EXE_DEFAULT);
+    if(status) goto defer;
 
+    defer:
     mc_destroy_stream(program);
     mc_destroy_stream(static_memory);
     mc_destroy_stream(labels);
-    mc_destroy_stream(label_definitions);
+    mc_destroy_stream(files);
 
     return status;
 }

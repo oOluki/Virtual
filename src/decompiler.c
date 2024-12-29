@@ -103,7 +103,7 @@ char* get_reg_str(int reg, char* output){
 
 #define READ_AS(TYPE, PDATA) *(TYPE*)(PDATA)
 
-int print_inst(Inst inst, const char* data, char* static_memory){
+int print_inst(uint8_t inst, const uint8_t* data, const uint8_t* static_memory){
     switch (inst)
     {
     case INST_NOP:
@@ -138,12 +138,14 @@ int print_inst(Inst inst, const char* data, char* static_memory){
     case INST_POP:
         printf("POP %s\n", get_reg_str(data[0], buff1));
         return 2;
-    case INST_GET:
-        printf("READ %s\n", get_reg_str(data[0], buff1));
-        return 10;
-    case INST_WRITE:
-        printf("WRITE %s\n", get_reg_str(data[0], buff1));
-        return 10;
+    case INST_GET:{
+        Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
+        printf("GET %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 10;
+    case INST_WRITE:{
+        Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
+        printf("WRITE %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 10;
     case INST_GSP:
         printf("GSP %s\n", get_reg_str(data[0], buff1));
         return 2;
@@ -151,16 +153,16 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("STATIC %"PRIx64" \"%*s\"...\n", *(uint64_t*)(data), 10, static_memory + *(uint64_t*)(data));
         return 9;
     case INST_READ8:
-        printf("READ8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ16:
-        printf("READ16 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ16 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ32:
-        printf("READ32 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ32 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_READ:
-        printf("READ %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[0], buff2));
+        printf("READ %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_SET8:
         printf("SET8 %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
@@ -214,7 +216,7 @@ int print_inst(Inst inst, const char* data, char* static_memory){
         printf("RET\n");
         return 1;
     case INST_ADD:
-        printf("ADDI %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
+        printf("ADD %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
         return 3;
     case INST_SUB:
         printf("SUB %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
@@ -350,7 +352,7 @@ int main(int argc, char** argv){
 
     Mc_stream_t stream = mc_create_stream(1000);
 
-    if(!read_file(&stream, argv[1], "rb")){
+    if(!read_file(&stream, argv[1], "rb", 0)){
         fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
         mc_destroy_stream(stream);
         return 2;
@@ -362,43 +364,50 @@ int main(int argc, char** argv){
 
     if(get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags)) return 1;
 
-    char* static_memory = NULL;
+    uint8_t* static_memory = NULL;
 
     for(size_t i = 16; i + 8 < 16 + meta_data_size; ){
-        const uint64_t size = *(uint64_t*)(stream.data + i);
-        const uint64_t id   = *(uint64_t*)(stream.data + i + sizeof(uint64_t));
+        const uint64_t size = *(uint64_t*)((uint8_t*)(stream.data) + i);
+        const uint64_t id   = *(uint64_t*)((uint8_t*)(stream.data) + i + sizeof(uint64_t));
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
-            static_memory = stream.data + i;
+            static_memory = (uint8_t*)(stream.data) + i;
             break;
         }
         i+=size;
     }
-    const size_t static_memory_size = (size_t)(*(uint64_t*)(static_memory));
+    const uint64_t static_memory_size = *(uint64_t*)(static_memory);
 
-    const size_t program_size = stream.size - 24 - meta_data_size;
+    const uint64_t program_size = stream.size - 24 - meta_data_size;
 
     printf(
         "\nX====X (SPECIFICATIONS) X====X\n"
         "\tname = %s\n"
-        "\ttotal size     = %zu\n"
-        "\tprogram size   = %zu\n"
-        "\tflags          = %02x\n"
-        "\tmeta_data_size = %zu\n"
-        "\tstatic_memory = { position = %zu, pointer = %p, size = %zu }\n"
-        "\tentry point    = %zu\n"
+        "\ttotal size     = %"PRIu64"\n"
+        "\tprogram size   = %"PRIu64"\n"
+        "\tflags          = %02"PRIx32"\n"
+        "\tmeta_data_size = %"PRIu64"\n"
+        "\tstatic_memory = { position = %"PRIu64", pointer = %p, size = %"PRIu64" }\n"
+        "\tentry point    = %"PRIu64"\n"
         "X====X (SPECIFICATIONS) X====X\n\n\n",
         argv[1],
-        (size_t)stream.size,
+        stream.size,
         program_size,
         flags,
-        (size_t)(meta_data_size),
-        (size_t)(static_memory - (char*)stream.data), static_memory, static_memory_size,
-        (size_t)(entry_point)
+        meta_data_size,
+        (uint64_t)(size_t)(static_memory - (uint8_t*)stream.data), static_memory, static_memory_size,
+        entry_point
     );
 
-    const size_t start = 24 + meta_data_size + entry_point;
+    const size_t start = 24 + meta_data_size;
 
-    for(size_t i = 0; i < program_size; i += print_inst(stream.data[i + start], stream.data + i + start + 1, static_memory));
+    for(
+        size_t i = 0;
+        i < program_size;
+        i += print_inst(
+            ((unsigned char*)stream.data)[i + start],
+            (uint8_t*)(stream.data) + i + start + 1, static_memory
+        )
+    );
 
 
     return 0;
