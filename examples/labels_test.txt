@@ -28,6 +28,7 @@ say_hello:
 
     MOVV RC 10
     PUTC RC RA
+    DISREG RA
     RET
 
 %unlabel say_hello_loop
