@@ -138,12 +138,14 @@ int print_inst(uint8_t inst, const uint8_t* data, const uint8_t* static_memory){
     case INST_POP:
         printf("POP %s\n", get_reg_str(data[0], buff1));
         return 2;
-    case INST_GET:
-        printf("READ %s\n", get_reg_str(data[0], buff1));
-        return 10;
-    case INST_WRITE:
-        printf("WRITE %s\n", get_reg_str(data[0], buff1));
-        return 10;
+    case INST_GET:{
+        Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
+        printf("GET %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 10;
+    case INST_WRITE:{
+        Register op = {.as_uint64 = *(uint64_t*)(data + 1)};
+        printf("WRITE %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(data[0], buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 10;
     case INST_GSP:
         printf("GSP %s\n", get_reg_str(data[0], buff1));
         return 2;
@@ -396,7 +398,7 @@ int main(int argc, char** argv){
         entry_point
     );
 
-    const size_t start = 24 + meta_data_size + entry_point;
+    const size_t start = 24 + meta_data_size;
 
     for(
         size_t i = 0;

@@ -69,7 +69,7 @@ static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
         R1.as_uint64 = vpu.stack[SP - R2.as_uint64];
         return 10;
     case INST_WRITE:
-        vpu.stack[SP - R1.as_uint32] = R2.as_uint64;
+        vpu.stack[SP - L2] = R1.as_uint64;
         return 10;
     case INST_GSP:
         R1.as_ptr = vpu.stack;
@@ -143,10 +143,10 @@ static inline uint64_t perform_inst(uint8_t inst, const uint8_t* data){
     case INST_CALL:
         vpu.stack[SP++] = IP + 2;
         IP = R1.as_uint64;
-        return 2;
+        return 0;
     case INST_RET:
         IP = vpu.stack[--SP];
-        return 1;
+        return 0;
 
 /*--------------------------------------------------------------------------------------------------------------/
 /                                                                                                               /
@@ -362,16 +362,16 @@ int main(int argc, char** argv){
         }
     }
 
-    const size_t program_size = stream.size - 24 - meta_data_size;
+    const uint64_t program_size = stream.size - 24 - meta_data_size;
 
-    const size_t start = 24 + meta_data_size + entry_point;
+    const uint64_t start = 24 + meta_data_size;
 
     vpu.register_space = (uint8_t*)vpu.registers;
 
     vpu.stack = (uint64_t*)malloc(1024);
 
     for(
-        vpu.registers[RIP / 8].as_uint64 = 0;
+        vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(
             ((uint8_t*)stream.data)[vpu.registers[RIP / 8].as_uint64 + start],
