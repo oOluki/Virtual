@@ -31,7 +31,6 @@ int sys_call(VPU* vpu, uint64_t call){
     switch (inst)
     {
     case SYS_GET_SPECIAL_ADDRESS:
-        printf("[INFO] %p %p %p\n", stdout, stdin, stderr);
         switch (op_mask)
         {
         case SYS_ADDRESS_STDOUT: vpu->registers[RA / 8].as_ptr = stdout; break;

@@ -15,11 +15,8 @@
 %endif
 
 say_hello:
-    DISREG RA
     STATIC $HELLO
-    DISREG RA
     POP RB
-    DISREG RA
     SYS 0
     MOVV RE 1
     
@@ -31,12 +28,11 @@ say_hello:
 
     MOVV RC 10
     PUTC RC RA
-    DISREG RA
     RET
 
 %unlabel say_hello_loop
- 
-MOVV RA $say_hello
-CALL RA
 
-HALT
+%start
+    MOVV RA $say_hello
+    CALL RA
+    HALT

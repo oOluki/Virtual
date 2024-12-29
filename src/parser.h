@@ -310,7 +310,7 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
 }
 
-int parse_macro(Parser* parser, const Token macro, Token* include_path){
+int parse_macro(Parser* parser, const uint64_t program_position, const Token macro, Token* include_path){
     
     if(COMP_TKN(macro, MKTKN("%include"))){
         const Token arg = get_next_token(parser->tokenizer);
@@ -419,6 +419,10 @@ int parse_macro(Parser* parser, const Token macro, Token* include_path){
         parser->macro_if_depth -= 1;
         return 0;
     }
+    if(COMP_TKN(macro, MKTKN("%start"))){
+        parser->entry_point = program_position;
+        return 0;
+    }
 
     REPORT_ERROR(parser, "\n\tInvalid Macro Instruction '%.*s'\n\n", macro.size, macro.value.as_str);
     return 1;
@@ -455,7 +459,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         default:
             if(token.type == TKN_MACRO_INST){
                 Token next_path_sv = (Token){.value.as_str = NULL};
-                if(parse_macro(parser, token, &next_path_sv)){
+                if(parse_macro(parser, program->size, token, &next_path_sv)){
                     return 1;
                 }
                 continue;
