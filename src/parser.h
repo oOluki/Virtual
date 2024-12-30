@@ -56,7 +56,7 @@ typedef struct Operand{
 
 typedef struct InstProfile{
 
-    uint8_t   inst;
+    uint8_t   opcode;
     OpProfile profile;
 
 } InstProfile;
@@ -445,8 +445,8 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
 
     Operand operand;
     int opv = 0;
-    InstProfile inst;
-    Token inst_token;
+    InstProfile inst = (InstProfile){.opcode = INST_ERROR, .profile = OP_PROFILE_NONE};
+    Token inst_token = (Token){.value.as_str = NULL};
     uint64_t expects = EXPECT_ANY;
 
     Token token = get_next_token(parser->tokenizer);
@@ -515,7 +515,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             }
         case EXPECT_INST:
             inst = parse_inst(token);
-            if(inst.inst == INST_ERROR){
+            if(inst.opcode == INST_ERROR){
                 const Token next_token = get_next_token(parser->tokenizer);
                 if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                     if(COMP_TKN(next_token, MKTKN(":"))){
@@ -542,7 +542,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             }
             opv = 0;
             inst_token = token;
-            mc_stream(program, &inst.inst, 1);
+            mc_stream(program, &inst.opcode, 1);
             expects = get_expectations(inst.profile);
             break;
         case EXPECT_OP_REG:
@@ -561,7 +561,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             break;
         case EXPECT_OP_LIT:
             if(token.type == TKN_STR){
-                if(inst.inst != INST_STATIC){
+                if(inst.opcode != INST_STATIC){
                     REPORT_ERROR(parser, "\n\tInstruction %.*s Can't Take String As Argument\n\n", inst_token.size, inst_token.value.as_str);
                     return 1;
                 }
@@ -579,9 +579,9 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             operand = parse_op_literal(
                 parser,
                 token,
-                (inst.inst == INST_MOV8)  * HINT_8BIT  +
-                (inst.inst == INST_MOV16) * HINT_16BIT +
-                (inst.inst == INST_MOV32) * HINT_32BIT
+                (inst.opcode == INST_MOV8)  * HINT_8BIT  +
+                (inst.opcode == INST_MOV16) * HINT_16BIT +
+                (inst.opcode == INST_MOV32) * HINT_32BIT
             );
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
@@ -591,11 +591,13 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                 );
                 return 1;
             }
-            mc_stream(program, &(operand.value.as_uint64), 8);
+            mc_stream(program, &(operand.value.as_uint16), 2);
             opv += 1;
             expects = (expects >> 8) & ~0XFF00000000000000;
             break;
         }
+
+
 
     }
 

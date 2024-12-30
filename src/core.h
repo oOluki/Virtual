@@ -10,7 +10,7 @@ typedef enum ExeFlags{
 } ExeFlags;
 
 
-typedef enum Inst{
+typedef enum OpCode{
 
     // does nothing
     INST_NOP = 0,
@@ -123,8 +123,9 @@ typedef enum Inst{
 
     INST_ERROR = 255
 
-} Inst;
+} OpCode;
 
+typedef uint32_t Inst;
 
 typedef enum OpProfile{
 
