@@ -317,7 +317,7 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
         return (Operand){.value.as_float32 = is_negative? -output : output, .type = TKN_FLIT}; 
     }
 
-    const double output = (double)(second_part) + (double)(first_part) / (double)(dot_position);
+    const double output = (double)(second_part) + (double)(first_part) / (double)(_10n1);
     
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
 }
