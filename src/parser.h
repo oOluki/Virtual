@@ -240,7 +240,7 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
                 parser,
                 (Token){
                     .value.as_str = token.value.as_str + 2,
-                    .size = toke.size - 2
+                    .size = token.size - 2
                 }
             );
             if(parser->flags & FLAG_TEST){
