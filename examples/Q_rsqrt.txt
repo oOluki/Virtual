@@ -1,0 +1,30 @@
+
+;; classic Q_sqrt algorithm implemented for double precision in VASM
+;; for reference and the history of the original algorithm check: https://en.m.wikipedia.org/wiki/Fast_inverse_square_root
+
+;; lets calculate the 1/sqrt(400)
+MOVV RA 400.0
+
+;; evil bit level hacking (trivial in this case)
+MOV RB RA
+
+;; "what the fuck"
+MOVV RC -1
+BSHIFT RB RC
+MOVV RC 0x5fe6ec85e7de30da
+SUB RC RB
+
+; newton's method iteration
+MOVV RB 0.5
+MULF RB RA
+MULF RB RC
+MULF RB RC
+MOVV RA 1.5
+SUBF RA RB
+MULF RA RC
+
+; display the result
+DISREG RA
+
+
+
