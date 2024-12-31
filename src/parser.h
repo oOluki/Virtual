@@ -38,15 +38,6 @@ enum OpHint{
 
 };
 
-enum Expects{
-    EXPECT_ANY = 0,
-    EXPECT_INST,
-    EXPECT_OP_REG,
-    EXPECT_OP_LIT,
-    EXPECT_OP_STR,
-    EXPECT_IDENTIFIER,
-};
-
 typedef struct Operand{
     
     Register value;
@@ -57,7 +48,7 @@ typedef struct Operand{
 typedef struct InstProfile{
 
     uint8_t   opcode;
-    OpProfile profile;
+    OpProfile op_profile;
 
 } InstProfile;
 
@@ -210,19 +201,6 @@ int get_reg(const Token token){
         }
     }
     return -1;
-}
-
-uint64_t get_expectations(int inst_profile){
-    switch (inst_profile)
-    {
-    case OP_PROFILE_R:    return EXPECT_OP_REG;
-    case OP_PROFILE_RR :  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF);
-    case OP_PROFILE_RRR:  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF) | ((EXPECT_OP_REG << 16) & ~0XFFFF);
-    case OP_PROFILE_RL:   return EXPECT_OP_REG | ((EXPECT_OP_LIT << 8) & ~0XFF);
-    case OP_PROFILE_L:    return EXPECT_OP_LIT;
-    default:              return EXPECT_ANY;
-    }
-    return EXPECT_ANY;
 }
 
 Operand parse_op_literal(Parser* parser, Token token, int hint){
@@ -445,9 +423,8 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
 
     Operand operand;
     int opv = 0;
-    InstProfile inst = (InstProfile){.opcode = INST_ERROR, .profile = OP_PROFILE_NONE};
+    InstProfile inst = (InstProfile){.opcode = INST_ERROR, .op_profile = OP_PROFILE_NONE};
     Token inst_token = (Token){.value.as_str = NULL};
-    uint64_t expects = EXPECT_ANY;
 
     Token token = get_next_token(parser->tokenizer);
     for(;
@@ -466,7 +443,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             token = tmp;
         }
 
-        switch (expects & 0XFF)
+        switch (inst.op_profile & 0XFF)
         {
         default:
             if(token.type == TKN_MACRO_INST){
@@ -543,7 +520,6 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             opv = 0;
             inst_token = token;
             mc_stream(program, &inst.opcode, 1);
-            expects = get_expectations(inst.profile);
             break;
         case EXPECT_OP_REG:
             operand.value.as_int64 = get_reg(token);
@@ -557,7 +533,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             }
             mc_stream(program, &(operand.value.as_uint8), 1);
             opv += 1;
-            expects = (expects >> 8) & ~0XFF00000000000000;
+            inst.op_profile = (inst.op_profile >> 8) & ~0XFF00000000000000;
             break;
         case EXPECT_OP_LIT:
             if(token.type == TKN_STR){
@@ -573,7 +549,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                 mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
                 mc_stream_str(static_memory, "");
                 mc_stream(program, &(operand.value.as_uint64), 8);
-                expects = (expects >> 8) & ~0XFF00000000000000;
+                inst.op_profile = (inst.op_profile >> 8) & ~0XFF00000000000000;
                 break;
             }
             operand = parse_op_literal(
@@ -591,9 +567,9 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
                 );
                 return 1;
             }
-            mc_stream(program, &(operand.value.as_uint16), 2);
+            mc_stream(program, &(operand.value.as_uint64), 8);
             opv += 1;
-            expects = (expects >> 8) & ~0XFF00000000000000;
+            inst.op_profile = (inst.op_profile >> 8) & ~0XFF00000000000000;
             break;
         }
 

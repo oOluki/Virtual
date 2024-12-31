@@ -127,19 +127,30 @@ typedef enum OpCode{
 
 typedef uint32_t Inst;
 
+
+enum Expects{
+    EXPECT_ANY = 0,
+    EXPECT_INST,
+    EXPECT_OP_REG,
+    EXPECT_OP_LIT,
+    EXPECT_OP_STR,
+    EXPECT_IDENTIFIER,
+};
+
+// R: REGISTER, L: LITERAL, O: OPTIONAL_LITERAL
 typedef enum OpProfile{
 
-    OP_PROFILE_NONE = 0,
+    OP_PROFILE_NONE = EXPECT_ANY,
     // instruction takes one register
-    OP_PROFILE_R,
+    OP_PROFILE_R = EXPECT_OP_REG,
     // instruction takes one literal
-    OP_PROFILE_L,
+    OP_PROFILE_L = EXPECT_OP_LIT,
     // instruction takes two registers
-    OP_PROFILE_RR,
+    OP_PROFILE_RR = (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
     // instruction takes one register and a literal
-    OP_PROFILE_RL,
+    OP_PROFILE_RL = (EXPECT_OP_LIT << 8) | EXPECT_OP_REG,
     // instruction takes three registers
-    OP_PROFILE_RRR,
+    OP_PROFILE_RRR = (EXPECT_OP_REG << 16) | (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
 
 } OpProfile;
 
