@@ -187,19 +187,19 @@ int print_inst(uint8_t inst, const uint8_t* data, const uint8_t* static_memory){
         return 2;
     case INST_AND:
         printf("AND %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
-        return 2;
+        return 3;
     case INST_NAND:
         printf("NAND %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
-        return 2;
+        return 3;
     case INST_OR:
         printf("OR %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
-        return 2;
+        return 3;
     case INST_XOR:
         printf("XOR %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
-        return 2;
+        return 3;
     case INST_BSHIFT:
         printf("BSHIFT %s %s\n", get_reg_str(data[0], buff1), get_reg_str(data[1], buff2));
-        return 2;
+        return 3;
     case INST_JMP:
         printf("JMP %s\n", get_reg_str(data[0], buff1));
         return 9;
