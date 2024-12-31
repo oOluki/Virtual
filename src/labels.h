@@ -41,9 +41,10 @@ Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
 int remove_label(Mc_stream_t* labels, const Token label_token){
     Label* label = get_label(labels, label_token);
     if(label == NULL) return 1;
+    const uint32_t removed_label_size = label->size;
     const size_t ssize = (size_t)(labels->size - label->size - (size_t)((uint8_t*)(label) - (uint8_t*)(labels->data)));
     memmove(label, ((uint8_t*)label) + label->size, ssize);
-    labels->size -= ssize;
+    labels->size -= removed_label_size;
     return 0;
 }
 
