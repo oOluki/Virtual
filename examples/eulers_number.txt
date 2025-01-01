@@ -1,23 +1,28 @@
-;main:
-    MOVV RA 1.0     ; RA will store the number e
-    MOVV RB 0.0     ; RB will store n (number of current iterations)
-    MOVV RC 10.0f    ; RC will store the total number of iterations to be performed
-    MOVV RD 50      ; RD holds the address of the loop
-    MOVV RE 1.0     ; RE holds n!
-    loop:
-        MOVV RF 1.0
-        ADDF RB RF
-        MULF RE RB
-        DIVF RF RE
-        ADDF RA RF
-        MOV  RF RB
-        SMLF RF RC
-        JMPF RF $loop
-    
-    DISREG RA
-    HALT
-    
+;; RA will store the number e
+;; RB will store n (number of current iterations)
+;; RC will store the total number of iterations to be performed
+;; RD holds 1.0f
+;; RE holds 1 / n!
 
 
+MOVV RA 1     
+MOVV RB 0     
+MOVV RC 10 
 
+; casting everything to double
+CASTFU RA
+CASTFU RB
+CASTFU RC
+MOV RD RA
+MOV RE RA
 
+loop:
+    ADDF RB RD
+    DIVF RE RB
+    ADDF RA RE
+    MOV  RF RB
+    SMLF RF RC
+JMPF RF $loop
+
+DISREG RA
+HALT

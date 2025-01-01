@@ -28,6 +28,8 @@ static inline int64_t perform_inst(Inst inst){
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R1.as_##TYPE OP R2.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R1.as_##TYPE OP R2.as_##TYPE
 
+    
+
     switch (inst & 0XFF)
     {
 
@@ -141,12 +143,12 @@ static inline int64_t perform_inst(Inst inst){
         }
         return 1;
     case INST_CALL:
-        vpu.stack[SP++] = IP + 2;
+        vpu.stack[SP++] = IP + 1;
         IP = R1.as_uint64;
-        return 1;
+        return 0;
     case INST_RET:
         IP = vpu.stack[--SP];
-        return 1;
+        return 0;
 
 /*--------------------------------------------------------------------------------------------------------------/
 /                                                                                                               /
@@ -258,10 +260,10 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = (uint64_t)R1.as_float64;
         return 1;
     case INST_CASTFI:
-        R1.as_float64 = (uint64_t)R1.as_int64;
+        R1.as_float64 = (double)R1.as_int64;
         return 1;
     case INST_CASTFU:
-        R1.as_float64 = (uint64_t)R1.as_uint64;
+        R1.as_float64 = (double)R1.as_uint64;
         return 1;
     case INST_CF3264:
         R1.as_float32 = (float)R1.as_float64;
