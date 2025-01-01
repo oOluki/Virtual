@@ -1,7 +1,12 @@
 #ifndef CORE_HEADER
 #define CORE_HEADER
 
+#include <stdlib.h>
 #include "stdint.h"
+
+#ifndef VPU_MEMALIGN_TO
+    #define VPU_MEMALIGN_TO 8
+#endif
 
 typedef enum ExeFlags{
 
@@ -195,7 +200,9 @@ typedef struct VPU
 
     uint8_t* register_space;
 
-    uint64_t* stack;
+    Inst*    program;
+
+    uint64_t stack[1000];
     
 } VPU;
 
@@ -211,25 +218,50 @@ static inline uint32_t swap32(uint32_t x){
     );
 }
 
-static int get_exe_specifications(const void* data, uint64_t* meta_data_size, uint64_t* entry_point, uint32_t* flags){
+static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
+
+    // it may be a good idea to only allow alignment to powers of 2
+    //if(alignment & (alignment - 1)) return NULL;
+
+    const uintptr_t addr = (uintptr_t)malloc(n + sizeof(void*) + alignment) + sizeof(void*);
+
+    if(addr == sizeof(void*)) return NULL;
+
+    *(void**)(addr - sizeof(void*)) = (void*)(addr - sizeof(void*));
+    const uintptr_t offset = (alignment - (addr % alignment)) % alignment;
+
+    return (void *)(addr + offset);
+}
+
+static inline void vpu_free_aligned(void* ptr){
+
+    free((void*) ((uintptr_t)(ptr) - sizeof(void*)));
+
+}
+
+static void* get_exe_specifications(const void* data, uint64_t* meta_data_size, uint64_t* entry_point, uint64_t* flags, uint32_t* padding){
 
     const char* _data = data;
 
     uint32_t magic_number = is_little_endian()? swap32(*(uint32_t*)_data) : *(uint32_t*)_data;
     _data += 4;
 
-    if(magic_number != 0x56505500)
-        return 1;
-    
-    *flags = *(uint32_t*)_data;
-    _data += 4;
+    //                     VPU:
+    if(magic_number != 0x5650553a)
+        return NULL;
 
-    *meta_data_size = *(uint64_t*)_data;
-    _data += 8 + *meta_data_size;
+    *padding = *(uint32_t*)(_data);
+    _data += 4;
+    
+    *flags = *(uint64_t*)_data;
+    _data += 8;
 
     *entry_point = *(uint64_t*)_data;
+    _data += 8;
 
-    return 0;
+    *meta_data_size = *(uint64_t*)_data;
+
+    return (void*)(_data + 8);
 }
 
 

@@ -1,31 +1,43 @@
 #define MC_INITMACRO_FORCE_64BIT 1
 #include <stdio.h>
 #include "parser.h"
+#include <inttypes.h>
 
+int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void* meta_data, uint64_t meta_data_size, uint64_t flags){
 
+    if(program->size % 4){
+        fprintf(stderr, "[INTERNAL ERROR] " __FILE__ ":%i:9 : Program Size (%" PRIu64 ") Is Not Aligned To 4 Bytes\n"
+        "Beware If You Are A User That This Is An Internal Error With The Compiler Implementation "
+        "And Is Likelly Not Your Fault\n", (int) __LINE__, program->size);
+        return 1;
+    }
 
-int write_exe(Mc_stream_t* stream, const char* path, uint64_t entry_point, void* meta_data, uint64_t meta_data_size, uint32_t flags){
+    uint8_t errstatus = 0;
 
-    int errstatus = 0;
+    // padding bytes after the metadata to garantee the 4 byte alignment of the program pointer
+    uint32_t padding = ((4 - (meta_data_size % 4)) % 4);
 
     FILE* file = fopen(path, "wb");
 
     errstatus |= (!file);
 
-    errstatus |= (fwrite("VPU", 4, 1, file) != 1);
+    errstatus |= (fwrite("VPU:", 4, 1, file) != 1);
 
-    errstatus |= (fwrite(&flags, 4, 1, file) != 1);
+    errstatus |= (fwrite(&padding, 4, 1, file) != 1);
 
-    errstatus |= (fwrite(&meta_data_size, 8, 1, file) != 1);
-
-    errstatus |= meta_data_size && (fwrite(meta_data, meta_data_size, 1, file) != 1);
+    errstatus |= (fwrite(&flags, 8, 1, file) != 1);
 
     errstatus |= (fwrite(&entry_point, 8, 1, file) != 1);
 
-    errstatus |= (fwrite(stream->data, 1, stream->size, file) != stream->size);
+    errstatus |= (fwrite(&meta_data_size, 8, 1, file) != 1);
 
-    if(((char*)stream->data)[stream->size - 1] != INST_HALT)
-        errstatus |= (fputc(INST_HALT, file) != INST_HALT);
+    uint64_t dummy = *(uint64_t*)meta_data;
+
+    errstatus |= meta_data_size && (fwrite(meta_data, meta_data_size, 1, file) != 1);
+
+    for( ; padding > 0; padding -= 1) errstatus |= (fwrite(&errstatus, 1, 1, file) != 1);
+
+    errstatus |= (fwrite(program->data, 1, program->size, file) != program->size);
 
     fclose(file);
 
@@ -46,10 +58,11 @@ static inline Token token_from_cstr(char* cstr){
 
 int main(int argc, char** argv){
 
-    // X==X (DEBUG) X==X
-    // argc = 2;
-    // argv = malloc(argc * sizeof(char*));
-    // argv[1] = "../examples/vstd_test.txt";
+    #if 0 // X==X (DEBUG) X==X
+    argc = 2;
+    argv = malloc(argc * sizeof(char*));
+    argv[1] = "../examples/hello_world.txt";
+    #endif
 
     int input_file  = -1;
     int output_file = -1;
@@ -88,7 +101,7 @@ int main(int argc, char** argv){
 
     Mc_stream_t labels = mc_create_stream(1000);
 
-    Mc_stream_t files = (Mc_stream_t){.data = malloc(1000), .size = 0, .capacity = 1000};
+    Mc_stream_t files = mc_create_stream(1000);
 
     #ifdef _WIN32 // changing file separator to default '/'
 
@@ -98,7 +111,7 @@ int main(int argc, char** argv){
 
     #endif
 
-    if(!read_file(&files, argv[input_file], "r", 1)){
+    if(!read_file(&files, argv[input_file], 0, 1)){
         fprintf(stderr, "[ERROR] Could Not Open/Read File '%s'\n", argv[input_file]);
         mc_destroy_stream(program);
         mc_destroy_stream(static_memory);
@@ -126,8 +139,18 @@ int main(int argc, char** argv){
 
     *(uint64_t*)(static_memory.data) = static_memory.size;
 
-    status = write_exe(&program, (output_file > 0)? argv[output_file] : "output.bin", parser.entry_point, static_memory.data, static_memory.size, EXE_DEFAULT);
-    if(status) goto defer;
+    status = write_exe(
+        &program,
+        (output_file > 0)? argv[output_file] : "output.bin",
+        parser.entry_point,
+        static_memory.data,
+        static_memory.size,
+        EXE_DEFAULT
+    );
+    if(status){
+        fprintf(stderr, "[ERROR] Could Not Write Executable To '%s'\n", (output_file > 0)? argv[output_file] : "output.bin");
+        goto defer;
+    }
 
     defer:
     mc_destroy_stream(program);

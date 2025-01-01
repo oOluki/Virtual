@@ -1,10 +1,11 @@
 #ifndef VIRTUAL_LEXER_H
 #define VIRTUAL_LEXER_H
 
-#include <stdlib.h>
+
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include "core.h"
 
 
 typedef struct Mc_stream_t{
@@ -201,26 +202,14 @@ static inline uint64_t mc_swap64(uint64_t x) {
         ((x & 0xFF00000000000000ULL) >> 56);
 }
 
-void mc_put(Mc_stream_t* stream, char c){
-    if(1 + stream->size > stream->capacity){
-        void* old_data = (char*)stream->data;
-        stream->capacity *= 2;
-        stream->data = malloc(stream->capacity);
-        memcpy(stream->data, old_data, stream->size);
-        free(old_data);
-    }
-    ((char*)stream->data)[stream->size] = c;
-    stream->size += 1;
-}
-
 // streams size bytes of data to stream
 void mc_stream(Mc_stream_t* stream, const void* data, size_t size){
     if(size + stream->size > stream->capacity){
         void* old_data = stream->data;
         stream->capacity *= 1 + (size_t)((size + stream->size) / stream->capacity);
-        stream->data = malloc(stream->capacity);
+        stream->data = vpu_alloc_aligned(stream->capacity, 8);
         memcpy(stream->data, old_data, stream->size);
-        free(old_data);
+        vpu_free_aligned(old_data);
     }
     memcpy((uint8_t*)(stream->data) + stream->size, data, size);
     stream->size += size;
@@ -235,30 +224,30 @@ void mc_stream_str(Mc_stream_t* stream, const char* data){
     mc_stream(stream, data, size * sizeof(char));
 }
 
-// \returns (Mc_stream_t){.data = (Mc_byte_t*)malloc(capacity), .size = 0, .capacity = capacity};
+// \returns (Mc_stream_t){.data = vpu_alloc_aligned(capacity, VPU_MEMALIGN_TO), .size = 0, .capacity = capacity};
 Mc_stream_t mc_create_stream(uint64_t capacity){
-    return (Mc_stream_t){.data = malloc(capacity), .size = 0, .capacity = capacity};
+    return (Mc_stream_t){.data = vpu_alloc_aligned(capacity, VPU_MEMALIGN_TO), .size = 0, .capacity = capacity};
 }
 
-// this simply passes stream.data to free. free(stream.data)
+// this simply passes stream.data to vpu_free_aligned. free(stream.data)
 void mc_destroy_stream(Mc_stream_t stream){
-    free(stream.data);
+    vpu_free_aligned(stream.data);
 }
 
 // changes the capacity of the stream to new_cap, resizing it accordingly
-void mc_change_stream_cap(Mc_stream_t* stream, size_t new_cap){
-    stream->capacity = new_cap;
-
-    void* old_data = stream->data;
-
-    stream->data = malloc(new_cap);
-
-    if(new_cap < stream->size) stream->size = new_cap;
-
-    memcpy(stream->data, old_data, stream->size);
-
-    free(old_data);
-}
+//void mc_change_stream_cap(Mc_stream_t* stream, size_t new_cap){
+//    stream->capacity = new_cap;
+//
+//    void* old_data = stream->data;
+//
+//    stream->data = malloc(new_cap);
+//
+//    if(new_cap < stream->size) stream->size = new_cap;
+//
+//    memcpy(stream->data, old_data, stream->size);
+//
+//    free(old_data);
+//}
 
 
 
@@ -403,9 +392,9 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
 
 // if include_file_path is NOT 0 then, on success, the file path will be streamed to the stream as streamview
 // (first size (uint32) then cstr (null terminated)) before the file contents
-char* read_file(Mc_stream_t* stream, const char* path, const char* modes, int include_file_path){
+char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_file_path){
 
-    FILE* file = fopen(path, modes);
+    FILE* file = fopen(path, binary? "rb" : "r");
     if(!file) return NULL;
 
     if(fseek(file, 0, SEEK_END)){
@@ -437,14 +426,14 @@ char* read_file(Mc_stream_t* stream, const char* path, const char* modes, int in
     if(stream->size + size + 1 > stream->capacity){
         stream->capacity = (size_t)(size + stream->size + 1);
         void* odata = stream->data;
-        stream->data = (char*)malloc(stream->capacity);
+        stream->data = (char*)vpu_alloc_aligned(stream->capacity, 8);
         memcpy(stream->data, odata, stream->size);
-        free(odata);
+        vpu_free_aligned(odata);
     }
 
     stream->size += fread((uint8_t*)(stream->data) + stream->size, 1, size, file);
 
-    ((char*)stream->data)[stream->size++] = '\0';
+    if(!binary) ((char*)stream->data)[stream->size++] = '\0';
 
     fclose(file);
 
@@ -464,7 +453,7 @@ char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView 
     const char nullterm_ = '\0';
     mc_stream(stream, &nullterm_, sizeof(nullterm_));
 
-    char* const status = read_file(stream, (char*)((uint8_t*)(stream->data) + ssize + sizeof(path_str_size)), "r", 0);
+    char* const status = read_file(stream, (char*)((uint8_t*)(stream->data) + ssize + sizeof(path_str_size)), 0, 0);
 
     if(status == NULL){
         stream->size = ssize;
