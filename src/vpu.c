@@ -134,7 +134,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = R1.as_uint64 ^ R2.as_uint64;
         return 1;
     case INST_BSHIFT:
-        R1.as_uint64 = R2.as_int8 < 0? R1.as_uint64 >> -(R2.as_int64) : R1.as_uint64 << R2.as_uint64;
+        R1.as_uint64 = R2.as_int64 < 0? R1.as_uint64 >> -(R2.as_int64) : R1.as_uint64 << R2.as_uint64;
         return 1;
     case INST_JMP:
         IP = L1;
@@ -389,7 +389,10 @@ int main(int argc, char** argv){
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(vpu.program[vpu.registers[RIP / 8].as_uint64])
-    );
+    ){
+        const Inst i = vpu.program[vpu.registers[RIP / 8].as_uint64];
+        printf("%u %u %u %u\n", i & 0XFF, (i >> 8) & 0XFF, (i >> 16) & 0XFF, (i >> 24));
+    }
 
     mc_destroy_stream(stream);
 
