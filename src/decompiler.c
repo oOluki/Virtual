@@ -197,6 +197,7 @@ int print_inst(Inst inst, const uint8_t* static_memory){
         printf("NEG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_AND:
+
         printf("AND %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_NAND:
