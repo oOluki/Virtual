@@ -27,11 +27,17 @@ typedef enum OpCode{
     INST_MOV16,
     // moves a 32 bit value from a register into another register
     INST_MOV32,
-    // moves a 64 bit value from a register into another register
+    // moves a 64 bit value from the first register into the second register
     INST_MOV,
-    // moves a 64 bit value directly into a register
+    // moves a 64 bit value from the second register into the third register if the first register value is not 0
+    INST_MOVC,
+    // moves an immediate value directly into a 64 bit register
     INST_MOVV,
-    // pushes a 64 bit value to the stack from a register
+    // moves the bitwise not of an immediate value directly into a register
+    INST_MOVN,
+    // moves an immediate value directly into the first 16 bits of a register
+    INST_MOVV16,
+    // pushes a value from a register to the stack
     INST_PUSH,
     // pushes a 64 bit value directly to the stack
     INST_PUSHV,

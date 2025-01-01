@@ -3,23 +3,35 @@
 ;; for reference and the history of the original algorithm check: https://en.m.wikipedia.org/wiki/Fast_inverse_square_root
 
 ;; lets calculate the 1/sqrt(400)
-MOVV RA 400.0
+MOVV RA 400
+CASTFU RA
 
 ;; evil bit level hacking (trivial in this case)
 MOV RB RA
 
 ;; "what the fuck"
-MOVV RC -1
+MOVN RC 0
 BSHIFT RB RC
-MOVV RC 0x5fe6ec85e7de30da
+MOVV16 RC6 0x5fe6
+MOVV16 RC4 0xec85
+MOVV16 RC2 0xe7de
+MOVV16 RC  0x30da
 SUB RC RB
 
 ; newton's method iteration
-MOVV RB 0.5
+MOVV RB 1
+MOVV RF 2
+CASTFU RB
+CASTFU RF
+DIVF RB RF
 MULF RB RA
 MULF RB RC
 MULF RB RC
-MOVV RA 1.5
+MOVV RA 3
+MOVV RF 2
+CASTFU RA
+CASTFU RF
+DIVF RA RF
 SUBF RA RB
 MULF RA RC
 

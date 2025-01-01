@@ -26,7 +26,7 @@ static inline int64_t perform_inst(Inst inst){
     #define IP (*(Register*)(vpu.register_space + RIP)).as_uint64
 
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R1.as_##TYPE OP R2.as_##TYPE
-    #define COMPARE(OP, TYPE)   R1.as_uint8 = R1.as_##TYPE OP R2.as_##TYPE
+    #define COMPARE(OP, TYPE)   R1.as_uint64 = R1.as_##TYPE OP R2.as_##TYPE
 
     
 
@@ -55,8 +55,17 @@ static inline int64_t perform_inst(Inst inst){
     case INST_MOV:
         R1 = R2;
         return 1;
+    case INST_MOVC:
+        if(R1.as_uint64) R2 = R3;
+        return 1;
     case INST_MOVV:
         R1.as_uint64 = L2;
+        return 1;
+    case INST_MOVN:
+        R1.as_uint64 = ~(uint64_t)L2;
+        return 1;
+    case INST_MOVV16:
+        R1.as_uint16 = L2;
         return 1;
     case INST_PUSH:
         vpu.stack[SP++] = R1.as_uint64;
@@ -125,19 +134,19 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = R1.as_uint64 ^ R2.as_uint64;
         return 1;
     case INST_BSHIFT:
-        R1.as_uint64 = R2.as_int64 < 0? R1.as_uint64 >> -(R2.as_int64) : R1.as_uint64 << R2.as_uint64;
+        R1.as_uint64 = R2.as_int8 < 0? R1.as_uint64 >> -(R2.as_int64) : R1.as_uint64 << R2.as_uint64;
         return 1;
     case INST_JMP:
         IP = L1;
         return 1;
     case INST_JMPIF:
-        if(R1.as_uint8){
+        if(R1.as_uint64){
             IP = L2;
             return 0;
         }
         return 1;
     case INST_JMPIFN:
-        if(!(R1.as_uint8)){
+        if(!(R1.as_uint64)){
             IP = L2;
             return 0;
         }
@@ -283,7 +292,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_ptr = memmove(R1.as_ptr, R2.as_ptr, R3.as_uint64);
         return 1;
     case INST_MEMCMP:
-        R1.as_int8 = (uint8_t)memcmp(R1.as_ptr, R2.as_ptr, R3.as_uint64);
+        R1.as_int64 = (uint8_t)memcmp(R1.as_ptr, R2.as_ptr, R3.as_uint64);
         return 1;
     case INST_MALLOC:
         R1.as_ptr = malloc(R1.as_uint64);
@@ -304,13 +313,13 @@ static inline int64_t perform_inst(Inst inst){
         }
         return 1;
     case INST_FCLOSE:
-        R1.as_uint32 = fclose((FILE*)R1.as_ptr);
+        R1.as_uint64 = fclose((FILE*)R1.as_ptr);
         return 1;
     case INST_PUTC:
-        R1.as_int32 = fputc(R1.as_int32, R2.as_ptr);
+        R1.as_int64 = fputc(R1.as_int32, R2.as_ptr);
         return 1;
     case INST_GETC:
-        R1.as_int32 = fgetc(R1.as_ptr);
+        R1.as_int64 = fgetc(R1.as_ptr);
         return 1;
     
 
@@ -370,7 +379,7 @@ int main(int argc, char** argv){
         i += block_size;
     }
 
-    const uint64_t program_size = stream.size - meta_data_size - skip - padding;
+    const uint64_t program_size = (stream.size - meta_data_size - skip - padding) / 4;
 
     vpu.program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
 

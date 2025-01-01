@@ -36,70 +36,57 @@ char get_digit_char(int i){
 
 char* get_reg_str(int reg, char* output){
 
-
-
-    output[3] = '\0';
-    switch (reg)
+    switch (8 * (int)(reg / 8))
     {
-    case RA1:
-    case RA2:
-    case RA3:
-    case RA4:
     case RA:
         output[0] = 'R';
         output[1] = 'A';
         output[2] = get_digit_char(reg - RA);
+        output[3] = '\0';
         return output;
-    case RB1:
-    case RB2:
-    case RB3:
-    case RB4:
     case RB:
         output[0] = 'R';
         output[1] = 'B';
         output[2] = get_digit_char(reg - RB);
+        output[3] = '\0';
         return output;
-    case RC1:
-    case RC2:
-    case RC3:
-    case RC4:
     case RC:
         output[0] = 'R';
         output[1] = 'C';
         output[2] = get_digit_char(reg - RC);
+        output[3] = '\0';
         return output;
-    case RD1:
-    case RD2:
-    case RD3:
-    case RD4:
     case RD:
         output[0] = 'R';
         output[1] = 'D';
         output[2] = get_digit_char(reg - RD);
+        output[3] = '\0';
         return output;
-    case RE1:
-    case RE2:
-    case RE3:
-    case RE4:
     case RE:
         output[0] = 'R';
         output[1] = 'E';
         output[2] = get_digit_char(reg - RE);
+        output[3] = '\0';
         return output;
     case RF:
         output[0] = 'R';
         output[1] = 'F';
-        output[2] = '\0';
+        output[2] = get_digit_char(reg - RF);
+        output[3] = '\0';
         return output;
     case RSP:
         output[0] = 'R';
         output[1] = 'S';
         output[2] = 'P';
+        output[3] = get_digit_char(reg - RSP);
+        output[4] = '\0';
         return output;
     case RIP:
         output[0] = 'R';
         output[1] = 'I';
         output[2] = 'P';
+        output[2] = get_digit_char(reg - RIP);
+        output[4] = '\0';
         return output;
     
     default: return NULL;
@@ -133,9 +120,20 @@ int print_inst(Inst inst, const uint8_t* static_memory){
     case INST_MOV:
         printf("MOV %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
+    case INST_MOVC:
+        printf("MOVC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        return 0;
     case INST_MOVV:{
         Register op = {.as_uint16 = L2};
         printf("MOVV %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 0;
+    case INST_MOVN:{
+        Register op = {.as_uint16 = L2};
+        printf("MOVN %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+    }   return 0;
+    case INST_MOVV16:{
+        Register op = {.as_uint16 = L2};
+        printf("MASK %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_PUSH:
         printf("PUSH %s\n", get_reg_str(R1, buff1));
