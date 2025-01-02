@@ -303,7 +303,7 @@ static inline int64_t perform_inst(Inst inst){
     
 
     case INST_FOPEN:
-        switch (R2.as_uint8)
+        switch (R2.as_uint64)
         {
         case 0: R1.as_ptr = fopen(R1.as_ptr, "rb"); break;
         case 1: R1.as_ptr = fopen(R1.as_ptr, "wb"); break;
@@ -344,13 +344,10 @@ static inline int64_t perform_inst(Inst inst){
 
 int main(int argc, char** argv){
 
-    fprintf(stderr, "[ERROR] 0\n");
-
     if(argc != 2){
         fprintf(stderr, "[ERROR] Expected 1 Argument, Got %i Instead\n", argc - 1);
         return 1;
     }
-    fprintf(stderr, "[ERROR] 1\n");
 
     Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
 
@@ -358,9 +355,6 @@ int main(int argc, char** argv){
         fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
         return 2;
     }
-    fprintf(stderr, "[ERROR] 2\n");
-
-
 
     uint64_t flags;
     uint64_t meta_data_size;
@@ -373,8 +367,6 @@ int main(int argc, char** argv){
 
     if(!meta_data) return 1;
 
-    fprintf(stderr, "[ERROR] 3\n");
-
     for(size_t i = 0; i + 8 < meta_data_size; ){
         const uint64_t block_size = *(uint64_t*)((uint8_t*)(stream.data) + i);
         const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
@@ -384,15 +376,12 @@ int main(int argc, char** argv){
         }
         i += block_size;
     }
-    fprintf(stderr, "[ERROR] 4\n");
 
     const uint64_t program_size = (stream.size - meta_data_size - skip - padding) / 4;
 
     vpu.program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
 
     vpu.register_space = (uint8_t*)vpu.registers;
-
-    fprintf(stderr, "[ERROR] 5\n");
 
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
