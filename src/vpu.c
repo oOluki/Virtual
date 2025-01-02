@@ -344,6 +344,8 @@ static inline int64_t perform_inst(Inst inst){
 
 int main(int argc, char** argv){
 
+    printf("0\n");
+
     if(argc != 2){
         fprintf(stderr, "[ERROR] Expected 1 Argument, Got %i Instead\n", argc - 1);
         return 1;
