@@ -394,8 +394,6 @@ int main(int argc, char** argv){
 
     fprintf(stderr, "[ERROR] 5\n");
 
-    vpu.stack = vpu_alloc_aligned(1000 * sizeof(*vpu.stack), VPU_MEMALIGN_TO);
-
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
@@ -403,8 +401,6 @@ int main(int argc, char** argv){
     );
 
     mc_destroy_stream(stream);
-
-    vpu_free_aligned(vpu.stack);
 
     return 0;
 }

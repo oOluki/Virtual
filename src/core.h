@@ -208,7 +208,7 @@ typedef struct VPU
 
     Inst*    program;
 
-    uint64_t* stack;
+    uint64_t stack[1000];
     
 } VPU;
 
@@ -241,7 +241,7 @@ static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
 
 static inline void vpu_free_aligned(void* ptr){
 
-    free((void*) ((uintptr_t)(ptr) - sizeof(void*)));
+    if(ptr) free((void*) ((uintptr_t)(ptr) - sizeof(void*)));
 
 }
 
