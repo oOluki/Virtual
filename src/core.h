@@ -1,7 +1,12 @@
 #ifndef CORE_HEADER
 #define CORE_HEADER
 
+#include <stdlib.h>
 #include "stdint.h"
+
+#ifndef VPU_MEMALIGN_TO
+    #define VPU_MEMALIGN_TO 8
+#endif
 
 typedef enum ExeFlags{
 
@@ -10,7 +15,7 @@ typedef enum ExeFlags{
 } ExeFlags;
 
 
-typedef enum Inst{
+typedef enum OpCode{
 
     // does nothing
     INST_NOP = 0,
@@ -22,11 +27,17 @@ typedef enum Inst{
     INST_MOV16,
     // moves a 32 bit value from a register into another register
     INST_MOV32,
-    // moves a 64 bit value from a register into another register
+    // moves a 64 bit value from the first register into the second register
     INST_MOV,
-    // moves a 64 bit value directly into a register
+    // moves a 64 bit value from the second register into the third register if the first register value is not 0
+    INST_MOVC,
+    // moves an immediate value directly into a 64 bit register
     INST_MOVV,
-    // pushes a 64 bit value to the stack from a register
+    // moves the bitwise not of an immediate value directly into a register
+    INST_MOVN,
+    // moves an immediate value directly into the first 16 bits of a register
+    INST_MOVV16,
+    // pushes a value from a register to the stack
     INST_PUSH,
     // pushes a 64 bit value directly to the stack
     INST_PUSHV,
@@ -123,22 +134,34 @@ typedef enum Inst{
 
     INST_ERROR = 255
 
-} Inst;
+} OpCode;
+
+typedef uint32_t Inst;
 
 
+enum Expects{
+    EXPECT_ANY = 0,
+    EXPECT_INST,
+    EXPECT_OP_REG,
+    EXPECT_OP_LIT,
+    EXPECT_OP_STR,
+    EXPECT_IDENTIFIER,
+};
+
+// R: REGISTER, L: LITERAL, O: OPTIONAL_LITERAL
 typedef enum OpProfile{
 
-    OP_PROFILE_NONE = 0,
+    OP_PROFILE_NONE = EXPECT_ANY,
     // instruction takes one register
-    OP_PROFILE_R,
+    OP_PROFILE_R = EXPECT_OP_REG,
     // instruction takes one literal
-    OP_PROFILE_L,
+    OP_PROFILE_L = EXPECT_OP_LIT,
     // instruction takes two registers
-    OP_PROFILE_RR,
+    OP_PROFILE_RR = (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
     // instruction takes one register and a literal
-    OP_PROFILE_RL,
+    OP_PROFILE_RL = (EXPECT_OP_LIT << 8) | EXPECT_OP_REG,
     // instruction takes three registers
-    OP_PROFILE_RRR,
+    OP_PROFILE_RRR = (EXPECT_OP_REG << 16) | (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
 
 } OpProfile;
 
@@ -183,7 +206,9 @@ typedef struct VPU
 
     uint8_t* register_space;
 
-    uint64_t* stack;
+    Inst*    program;
+
+    uint64_t stack[1000];
     
 } VPU;
 
@@ -199,25 +224,50 @@ static inline uint32_t swap32(uint32_t x){
     );
 }
 
-static int get_exe_specifications(const void* data, uint64_t* meta_data_size, uint64_t* entry_point, uint32_t* flags){
+static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
+
+    // it may be a good idea to only allow alignment to powers of 2
+    //if(alignment & (alignment - 1)) return NULL;
+
+    const uintptr_t addr = (uintptr_t)malloc(n + sizeof(void*) + alignment) + sizeof(void*);
+
+    if(addr == sizeof(void*)) return NULL;
+
+    *(void**)(addr - sizeof(void*)) = (void*)(addr - sizeof(void*));
+    const uintptr_t offset = (alignment - (addr % alignment)) % alignment;
+
+    return (void *)(addr + offset);
+}
+
+static inline void vpu_free_aligned(void* ptr){
+
+    if(ptr) free((void*) ((uintptr_t)(ptr) - sizeof(void*)));
+
+}
+
+static void* get_exe_specifications(const void* data, uint64_t* meta_data_size, uint64_t* entry_point, uint64_t* flags, uint32_t* padding){
 
     const char* _data = data;
 
     uint32_t magic_number = is_little_endian()? swap32(*(uint32_t*)_data) : *(uint32_t*)_data;
     _data += 4;
 
-    if(magic_number != 0x56505500)
-        return 1;
-    
-    *flags = *(uint32_t*)_data;
-    _data += 4;
+    //                     VPU:
+    if(magic_number != 0x5650553a)
+        return NULL;
 
-    *meta_data_size = *(uint64_t*)_data;
-    _data += 8 + *meta_data_size;
+    *padding = *(uint32_t*)(_data);
+    _data += 4;
+    
+    *flags = *(uint64_t*)_data;
+    _data += 8;
 
     *entry_point = *(uint64_t*)_data;
+    _data += 8;
 
-    return 0;
+    *meta_data_size = *(uint64_t*)_data;
+
+    return (void*)(_data + 8);
 }
 
 

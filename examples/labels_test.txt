@@ -1,18 +1,22 @@
 %labelv X
 
+dummy:
+
 %unlabel X      ;; testing the label addition and deletion
 
 %iflabel X      ;; testing the if macros
 
-%label HELLO "hello from virtual"
+%label HELLO "[ERROR] TEST FAILED"
 
 %endif
 
 %ifnlabel X
 
-%label HELLO "hello from label test"
+%label HELLO "LABELS TEST WAS SUCCESSFULL"
 
 %endif
+
+%unlabel dummy
 
 say_hello:
     STATIC $HELLO

@@ -8,14 +8,12 @@
 
 #define COMP_TKN(TKN1, TKN2) mc_compare_token(TKN1, TKN2, 0)
 
-#define REPORT_ERROR(PARSER, STR, ...) do{\
-    fprintf(\
+#define REPORT_ERROR(PARSER, STR, ...) fprintf(\
         stderr,\
         "[ERROR] %s:%i:%i :  " STR,\
         PARSER->file_path, PARSER->tokenizer->line + 1,\
         PARSER->tokenizer->column + 1, __VA_ARGS__\
-    );\
-} while(0)
+    )
 
 #define REP_INVALID_REGID(PARSER, TOKEN) REPORT_ERROR(PARSER, "\n\tInvalid Register Identifier '%.*s', No Such Register\n", TOKEN.size, TOKEN.value.as_str)
 
@@ -38,15 +36,6 @@ enum OpHint{
 
 };
 
-enum Expects{
-    EXPECT_ANY = 0,
-    EXPECT_INST,
-    EXPECT_OP_REG,
-    EXPECT_OP_LIT,
-    EXPECT_OP_STR,
-    EXPECT_IDENTIFIER,
-};
-
 typedef struct Operand{
     
     Register value;
@@ -56,8 +45,8 @@ typedef struct Operand{
 
 typedef struct InstProfile{
 
-    uint8_t   inst;
-    OpProfile profile;
+    uint8_t   opcode;
+    OpProfile op_profile;
 
 } InstProfile;
 
@@ -73,7 +62,7 @@ typedef struct Parser
 } Parser;
 
 
-InstProfile parse_inst(const Token inst_token){
+InstProfile get_inst_profile(const Token inst_token){
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 
     if(COMP_TKN(inst_token, MKTKN("NOP")))    return (InstProfile){INST_NOP   , OP_PROFILE_NONE};
@@ -82,7 +71,10 @@ InstProfile parse_inst(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("MOV16")))  return (InstProfile){INST_MOV16 , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("MOV32")))  return (InstProfile){INST_MOV32 , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("MOV")))    return (InstProfile){INST_MOV   , OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("MOVC")))   return (InstProfile){INST_MOVC  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MOVV")))   return (InstProfile){INST_MOVV  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("MOVN")))   return (InstProfile){INST_MOVN  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("MOVV16"))) return (InstProfile){INST_MOVV16, OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("PUSHV")))  return (InstProfile){INST_PUSHV , OP_PROFILE_L};
     if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
@@ -193,7 +185,7 @@ static inline int get_major_reg_identifier(const Token token){
     return -1;
 }
 
-int get_reg(const Token token){
+uint32_t get_reg(const Token token){
     if(token.type == TKN_REG) return (int)token.value.as_uint;
     if(token.type != TKN_RAW) return -1;
     const int reg = get_major_reg_identifier(token);
@@ -210,19 +202,6 @@ int get_reg(const Token token){
         }
     }
     return -1;
-}
-
-uint64_t get_expectations(int inst_profile){
-    switch (inst_profile)
-    {
-    case OP_PROFILE_R:    return EXPECT_OP_REG;
-    case OP_PROFILE_RR :  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF);
-    case OP_PROFILE_RRR:  return EXPECT_OP_REG | ((EXPECT_OP_REG << 8) & ~0XFF) | ((EXPECT_OP_REG << 16) & ~0XFFFF);
-    case OP_PROFILE_RL:   return EXPECT_OP_REG | ((EXPECT_OP_LIT << 8) & ~0XFF);
-    case OP_PROFILE_L:    return EXPECT_OP_LIT;
-    default:              return EXPECT_ANY;
-    }
-    return EXPECT_ANY;
 }
 
 Operand parse_op_literal(Parser* parser, Token token, int hint){
@@ -440,23 +419,17 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
     return 1;
 }
 
-// \return 1 on error or 0 otherwise
-int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, Mc_stream_t* files_stream){
+// \returns 0 on success or 1 on failure
+int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program, InstProfile inst_profile, const StringView inst_sv){
 
-    Operand operand;
-    int opv = 0;
-    InstProfile inst;
-    Token inst_token;
-    uint64_t expects = EXPECT_ANY;
+    Inst inst = inst_profile.opcode;
+    int op_pos_in_inst = 1;
+    int op_token_pos = 1;
 
-    Token token = get_next_token(parser->tokenizer);
-    for(;
-        (token.type != TKN_NONE) && (token.type != TKN_ERROR);
-        token = get_next_token(parser->tokenizer)){
-
-        while (token.type == TKN_EMPTY) continue;
-
-
+    for ( ; inst_profile.op_profile;
+    inst_profile.op_profile = (inst_profile.op_profile >> 8) & ~0XFF00000000000000)
+    {
+        Token token = get_next_token(parser->tokenizer);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -465,141 +438,169 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             }
             token = tmp;
         }
-
-        switch (expects & 0XFF)
-        {
-        default:
-            if(token.type == TKN_MACRO_INST){
-                StringView next_path_sv = (StringView){.str = NULL};
-                if(parse_macro(parser, program->size, token, &next_path_sv)){
-                    return 1;
-                }
-                if(next_path_sv.str != NULL){
-                    StringView mother_directory = (StringView){.str = parser->file_path, .size = parser->file_path_size};
-                    for(int i = 0; i < mother_directory.size; i+=1){
-                        const char c = mother_directory.str[mother_directory.size - i - 1];
-                        if(c == '/'){
-                            mother_directory.size -= i;
-                            break;
-                        }
-                    }
-                    const uint64_t previous_file_stream_size = files_stream->size;
-                    const char* const new_file = read_file_relative(files_stream, mother_directory, next_path_sv);
-                    if(new_file == NULL){
-                        REPORT_ERROR(
-                            parser, "Could Not Read File '%.*s%.*s', Invalid File Or File Path\n\n",
-                            mother_directory.size, mother_directory.str, next_path_sv.size, next_path_sv.str
-                        );
-                        return 1;
-                    }
-                    const Tokenizer previous_tokenizer_state = *(parser->tokenizer);
-                    const int macro_if_depth = parser->macro_if_depth;
-                    const size_t file_pos = (size_t)((uint8_t*)(parser->file_path) - (uint8_t*)(files_stream->data));
-                    const int previous_file_path_size = parser->file_path_size;
-                    parser->macro_if_depth = 0;
-                    *(parser->tokenizer) = (Tokenizer){
-                        .data = (char*)((uint8_t*)(new_file) + mother_directory.size + next_path_sv.size + 1 + sizeof(uint32_t)),
-                        .pos = 0, .line = 0, .column = 0
-                    };
-                    parser->file_path = (char*)((uint8_t*)(new_file) + sizeof(uint32_t));
-                    if(parse_file(parser, program, static_memory, files_stream))
-                        return 1;
-                    files_stream->size = previous_file_stream_size;
-                    parser->file_path = (char*)((uint8_t*)(files_stream->data) + file_pos);
-                    parser->file_path_size = previous_file_path_size;
-                    parser->macro_if_depth = macro_if_depth;
-                    *(parser->tokenizer) = previous_tokenizer_state;
-                    parser->tokenizer->data = (char*)((uint8_t*)(files_stream->data) + file_pos + parser->file_path_size + 1);
-                }
-                continue;
-            }
-        case EXPECT_INST:
-            inst = parse_inst(token);
-            if(inst.inst == INST_ERROR){
-                const Token next_token = get_next_token(parser->tokenizer);
-                if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
-                    if(COMP_TKN(next_token, MKTKN(":"))){
-                        if(
-                            add_label(
-                                parser->labels, token,
-                                (Token){.value.as_uint = program->size,
-                                .type = TKN_ULIT},
-                                0
-                            )
-                        ) {
-                            REPORT_ERROR(
-                                parser,
-                                "\n\tCould Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
-                                token.size, token.value.as_str
-                            );
-                            return 1;
-                        }
-                        break;
-                    }
-                }
-                REPORT_ERROR(parser, "\n\tExpected Instruction, Got '%.*s' Instead\n\n", token.size, token.value.as_str);
-                return 1;
-            }
-            opv = 0;
-            inst_token = token;
-            mc_stream(program, &inst.inst, 1);
-            expects = get_expectations(inst.profile);
-            break;
-        case EXPECT_OP_REG:
-            operand.value.as_int64 = get_reg(token);
-            if(operand.value.as_int64 < 0){
+        const int expect = inst_profile.op_profile & 0XFF; 
+        if(expect == EXPECT_OP_REG){
+            const int32_t reg = get_reg(token);
+            if(reg < 0){
                 REPORT_ERROR(
                     parser,
                     "\n\tArgument %i Of Instruction %.*s Should Be Register, Got '%.*s' Instead\n\n",
-                    opv + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
+                    op_token_pos, inst_sv.size, inst_sv.str, token.size, token.value.as_str
                 );
                 return 1;
             }
-            mc_stream(program, &(operand.value.as_uint8), 1);
-            opv += 1;
-            expects = (expects >> 8) & ~0XFF00000000000000;
-            break;
-        case EXPECT_OP_LIT:
+            inst |= (reg << (op_pos_in_inst * 8));
+            op_pos_in_inst += 1;
+            op_token_pos += 1;
+        }
+        else{   // EXPECT_OP_LIT
             if(token.type == TKN_STR){
-                if(inst.inst != INST_STATIC){
-                    REPORT_ERROR(parser, "\n\tInstruction %.*s Can't Take String As Argument\n\n", inst_token.size, inst_token.value.as_str);
-                    return 1;
-                }
-                if(token.value.as_str[token.size - 1] != '\"'){
+                if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return 1;
                 }
-                operand.value.as_uint64 = static_memory->size;
+                const uint64_t op_value = static_memory->size;
                 mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
                 mc_stream_str(static_memory, "");
-                mc_stream(program, &(operand.value.as_uint64), 8);
-                expects = (expects >> 8) & ~0XFF00000000000000;
-                break;
+                inst |= (op_value & 0XFFFFFF) << 8;
+                op_token_pos += 1;
+                op_pos_in_inst += 2;
+                continue;
             }
-            operand = parse_op_literal(
+            const Operand operand = parse_op_literal(
                 parser,
                 token,
-                (inst.inst == INST_MOV8)  * HINT_8BIT  +
-                (inst.inst == INST_MOV16) * HINT_16BIT +
-                (inst.inst == INST_MOV32) * HINT_32BIT
+                (inst_profile.opcode == INST_MOV8)  * HINT_8BIT  +
+                (inst_profile.opcode == INST_MOV16) * HINT_16BIT +
+                (inst_profile.opcode == INST_MOV32) * HINT_32BIT
             );
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
                     parser,
-                    "\n\tArgument %i Of Instruction %.*s Should Be A Literal, Got '%.*s' Instead\n\n",
-                    opv + 1, inst_token.size, inst_token.value.as_str, token.size, token.value.as_str
+                    "\n\tArgument %i Of Instruction %.*s Should Be Literal, Got '%.*s' Instead\n\n",
+                    op_token_pos, inst_sv.size, inst_sv.str, token.size, token.value.as_str
                 );
                 return 1;
             }
-            mc_stream(program, &(operand.value.as_uint64), 8);
-            opv += 1;
-            expects = (expects >> 8) & ~0XFF00000000000000;
-            break;
+            if(operand.value.as_uint16 != operand.value.as_uint64){
+                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
+                return 1;
+            }
+            inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
+            op_pos_in_inst += 2;
+            op_token_pos += 1;
         }
-
     }
 
-    return token.type == TKN_ERROR;
+    mc_stream(program, &inst, sizeof(inst));
+
+    return 0;
+}
+
+// \return 1 on error or 0 otherwise
+int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, Mc_stream_t* files_stream){
+
+    InstProfile inst_profile = (InstProfile){.opcode = INST_ERROR, .op_profile = OP_PROFILE_NONE};
+    Token inst_token = (Token){.value.as_str = NULL};
+
+    Token token = get_next_token(parser->tokenizer);
+    for(;
+        (token.type != TKN_NONE) && (token.type != TKN_ERROR);
+        token = get_next_token(parser->tokenizer)){
+
+        if(token.type == TKN_EMPTY){
+            continue;
+        }
+        if(token.type == TKN_LABEL_REF){
+            const Token tmp = resolve_token(parser->labels, token);
+            if(tmp.type == TKN_ERROR){
+                REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", token.size, token.value.as_str);
+                return 1;
+            }
+            token = tmp;
+        }
+        if(token.type == TKN_MACRO_INST){
+            StringView next_path_sv = (StringView){.str = NULL};
+            if(parse_macro(parser, program->size / sizeof(Inst), token, &next_path_sv)){
+                return 1;
+            }
+            if(next_path_sv.str != NULL){
+                StringView mother_directory = (StringView){.str = parser->file_path, .size = parser->file_path_size};
+                for(int i = 0; i < mother_directory.size; i+=1){
+                    const char c = mother_directory.str[mother_directory.size - i - 1];
+                    if(c == '/'){
+                        mother_directory.size -= i;
+                        break;
+                    }
+                }
+                const uint64_t previous_file_stream_size = files_stream->size;
+                const char* const new_file = read_file_relative(files_stream, mother_directory, next_path_sv);
+                if(new_file == NULL){
+                    REPORT_ERROR(
+                        parser, "Could Not Read File '%.*s%.*s', Invalid File Or File Path\n\n",
+                        mother_directory.size, mother_directory.str, next_path_sv.size, next_path_sv.str
+                    );
+                    return 1;
+                }
+                const Tokenizer previous_tokenizer_state = *(parser->tokenizer);
+                const int macro_if_depth = parser->macro_if_depth;
+                const size_t file_pos = (size_t)((uint8_t*)(parser->file_path) - (uint8_t*)(files_stream->data));
+                const int previous_file_path_size = parser->file_path_size;
+                parser->macro_if_depth = 0;
+                *(parser->tokenizer) = (Tokenizer){
+                    .data = (char*)((uint8_t*)(new_file) + mother_directory.size + next_path_sv.size + 1 + sizeof(uint32_t)),
+                    .pos = 0, .line = 0, .column = 0
+                };
+                parser->file_path = (char*)((uint8_t*)(new_file) + sizeof(uint32_t));
+                if(parse_file(parser, program, static_memory, files_stream))
+                    return 1;
+                files_stream->size = previous_file_stream_size;
+                parser->file_path = (char*)((uint8_t*)(files_stream->data) + file_pos);
+                parser->file_path_size = previous_file_path_size;
+                parser->macro_if_depth = macro_if_depth;
+                *(parser->tokenizer) = previous_tokenizer_state;
+                parser->tokenizer->data = (char*)((uint8_t*)(files_stream->data) + file_pos + parser->file_path_size + 1);
+            }
+            continue;
+        }
+        inst_profile = get_inst_profile(token);
+        if(inst_profile.opcode == INST_ERROR){
+            const Token next_token = get_next_token(parser->tokenizer);
+            if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
+                if(COMP_TKN(next_token, MKTKN(":"))){
+                    if(
+                        add_label(
+                            parser->labels, token,
+                            (Token){.value.as_uint = program->size / 4,
+                            .type = TKN_ULIT},
+                            0
+                        )
+                    ) {
+                        REPORT_ERROR(
+                            parser,
+                            "\n\tCould Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",
+                            token.size, token.value.as_str
+                        );
+                        return 1;
+                    }
+                    continue;
+                }
+            }
+            REPORT_ERROR(parser, "\n\tExpected Instruction, Got '%.*s' Instead\n\n", token.size, token.value.as_str);
+            return 1;
+        }
+        
+        if(parse_inst(parser, static_memory, program, inst_profile, (StringView){.str = inst_token.value.as_str, .size = inst_token.size})){
+            return 1;
+        }
+    }
+
+    if(token.type == TKN_ERROR){
+        REPORT_ERROR(parser, "Invalid Token%c\n", ' ');
+        return 1;
+    }
+
+    return 0;
 }
 
 

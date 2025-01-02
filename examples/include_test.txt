@@ -1,8 +1,8 @@
-%include "vstd/vstdio.in"
+%include "../examples/vstd/vstdio.in"
 
 
 %start
-    STATIC "test was successfull"
+    STATIC "INCLUDE TEST WAS SUCCESSFULL"
     POP RB
     SYS 0
     MOVV RC $fprintf_str
