@@ -24,18 +24,6 @@ enum ParsingFlags{
     FLAG_ADD_SYM_TABLE = 1 << 1
 };
 
-enum OpHint{
-
-    HINT_NONE = 0,
-    HINT_8BIT,
-    HINT_16BIT,
-    HINT_32BIT,
-
-    HINT_STR,
-    HINT_NUM
-
-};
-
 typedef struct Operand{
     
     Register value;
@@ -66,7 +54,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 
     if(COMP_TKN(inst_token, MKTKN("NOP")))    return (InstProfile){INST_NOP   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("HALT")))   return (InstProfile){INST_HALT  , OP_PROFILE_NONE};
+    if(COMP_TKN(inst_token, MKTKN("HALT")))   return (InstProfile){INST_HALT  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("MOV8")))   return (InstProfile){INST_MOV8  , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("MOV16")))  return (InstProfile){INST_MOV16 , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("MOV32")))  return (InstProfile){INST_MOV32 , OP_PROFILE_RR};
@@ -101,7 +89,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_L};
     if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPIF , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPIFN, OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("RET")))    return (InstProfile){INST_RET   , OP_PROFILE_NONE};
     if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("SUB8")))   return (InstProfile){INST_SUB8  , OP_PROFILE_RR};
@@ -204,7 +192,7 @@ uint32_t get_reg(const Token token){
     return -1;
 }
 
-Operand parse_op_literal(Parser* parser, Token token, int hint){
+Operand parse_op_literal(Parser* parser, Token token){
     
     if((token.type == TKN_FLIT) || (token.type == TKN_ILIT) || (token.type == TKN_ULIT)){
         return (Operand){.value.as_uint64 = token.value.as_uint, .type = token.type};
@@ -269,33 +257,10 @@ Operand parse_op_literal(Parser* parser, Token token, int hint){
     }
 
     if((dot_position < 0) && !float_identifier){
-        switch (hint)
-        {
-        case HINT_8BIT:
-            return is_negative?
-                (Operand){.value.as_int8  = (int8_t)(-first_part), .type = TKN_ILIT}:
-                (Operand){.value.as_uint8 = (int8_t)( first_part), .type = TKN_ULIT};
-        case HINT_16BIT:
-            return is_negative?
-                (Operand){.value.as_int8  = (int16_t)(-first_part), .type = TKN_ILIT}:
-                (Operand){.value.as_uint8 = (int16_t)( first_part), .type = TKN_ULIT};
-        case HINT_32BIT:
-            return is_negative?
-                (Operand){.value.as_int8  = (int32_t)(-first_part), .type = TKN_ILIT}:
-                (Operand){.value.as_uint8 = (int32_t)( first_part), .type = TKN_ULIT};
-        default:
-            return is_negative?
-                (Operand){.value.as_int64  = (int64_t)(-first_part), .type = TKN_ILIT}:
-                (Operand){.value.as_uint64 =            first_part , .type = TKN_ULIT};
-        }
-        
+        return is_negative?
+            (Operand){.value.as_int64  = (int64_t)(-first_part), .type = TKN_ILIT}:
+            (Operand){.value.as_uint64 =            first_part , .type = TKN_ULIT};
     }
-    if(hint == HINT_32BIT){
-       const float output = (float)(second_part) + (float)(first_part) / (float)(_10n1);
-    
-        return (Operand){.value.as_float32 = is_negative? -output : output, .type = TKN_FLIT}; 
-    }
-
     const double output = (double)(second_part) + (double)(first_part) / (double)(_10n1);
     
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
@@ -339,7 +304,7 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
         }
-        if(add_label(parser->labels, arg1, arg2, HINT_NONE)){
+        if(add_label(parser->labels, arg1, arg2)){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifined Already Labeled Labels\n\n",
                 "%label",
@@ -355,7 +320,7 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(add_label(parser->labels, arg1, (Token){.type = TKN_EMPTY}, HINT_NONE)){
+        if(add_label(parser->labels, arg1, (Token){.type = TKN_EMPTY})){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s'\n\tNOTE: You Can Not Relabel\n\n",
                 "%label", arg1.size, arg1.value.as_str
@@ -438,8 +403,9 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             }
             token = tmp;
         }
-        const int expect = inst_profile.op_profile & 0XFF; 
-        if(expect == EXPECT_OP_REG){
+        switch (inst_profile.op_profile & 0XFF)
+        {
+        case EXPECT_OP_REG:{
             const int32_t reg = get_reg(token);
             if(reg < 0){
                 REPORT_ERROR(
@@ -452,8 +418,8 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             inst |= (reg << (op_pos_in_inst * 8));
             op_pos_in_inst += 1;
             op_token_pos += 1;
-        }
-        else{   // EXPECT_OP_LIT
+        }   break;
+        case EXPECT_OP_LIT:{
             if(token.type == TKN_STR){
                 if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
@@ -467,13 +433,7 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 op_pos_in_inst += 2;
                 continue;
             }
-            const Operand operand = parse_op_literal(
-                parser,
-                token,
-                (inst_profile.opcode == INST_MOV8)  * HINT_8BIT  +
-                (inst_profile.opcode == INST_MOV16) * HINT_16BIT +
-                (inst_profile.opcode == INST_MOV32) * HINT_32BIT
-            );
+            const Operand operand = parse_op_literal(parser, token);
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
                     parser,
@@ -489,7 +449,60 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
             op_pos_in_inst += 2;
             op_token_pos += 1;
+        }   break;
+        
+        case EXPECT_OP_EITHER:{
+            if(token.type == TKN_STR){
+                if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
+                    REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
+                    return 1;
+                }
+                const uint64_t op_value = static_memory->size;
+                mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
+                mc_stream_str(static_memory, "");
+                inst |= (op_value & 0XFFFFFF) << 8;
+                inst |= HINT_LIT << 24;
+                op_token_pos += 1;
+                op_pos_in_inst += 3;
+                break;
+            }
+            const int32_t reg = get_reg(token);
+            if(reg < 0){
+                const Operand operand = parse_op_literal(parser, token);
+                if(operand.type == TKN_ERROR){
+                    REPORT_ERROR(
+                        parser,
+                        "\n\tArgument %i Of Instruction %.*s Should Be Register Or Literal, Got '%.*s' Instead\n\n",
+                        op_token_pos, inst_sv.size, inst_sv.str, token.size, token.value.as_str
+                    );
+                    return 1;
+                }
+                if(operand.value.as_uint16 != operand.value.as_uint64){
+                    REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
+                    return 1;
+                }
+                inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
+                inst |= HINT_LIT << 24;
+                op_pos_in_inst += 3;
+                op_token_pos += 1;
+                break;
+            }
+            inst |= (reg << (op_pos_in_inst * 8));
+            inst |= HINT_REG << 24;
+            op_pos_in_inst += 3;
+            op_token_pos += 1;
+        }   break;
+        default:
+            break;
         }
+    }
+
+    if(op_pos_in_inst > 5){
+        REPORT_ERROR(parser, "INTERNAL ERROR OCURRED\n\tIf You're An User Beware That This Is Not Your Fault, "
+        "Instead It's A Problem With The Compiler Implementation\n%c", '\n');
+        fprintf(stderr, "[INTERNAL ERROR] "__FILE__":%i:10: Instruction Size Overflow, Instance Of '%.*s' Has Size Of %i Bytes\n",
+        __LINE__, inst_sv.size, inst_sv.str, (op_pos_in_inst - 1));
+        return 1;
     }
 
     mc_stream(program, &inst, sizeof(inst));
@@ -568,14 +581,8 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(COMP_TKN(next_token, MKTKN(":"))){
-                    if(
-                        add_label(
-                            parser->labels, token,
-                            (Token){.value.as_uint = program->size / 4,
-                            .type = TKN_ULIT},
-                            0
-                        )
-                    ) {
+                    if(add_label(parser->labels, token, (Token){.value.as_uint = program->size / 4, .type = TKN_ULIT}))
+                    {
                         REPORT_ERROR(
                             parser,
                             "\n\tCould Not Add Label '%.*s', Label Is Either Invalid Or Has Already Been Defined\n",

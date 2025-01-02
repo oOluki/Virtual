@@ -144,11 +144,12 @@ enum Expects{
     EXPECT_INST,
     EXPECT_OP_REG,
     EXPECT_OP_LIT,
-    EXPECT_OP_STR,
+    // LITERAL OR REGISTER
+    EXPECT_OP_EITHER,
     EXPECT_IDENTIFIER,
 };
 
-// R: REGISTER, L: LITERAL, O: OPTIONAL_LITERAL
+// R: REGISTER, L: LITERAL, E: EITHER LITERAL OR REGISTER ID
 typedef enum OpProfile{
 
     OP_PROFILE_NONE = EXPECT_ANY,
@@ -156,6 +157,8 @@ typedef enum OpProfile{
     OP_PROFILE_R = EXPECT_OP_REG,
     // instruction takes one literal
     OP_PROFILE_L = EXPECT_OP_LIT,
+    // instruction takes either a literal or a register
+    OP_PROFILE_E = EXPECT_OP_EITHER,
     // instruction takes two registers
     OP_PROFILE_RR = (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
     // instruction takes one register and a literal
@@ -164,6 +167,13 @@ typedef enum OpProfile{
     OP_PROFILE_RRR = (EXPECT_OP_REG << 16) | (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
 
 } OpProfile;
+
+enum OpHint{
+
+    HINT_REG = 0,
+    HINT_LIT
+
+};
 
 
 enum RegisterId{
@@ -198,6 +208,9 @@ typedef union Register{
 
 typedef struct VPU
 {
+
+    int      return_status;
+
     uint8_t* static_memory;
 
     uint8_t* internal_data;

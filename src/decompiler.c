@@ -95,18 +95,22 @@ char* get_reg_str(int reg, char* output){
 
 // \returns 0 on success or 1 otherwise
 int print_inst(Inst inst, const uint8_t* static_memory){
-    #define R1 (uint8_t) ((inst & 0XFF00)      >> 8)
-    #define R2 (uint8_t) ((inst & 0XFF0000)    >> 16)
-    #define R3 (uint8_t) ((inst & 0XFF000000)  >> 24)
-    #define L2 (uint16_t) ((inst & 0XFFFF0000) >> 16)
-    #define L  (uint32_t) ((inst & 0XFFFFFF00) >> 8)
+    #define R1 (uint8_t) ((inst & 0XFF00) >> 8)
+    #define R2 (uint8_t) ((inst & 0XFF0000) >> 16)
+    #define R3 (uint8_t) (inst >> 24)
+    #define L2 (uint16_t) (inst >> 16)
+    #define L1 (uint16_t) ((inst & 0X00FFFF00) >> 8)
     switch (inst & 0XFF)
     {
     case INST_NOP:
         printf("NOP\n");
         return 0;
     case INST_HALT:
-        printf("HALT\n");
+        printf("HALT ");
+        if((inst >> 24) == HINT_REG){
+            printf("%s\n", get_reg_str(L1, buff1));
+        }
+        else printf("(%"PRIx16"; u: %"PRIu16")\n", L1, L1);
         return 0;
     case INST_MOV8:
         printf("MOV8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -133,7 +137,7 @@ int print_inst(Inst inst, const uint8_t* static_memory){
     }   return 0;
     case INST_MOVV16:{
         Register op = {.as_uint16 = L2};
-        printf("MASK %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        printf("MOVV16 %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_PUSH:
         printf("PUSH %s\n", get_reg_str(R1, buff1));
@@ -157,9 +161,9 @@ int print_inst(Inst inst, const uint8_t* static_memory){
         printf("GSP %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_STATIC:{
-        const char* string = (char*)(static_memory + L);
-        const uint64_t max_size = *(uint64_t*)(static_memory) - L;
-        printf("STATIC %"PRIu32" \"%.*s\"...\n", L, (15 < max_size)? (int)15 : (int)max_size, string);
+        const char* string = (char*)(static_memory + L1);
+        const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
+        printf("STATIC %"PRIu32" \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
     }   return 0;
     case INST_READ8:
         printf("READ8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -224,6 +228,33 @@ int print_inst(Inst inst, const uint8_t* static_memory){
         return 0;
     case INST_RET:
         printf("RET\n");
+        return 0;
+    case INST_ADD8:
+        printf("ADD8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_SUB8:
+        printf("SUB8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_MUL8:
+        printf("MUL8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_ADD16:
+        printf("ADD16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_SUB16:
+        printf("SUB16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_MUL16:
+        printf("MUL16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_ADD32:
+        printf("ADD32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_SUB32:
+        printf("SUB32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        return 0;
+    case INST_MUL32:
+        printf("MUL32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_ADD:
         printf("ADD %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -341,7 +372,7 @@ int print_inst(Inst inst, const uint8_t* static_memory){
         printf("DISREG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_SYS:
-        printf("SYS %02"PRIx32"\n", L);
+        printf("SYS %02"PRIx32"\n", L1);
         return 0;
     
     
