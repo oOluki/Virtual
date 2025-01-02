@@ -392,16 +392,17 @@ int main(int argc, char** argv){
 
     printf("5\n");
 
+    vpu.stack = vpu_alloc_aligned(1000 * sizeof(*vpu.stack), VPU_MEMALIGN_TO);
+
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
         vpu.registers[RIP / 8].as_uint64 += perform_inst(vpu.program[vpu.registers[RIP / 8].as_uint64])
-    ){
-        const Inst i = vpu.program[vpu.registers[RIP / 8].as_uint64];
-        printf("%u %u %u %u\n", i & 0XFF, (i >> 8) & 0XFF, (i >> 16) & 0XFF, (i >> 24));
-    }
+    );
 
     mc_destroy_stream(stream);
+
+    vpu_free_aligned(vpu.stack);
 
     return 0;
 }
