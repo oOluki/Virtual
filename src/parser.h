@@ -63,13 +63,12 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("MOVV")))   return (InstProfile){INST_MOVV  , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("MOVN")))   return (InstProfile){INST_MOVN  , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("MOVV16"))) return (InstProfile){INST_MOVV16, OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("PUSHV")))  return (InstProfile){INST_PUSHV , OP_PROFILE_L};
+    if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_GET   , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_L};
+    if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RR};
@@ -86,7 +85,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("OR")))     return (InstProfile){INST_OR    , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_L};
+    if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPIF , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPIFN, OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
@@ -137,7 +136,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_R};
 
-    if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_L};
+    if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
 
     return (InstProfile){INST_ERROR, 0};
@@ -460,8 +459,8 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 const uint64_t op_value = static_memory->size;
                 mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
                 mc_stream_str(static_memory, "");
-                inst |= (op_value & 0XFFFFFF) << 8;
-                inst |= HINT_LIT << 24;
+                inst |= (op_value & 0XFFFF) << 8;
+                inst |= HINT_LIT << 31;
                 op_token_pos += 1;
                 op_pos_in_inst += 3;
                 break;
@@ -482,13 +481,13 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                     return 1;
                 }
                 inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
-                inst |= HINT_LIT << 24;
+                inst |= HINT_LIT << 31;
                 op_pos_in_inst += 3;
                 op_token_pos += 1;
                 break;
             }
             inst |= (reg << (op_pos_in_inst * 8));
-            inst |= HINT_REG << 24;
+            inst |= HINT_REG << 31;
             op_pos_in_inst += 3;
             op_token_pos += 1;
         }   break;

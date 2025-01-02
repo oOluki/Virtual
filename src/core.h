@@ -37,10 +37,8 @@ typedef enum OpCode{
     INST_MOVN,
     // moves an immediate value directly into the first 16 bits of a register
     INST_MOVV16,
-    // pushes a value from a register to the stack
+    // pushes a 64 bit value to the stack
     INST_PUSH,
-    // pushes a 64 bit value directly to the stack
-    INST_PUSHV,
     // pops a 64 bit value from the stack into a register
     INST_POP,
     // reads a 64 bit value from the stack into a register
@@ -155,8 +153,6 @@ typedef enum OpProfile{
     OP_PROFILE_NONE = EXPECT_ANY,
     // instruction takes one register
     OP_PROFILE_R = EXPECT_OP_REG,
-    // instruction takes one literal
-    OP_PROFILE_L = EXPECT_OP_LIT,
     // instruction takes either a literal or a register
     OP_PROFILE_E = EXPECT_OP_EITHER,
     // instruction takes two registers
@@ -225,6 +221,7 @@ typedef struct VPU
     
 } VPU;
 
+#define GET_OP_HINT(INST) (INST >> 31)
 
 static inline int is_little_endian(){ return (*(unsigned short *)"\x01\x00" == 0x01); }
 
