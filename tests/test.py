@@ -5,7 +5,7 @@ import subprocess
 
 BUILD_DIR = sys.argv[1]
 EXAMPLES_DIR = sys.argv[2]
-COMPARE_DIR = sys.argv[3]
+PRECOMP_DIR = sys.argv[3]
 
 PATH_SEP = '\\' if platform.system() == "Windows" else '/'
 
@@ -14,6 +14,7 @@ DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
 RUN = BUILD_DIR + PATH_SEP + "VPU"
 
 os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
+os.makedirs(BUILD_DIR + PATH_SEP + "decompiled", exist_ok=True)
 
 def run_process(*command):
     return subprocess.run(
@@ -27,6 +28,10 @@ def test_example(example_path) -> int:
     EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
 
     COMPILED_PATH = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
+    DECOMPILED_PATH = BUILD_DIR + PATH_SEP + "decompiled" + PATH_SEP + EXAMPLE_NAME + ".txt"
+    
+    PRECOPMPILED_PATH = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
+    PREDECOMPILED_PATH = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
     process = run_process(COMPILE, example_path, "-o", COMPILED_PATH)
     if process.returncode != 0:
@@ -34,7 +39,7 @@ def test_example(example_path) -> int:
         print("stderr: " + process.stderr)
         return 1
 
-    process = run_process(DECOMPILE, COMPILED_PATH)
+    process = run_process(DECOMPILE, COMPILED_PATH, DECOMPILED_PATH)
     err_status = 0
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
@@ -50,6 +55,8 @@ def test_example(example_path) -> int:
     if err_status == 0:
         print("Test " + EXAMPLE_NAME + " was successfull")
         print("stdout: " + process.stdout)
+    else:
+        print("*Test " + EXAMPLE_NAME + " failed ***")
     return err_status
     
 
