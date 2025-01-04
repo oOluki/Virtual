@@ -19,7 +19,10 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
     FILE* file = fopen(path, "wb");
 
-    errstatus |= (!file);
+    if(!file){
+	fprintf(stderr, "[ERROR] Could Not Write Executable To '%s', Unable To Open/Find File\n", path);
+	return 1;
+    }
 
     errstatus |= (fwrite("VPU:", 4, 1, file) != 1);
 
@@ -42,7 +45,7 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
     fclose(file);
 
     if(errstatus)
-        fprintf(stderr, "[ERROR] Could Not Write Executable To '%s'\n", path);
+        fprintf(stderr, "[ERROR] Could Not Write Valid Executable To '%s', EXECUTABLE GOT CORRUPTED DO NOT RUN IT\n", path);
 
     return errstatus;
 }
@@ -148,7 +151,6 @@ int main(int argc, char** argv){
         EXE_DEFAULT
     );
     if(status){
-        fprintf(stderr, "[ERROR] Could Not Write Executable To '%s'\n", (output_file > 0)? argv[output_file] : "output.bin");
         goto defer;
     }
 
