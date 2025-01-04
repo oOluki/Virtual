@@ -110,7 +110,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         if((inst >> 24) == HINT_REG){
             fprintf(output, "%s\n", get_reg_str(L1, buff1));
         }
-        else fprintf(output, "(%"PRIx16"; u: %"PRIu16")\n", L1, L1);
+        else fprintf(output, "0x%"PRIx16"; (u: %"PRIu16")\n", L1, L1);
         return 0;
     case INST_MOV8:
         fprintf(output, "MOV8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -129,15 +129,15 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         return 0;
     case INST_MOVV:{
         Register op = {.as_uint16 = L2};
-        fprintf(output, "MOVV %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "MOVV %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_MOVN:{
         Register op = {.as_uint16 = L2};
-        fprintf(output, "MOVN %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "MOVN %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_MOVV16:{
         Register op = {.as_uint16 = L2};
-        fprintf(output, "MOVV16 %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "MOVV16 %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_PUSH:
         fprintf(output, "PUSH ");
@@ -145,7 +145,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
 		fprintf(output, "%s\n", get_reg_str(R1, buff1));
 	else {
 		const Register op = {.as_uint16 = (uint64_t) L1};
-		fprintf(output, "(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+		fprintf(output, "0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
 	}
         return 0;
     case INST_POP:
@@ -153,11 +153,11 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         return 0;
     case INST_GET:{
         Register op = {.as_uint64 = L2};
-        fprintf(output, "GET %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "GET %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_WRITE:{
         Register op = {.as_uint64 = L2};
-        fprintf(output, "WRITE %s (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "WRITE %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_GSP:
         fprintf(output, "GSP %s\n", get_reg_str(R1, buff1));
@@ -169,7 +169,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
 	else {
             const char* string = (char*)(static_memory + L1);
             const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
-            fprintf(output, "STATIC %"PRIu32" \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
+            fprintf(output, "STATIC 0x%"PRIu32" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
     }   return 0;
     case INST_READ8:
         fprintf(output, "READ8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -205,7 +205,6 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "NEG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_AND:
-
         fprintf(output, "AND %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_NAND:
@@ -223,7 +222,8 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
     case INST_JMP:
         fprintf(output, "JMP ");
 	if(GET_OP_HINT(inst) == HINT_REG)
-                fprintf(output, "%s\n", get_reg_str(R1, buff1));          else                                                               printf("%"PRIu16"\n", L1);
+                fprintf(output, "%s\n", get_reg_str(R1, buff1));
+	else                                                               printf("%"PRIu16"\n", L1);
         return 0;
     case INST_JMPIF:
         fprintf(output, "JMPF %s %"PRIu16"\n", get_reg_str(R1, buff1), L2);
@@ -384,7 +384,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "DISREG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_SYS:
-        fprintf(output, "SYS %02"PRIx32"\n", L1);
+        fprintf(output, "SYS 0x%02"PRIx32"\n", L1);
         return 0;
     
     
@@ -449,16 +449,16 @@ int main(int argc, char** argv){
     const uint64_t inst_count = (stream.size - skip - meta_data_size - padding) / sizeof(Inst);
 
     fprintf( output,
-        "\nX====X (SPECIFICATIONS) X====X\n"
-        "\tname = %s\n"
-        "\texecutable size = %"PRIu64"\n"
-        "\tinst count      = %"PRIu64"\n"
-        "\tinst size       = %"PRIu32"\n"
-        "\tflags           = %02"PRIx64"\n"
-        "\tmeta_data_size  = %"PRIu64"\n"
-        "\tstatic_memory   = { position = %"PRIu64", pointer = %p, size = %"PRIu64" }\n"
-        "\tentry point     = %"PRIu64"\n"
-        "X====X (SPECIFICATIONS) X====X\n\n\n",
+        "\n;; X====X (SPECIFICATIONS) X====X\n"
+        "\t;; name = %s\n"
+        "\t;; executable size = %"PRIu64"\n"
+        "\t;; inst count      = %"PRIu64"\n"
+        "\t;; inst size       = %"PRIu32"\n"
+        "\t;; flags           = %02"PRIx64"\n"
+        "\t;; meta_data_size  = %"PRIu64"\n"
+        "\t;; static_memory   = { position = %"PRIu64", pointer = %p, size = %"PRIu64" }\n"
+        "\t;; entry point     = %"PRIu64"\n"
+        ";; X====X (SPECIFICATIONS) X====X\n\n\n",
         argv[1],
         stream.size,
         inst_count,
@@ -468,6 +468,15 @@ int main(int argc, char** argv){
         (uint64_t)(size_t)(static_memory - meta_data), static_memory, static_memory_size,
         entry_point
     );
+    
+    if(static_memory_size > 8){
+    	fprintf(output, "%cstatic 0x", '%');
+	for(uint64_t i = 8; i < static_memory_size; i+=1){
+	    fprintf(output, "%02"PRIx8"", static_memory[i]);
+	}
+	fprintf(output, "\n");
+    }
+
 
     const Inst* program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
 

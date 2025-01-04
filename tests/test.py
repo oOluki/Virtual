@@ -22,31 +22,67 @@ def run_process(*command):
         stdout=subprocess.PIPE,                                    stderr=subprocess.PIPE,                                    text=True
     )
 
+def cmpf(f1, f2, mode):
+    file1 = open(f1, mode)
+    file2 = open(f2, mode)
+    status = file1.read() == file2.read()
+    file1.close()
+    file2.close()
+    return status
 
-def test_example(example_path) -> int:
+def precompute(example_path):
     EXAMPLE_NAME = example_path.removesuffix(".txt").split(PATH_SEP)
     EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
 
-    COMPILED_PATH = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
-    DECOMPILED_PATH = BUILD_DIR + PATH_SEP + "decompiled" + PATH_SEP + EXAMPLE_NAME + ".txt"
+    PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
+ 
+    PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
     
-    PRECOPMPILED_PATH = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
-    PREDECOMPILED_PATH = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
-
-    process = run_process(COMPILE, example_path, "-o", COMPILED_PATH)
+    process = run_process(COMPILE, example_path, "-o", PRECOMPILED)
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
         return 1
 
-    process = run_process(DECOMPILE, COMPILED_PATH, DECOMPILED_PATH)
+    process = run_process(DECOMPILE, PRECOMPILED, PREDECOMPILED)
+    if process.returncode != 0:
+        print("Decompilation Failed For " + EXAMPLE_NAME)
+        print("stderr: " + process.stderr)
+        return 1
+
+    return 0
+
+
+def test_example(example_path) -> int:
+    EXAMPLE_NAME = example_path.removesuffix(".txt").split(PATH_SEP)
+    EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
+
+    COMPILED = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
+    DECOMPILED = BUILD_DIR + PATH_SEP + "decompiled" + PATH_SEP + EXAMPLE_NAME + ".txt"
+    
+    PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
+    PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
+
+    process = run_process(COMPILE, example_path, "-o", COMPILED)
     err_status = 0
+    if process.returncode != 0:
+        print("Compilation Failed For " + EXAMPLE_NAME)
+        print("stderr: " + process.stderr)
+        return 1
+    elif cmpf(COMPILED, PRECOMPILED, "rb") == 0:
+        print("Compiled " + EXAMPLE_NAME + " Does Not Match Expected")
+        err_status = 1
+ 
+    process = run_process(DECOMPILE, COMPILED, DECOMPILED)
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
         err_status = 1
+    elif cmpf(DECOMPILED, PREDECOMPILED, "r") == 0:
+        print("Decompiled " + EXAMPLE_NAME + " Does Not Match Expected")
+        err_status = 1
     
-    process = run_process(RUN, COMPILED_PATH)
+    process = run_process(RUN, COMPILED)
     if process.returncode != 0:
         print("Run Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
@@ -64,9 +100,15 @@ examples = [f for f in os.listdir(EXAMPLES_DIR) if os.path.isfile(os.path.join(E
 test_count = len(examples)
 failed_tests = 0
 
-for example in examples:
-    failed_tests += test_example(EXAMPLES_DIR + PATH_SEP + example)
-
-print(str(failed_tests) + " (" + str(100 * (float(failed_tests) / float(test_count))) + "%) tests failed out of " + str(test_count) if failed_tests > 0 else "all tests were successfull")
+if len(sys.argv) < 5:
+    for example in examples:
+        failed_tests += test_example(EXAMPLES_DIR + PATH_SEP + example)
     
+    print(str(failed_tests) + " tests failed out of " + str(test_count) + " (" + str(100 * (float(failed_tests) / float(test_count))) + "%)" if failed_tests > 0 else "all tests were successfull")
+else:
+    for example in examples:
+        failed_tests += precompute(EXAMPLES_DIR + PATH_SEP + example)
+    
+    print(str(failed_tests) + " precomputes failed out of " + str(test_count) + " (" + str(100 * (float(failed_tests) / float(test_count))) + "%)"  if failed_tests > 0 else "all precomputes were successfull")
 
+exit(failed_tests != 0)

@@ -366,6 +366,22 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
         parser->macro_if_depth += 1;
         return 0;
     }
+    if(COMP_TKN(macro, MKTKN("%static"))){	
+	const Token arg = get_next_token(parser->tokenizer);
+	if(arg.type != TKN_RAW || arg.type != TKN_STR){
+	    REPORT_ERROR(parser, "\n\tArgument Of %s Should Be Literal Value\n\n", "%static");
+	    return 1;
+	}
+	if(arg.type == TKN_STR){
+	    if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
+	        REPORT_ERROR(parser, "\n\tMissing Closing '%c'\n\n", '\"');
+		return 1;
+	    }
+	    mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
+	    mc_stream_str(static_memory, "");
+	    return 0;
+	}	
+    }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
             REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %s\n\n", "%endif");
