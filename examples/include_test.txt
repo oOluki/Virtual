@@ -5,7 +5,6 @@
     STATIC "INCLUDE TEST WAS SUCCESSFULL"
     POP RB
     SYS 0
-    MOVV RC $fprintf_str
-    CALL RC
-    HALT
+    CALL $fprintf_str
+    HALT 0
 

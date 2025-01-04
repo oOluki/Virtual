@@ -48,7 +48,7 @@ int remove_label(Mc_stream_t* labels, const Token label_token){
     return 0;
 }
 
-int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition, int hint){
+int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition){
 
     const Label* dummy_label = get_label(labels, label_tkn);
 

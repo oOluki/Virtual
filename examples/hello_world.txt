@@ -5,7 +5,7 @@ SYS  0
 
 MOVV RE 1
 
-
+MOVV RC 0
 
 loop:
 
@@ -21,4 +21,4 @@ JMPF RC $loop
 MOVV RC 10
 PUTC RC RA
 
-HALT
+HALT 0

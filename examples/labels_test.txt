@@ -37,6 +37,5 @@ say_hello:
 %unlabel say_hello_loop
 
 %start
-    MOVV RA $say_hello
-    CALL RA
-    HALT
+    CALL $say_hello
+    HALT 0

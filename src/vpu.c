@@ -17,7 +17,7 @@ static inline int64_t perform_inst(Inst inst){
     // the third register operand
     #define R3 (*(Register*)(vpu.register_space +(uint8_t) ((inst & 0XFF000000)  >> 24)))
     // the first literal operand
-    #define L1 (uint32_t) ((inst & 0XFFFFFF00) >> 8)
+    #define L1 (uint16_t) ((inst & 0X00FFFF00) >> 8)
     // the second literal operand
     #define L2 (uint16_t) ((inst & 0XFFFF0000) >> 16)
     // the current stack position
@@ -42,6 +42,7 @@ static inline int64_t perform_inst(Inst inst){
     case INST_NOP:
         return 1;
     case INST_HALT:
+        vpu.return_status = (GET_OP_HINT(inst) == HINT_REG)? (int) R1.as_int64 : (int) L1;
         return 0XFFFFFFFFFFFFFFFF - IP;
     case INST_MOV8:
         R1.as_uint8 = R2.as_uint8;
@@ -68,11 +69,8 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint16 = L2;
         return 1;
     case INST_PUSH:
-        vpu.stack[SP++] = R1.as_uint64;
+        vpu.stack[SP++] = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
         return 1;
-    case INST_PUSHV:
-        vpu.stack[SP++] = L1;
-       return 1;
     case INST_POP:
         R1.as_uint64 = vpu.stack[--SP];
         return 1;
@@ -86,7 +84,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_ptr = vpu.stack;
         return 1;
     case INST_STATIC:
-        vpu.stack[SP++] = (uint64_t)(uintptr_t)(vpu.static_memory + L1);
+        vpu.stack[SP++] = (uint64_t)(uintptr_t)(vpu.static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
         return 1;
     case INST_READ8:
         R1.as_uint8 = *(uint8_t*)(R2.as_ptr);
@@ -137,7 +135,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = R2.as_int64 < 0? R1.as_uint64 >> -(R2.as_int64) : R1.as_uint64 << R2.as_uint64;
         return 1;
     case INST_JMP:
-        IP = L1;
+        IP = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
         return 1;
     case INST_JMPIF:
         if(R1.as_uint64){
@@ -153,7 +151,7 @@ static inline int64_t perform_inst(Inst inst){
         return 1;
     case INST_CALL:
         vpu.stack[SP++] = IP + 1;
-        IP = R1.as_uint64;
+        IP = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
         return 0;
     case INST_RET:
         IP = vpu.stack[--SP];
@@ -324,9 +322,11 @@ static inline int64_t perform_inst(Inst inst){
     
 
     case INST_SYS:
-        if(sys_call(&vpu, L1)){
-            exit(1);
-        }
+        if(sys_call(&vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
+	    fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
+            vpu.return_status = 1;
+	    return 0xFFFFFFFFFFFFFFFF - IP;
+	}
         return 1;
     case INST_DISREG:
         printf("(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
@@ -335,6 +335,7 @@ static inline int64_t perform_inst(Inst inst){
     
     default:
         fprintf(stderr, "[ERROR] Unknwon Instruction '%u' At Instuction Position %"PRIu64"\n", (unsigned int)inst, IP);
+	vpu.return_status = 1;
         return 0xFFFFFFFFFFFFFFFF - IP;
     }
 
@@ -383,6 +384,8 @@ int main(int argc, char** argv){
 
     vpu.register_space = (uint8_t*)vpu.registers;
 
+    vpu.return_status = 0;
+
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
@@ -391,6 +394,6 @@ int main(int argc, char** argv){
 
     mc_destroy_stream(stream);
 
-    return 0;
+    return vpu.return_status;
 }
 
