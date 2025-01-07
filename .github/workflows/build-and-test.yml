@@ -1,6 +1,8 @@
-# This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
-name: CMake on multiple platforms
+# Made from "Cmake on multiple platforms"
+# https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
+# See Also: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
+#
+name: Build And Test
 
 on:
   push:
@@ -76,7 +78,22 @@ jobs:
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
     - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --build-config ${{ matrix.build_type }} -V
+      if: runner.os != 'Windows'
+      working-directory: ${{ github.workspace }}
+      # perform tests in the test.py script
+      run: >
+        python ${{ github.workspace  }}/tests/test.py
+        ${{ steps.strings.outputs.build-output-dir }}
+        ${{ github.workspace }}/examples
+        ${{ github.workspace }}/precomputed
+
+    - name: Test-Windows
+      if: runner.os == 'Windows'
+      working-directory: ${{ github.workspace }}
+      # perform tests in the test.py script
+      run: >
+        python ${{ github.workspace  }}/tests/test.py
+        ${{ steps.strings.outputs.build-output-dir }}/Debug
+        ${{ github.workspace }}/examples
+        ${{ github.workspace }}/precomputed
+ 
