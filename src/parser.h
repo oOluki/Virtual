@@ -480,11 +480,11 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 );
                 return 1;
             }
-            if(operand.value.as_uint16 != operand.value.as_uint64){
+            if(operand.value.as_uint64 != (uint16_t) operand.value.as_uint64){
                 REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
                 return 1;
             }
-            inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
+            inst |= ((uint16_t) operand.value.as_uint64) << (8 * op_pos_in_inst);
             op_pos_in_inst += 2;
             op_token_pos += 1;
         }   break;
