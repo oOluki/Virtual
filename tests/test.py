@@ -81,7 +81,11 @@ def test_example(example_path) -> int:
         err_status = 1
     else:
         process = run_process(COMPILE, DECOMPILED, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
-        if cmpf(BUILD_DIR + PATH_SEP + "tmp.out", COMPILED, "rb") == 0:
+        if process.returncode != 0:
+            print("Could Not Compile " + EXAMPLE_NAME + " Decompiled File")
+            print("stderr: " + process.stderr)
+            err_status = 1
+        elif cmpf(BUILD_DIR + PATH_SEP + "tmp.out", COMPILED, "rb") == 0:
             print("Decompiled " + EXAMPLE_NAME + " Does Not Compile Back To Original Executable")
             err_status = 1
     
