@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "core.h"
 #include "labels.h"
+#include <inttypes.h>
 
 #define COMP_TKN(TKN1, TKN2) mc_compare_token(TKN1, TKN2, 0)
 
@@ -480,11 +481,13 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 );
                 return 1;
             }
-            if(operand.value.as_uint64 != (uint16_t) operand.value.as_uint64){
+            if(operand.value.as_uint16 != operand.value.as_uint64){
+                fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
+                fprintf(stderr, "%"PRIx64" %"PRIu16" %"PRIu64"\n", operand.value.as_uint64, operand.value.as_uint16, operand.value.as_uint64);
                 REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
                 return 1;
             }
-            inst |= ((uint16_t) operand.value.as_uint64) << (8 * op_pos_in_inst);
+            inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
             op_pos_in_inst += 2;
             op_token_pos += 1;
         }   break;
