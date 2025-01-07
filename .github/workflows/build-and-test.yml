@@ -78,11 +78,22 @@ jobs:
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
     - name: Test
+      if: runner.os != 'Windows'
       working-directory: ${{ github.workspace }}
       # perform tests in the test.py script
       run: >
         python ${{ github.workspace  }}/tests/test.py
         ${{ steps.strings.outputs.build-output-dir }}
+        ${{ github.workspace }}/examples
+        ${{ github.workspace }}/precomputed
+
+    - name: Test-Windows
+      if: runner.os == 'Windows'
+      working-directory: ${{ github.workspace }}
+      # perform tests in the test.py script
+      run: >
+        python ${{ github.workspace  }}/tests/test.py
+        ${{ steps.strings.outputs.build-output-dir }}/Debug
         ${{ github.workspace }}/examples
         ${{ github.workspace }}/precomputed
  
