@@ -15,6 +15,13 @@ if platform.system() == "Windows":
     COMPILE = BUILD_DIR + PATH_SEP + "compile"
     DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
     RUN = BUILD_DIR + PATH_SEP + "VPU"
+    dummy = open(COMPILE, "rb")
+    dummy.close()
+    dummy = open(DECOMPILE, "rb")
+    dummy.close()
+    dummy = open(RUN, "rb")
+    dummy.close()
+
 else:
     PATH_SEP = '/'
     COMPILE = BUILD_DIR + PATH_SEP + "compile"
