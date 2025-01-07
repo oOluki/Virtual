@@ -72,6 +72,7 @@ def test_example(example_path) -> int:
     PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
     #PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
+    print(COMPILE, example_path, "-o" , COMPILED)
     process = run_process(COMPILE, example_path, "-o", COMPILED)
     err_status = 0
     if process.returncode != 0:
