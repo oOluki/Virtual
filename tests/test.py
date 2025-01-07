@@ -70,6 +70,7 @@ def test_example(example_path) -> int:
     #PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
     process = run_process(COMPILE, example_path, "-o", COMPILED)
+    print(str(process))
     err_status = 0
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
