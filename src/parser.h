@@ -482,8 +482,6 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 return 1;
             }
             if(operand.value.as_uint16 != operand.value.as_uint64){
-                fprintf(stderr, "%.*s\n", token.size + 10, token.value.as_str - 5);
-                fprintf(stderr, "%"PRIx64" %"PRIu16" %"PRIu64"\n", operand.value.as_uint64, operand.value.as_uint16, operand.value.as_uint64);
                 REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
                 return 1;
             }

@@ -128,15 +128,15 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "MOVC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MOVV:{
-        Register op = {.as_uint16 = L2};
+        Register op = {.as_uint64 = L2};
         fprintf(output, "MOVV %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_MOVN:{
-        Register op = {.as_uint16 = L2};
+        Register op = {.as_uint64 = L2};
         fprintf(output, "MOVN %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_MOVV16:{
-        Register op = {.as_uint16 = L2};
+        Register op = {.as_uint64 = L2};
         fprintf(output, "MOVV16 %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_PUSH:
@@ -144,7 +144,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
 	if(GET_OP_HINT(inst) == HINT_REG)
 		fprintf(output, "%s\n", get_reg_str(R1, buff1));
 	else {
-		const Register op = {.as_uint16 = (uint64_t) L1};
+		const Register op = {.as_uint64 = (uint64_t) L1};
 		fprintf(output, "0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
 	}
         return 0;
@@ -169,7 +169,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
 	else {
             const char* string = (char*)(static_memory + L1);
             const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
-            fprintf(output, "STATIC 0x%"PRIx32" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
+            fprintf(output, "STATIC 0x%"PRIx16" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
     }   return 0;
     case INST_READ8:
         fprintf(output, "READ8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -221,9 +221,10 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         return 0;
     case INST_JMP:
         fprintf(output, "JMP ");
-	if(GET_OP_HINT(inst) == HINT_REG)
-                fprintf(output, "%s\n", get_reg_str(R1, buff1));
-	else                                                               printf("%"PRIu16"\n", L1);
+        if(GET_OP_HINT(inst) == HINT_REG)
+            fprintf(output, "%s\n", get_reg_str(R1, buff1));
+        else
+            printf("%"PRIu16"\n", L1);
         return 0;
     case INST_JMPIF:
         fprintf(output, "JMPF %s %"PRIu16"\n", get_reg_str(R1, buff1), L2);
@@ -233,11 +234,11 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         return 0;
     case INST_CALL:
         fprintf(output, "CALL ");
-	if(GET_OP_HINT(inst) == HINT_REG)
-		fprintf(output, "%s\n", get_reg_str(R1, buff1));
-	else
-		fprintf(output, "%"PRIu16"\n", L1);
-        return 0;
+        if(GET_OP_HINT(inst) == HINT_REG)
+            fprintf(output, "%s\n", get_reg_str(R1, buff1));
+        else
+            fprintf(output, "%"PRIu16"\n", L1);
+            return 0;
     case INST_RET:
         fprintf(output, "RET\n");
         return 0;
@@ -384,7 +385,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "DISREG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_SYS:
-        fprintf(output, "SYS 0x%02"PRIx32"\n", L1);
+        fprintf(output, "SYS 0x%02"PRIx16"\n", L1);
         return 0;
     
     
