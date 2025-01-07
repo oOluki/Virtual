@@ -24,7 +24,7 @@ else:
 os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
 
 def run_process(*command):
-    print("CMD: " + command)
+    print("CMD: " + str(command))
     return subprocess.run(
         command,
         stdout=subprocess.PIPE,
