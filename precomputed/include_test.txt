@@ -1,17 +1,17 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/include_test.out
+	;; name = .\precomputed\include_test.out
 	;; executable size = 168
 	;; inst count      = 22
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 45
-	;; static_memory   = { position = 0, pointer = 0xe84e6028, size = 45 }
+	;; static_memory   = { position = 0, pointer = 00A255E8, size = 45 }
 	;; entry point     = 17
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%static 0x5354415449433a00494e434c554445205445535420574153205355434345535346554c4c00
+%static 0x494e434c554445205445535420574153205355434345535346554c4c00
 PUTC RC RA
 ADD RB RD
 READ8 RC RB
@@ -29,7 +29,8 @@ JMPF RC 0
 POP RD
 POP RC
 RET
-STATIC 0x16 ;; "INCLUDE TEST WA"...
+%start
+STATIC 0x10 ;; "INCLUDE TEST WA"...
 POP RB
 SYS 0x00
 CALL 9

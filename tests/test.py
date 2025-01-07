@@ -14,12 +14,13 @@ DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
 RUN = BUILD_DIR + PATH_SEP + "VPU"
 
 os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
-os.makedirs(BUILD_DIR + PATH_SEP + "decompiled", exist_ok=True)
 
 def run_process(*command):
     return subprocess.run(
         command,
-        stdout=subprocess.PIPE,                                    stderr=subprocess.PIPE,                                    text=True
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
     )
 
 def cmpf(f1, f2, mode):
@@ -58,10 +59,10 @@ def test_example(example_path) -> int:
     EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
 
     COMPILED = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
-    DECOMPILED = BUILD_DIR + PATH_SEP + "decompiled" + PATH_SEP + EXAMPLE_NAME + ".txt"
+    DECOMPILED = BUILD_DIR + PATH_SEP + "tmp.txt"
     
     PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
-    PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
+    #PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
     process = run_process(COMPILE, example_path, "-o", COMPILED)
     err_status = 0
@@ -78,9 +79,11 @@ def test_example(example_path) -> int:
         print("Decompilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
         err_status = 1
-    elif cmpf(DECOMPILED, PREDECOMPILED, "r") == 0:
-        print("Decompiled " + EXAMPLE_NAME + " Does Not Match Expected")
-        err_status = 1
+    else:
+        process = run_process(COMPILE, DECOMPILED, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
+        if cmpf(BUILD_DIR + PATH_SEP + "tmp.out", COMPILED, "rb") == 0:
+            print("Decompiled " + EXAMPLE_NAME + " Does Not Compile Back To Original Executable")
+            err_status = 1
     
     process = run_process(RUN, COMPILED)
     if process.returncode != 0:

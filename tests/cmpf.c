@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <inttypes.h>
 
 int main(int argc, char** argv){
 
@@ -16,23 +16,24 @@ int main(int argc, char** argv){
     char c1;
     char c2;
     while(eq && !feof(f1) && !feof(f2)){
-	c1 = fgetc(f1);
-	c2 = fgetc(f2);
-	if(c1 == '\n'){
-	    line+=1;
-	    column=0;
-	} else column += 1;
+        c1 = fgetc(f1);
+        c2 = fgetc(f2);
+        if(c1 == '\n'){
+            line+=1;
+            column=0;
+        } else column += 1;
 
-
-	eq = c1 == c2;
+	    eq = c1 == c2;
     }
 
     if(!eq || (feof(f1) ^ feof(f2))){
-	printf("files differ in line %i column %i\n", line, column);
-	printf("%c != %c\n", c1, c2);
-	return 1;
+        printf("files differ in line %i column %i\n", line, column);
+        printf("%"PRIx8" != %"PRIx8"\n", c1, c2);
+        printf("%c != %c\n", c1, c2);
+        return 1;
     }
 
+    printf("files contents are equal\n");
     return 0;
 }
 

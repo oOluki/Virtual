@@ -169,7 +169,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
 	else {
             const char* string = (char*)(static_memory + L1);
             const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
-            fprintf(output, "STATIC 0x%"PRIu32" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
+            fprintf(output, "STATIC 0x%"PRIx32" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
     }   return 0;
     case INST_READ8:
         fprintf(output, "READ8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -469,12 +469,12 @@ int main(int argc, char** argv){
         entry_point
     );
     
-    if(static_memory_size > 8){
+    if(static_memory_size > 16){
     	fprintf(output, "%cstatic 0x", '%');
-	for(uint64_t i = 8; i < static_memory_size; i+=1){
-	    fprintf(output, "%02"PRIx8"", static_memory[i]);
-	}
-	fprintf(output, "\n");
+        for(uint64_t i = 16; i < static_memory_size; i+=1){
+            fprintf(output, "%02"PRIx8"", static_memory[i]);
+        }
+        fprintf(output, "\n");
     }
 
 
@@ -482,6 +482,9 @@ int main(int argc, char** argv){
 
     int status = 0;
     uint64_t i = 0;
+    for( ; (i < entry_point) && !status; i += 1)
+        status = print_inst(output, program[i], static_memory);
+    if(!status) fprintf(output, "%s\n", "%start");
     for( ; (i < inst_count) && !status; i += 1)
         status = print_inst(output, program[i], static_memory);
     

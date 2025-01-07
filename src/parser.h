@@ -142,24 +142,6 @@ InstProfile get_inst_profile(const Token inst_token){
     return (InstProfile){INST_ERROR, 0};
 }
 
-uint64_t parse_hexadecimal(Parser* parser, const Token token){
-
-    uint64_t n = 0;
-    
-    for(size_t i = 0; i < token.size; i+=1){
-        const uint8_t digit = get_hex_digit(token.value.as_str[i]);
-
-        if(digit == 255){
-            parser->flags |= FLAG_TEST;
-            return 0;
-        }
-
-        n = (n << 4) | digit;
-    }
-
-    return n;
-}
-
 static inline int get_major_reg_identifier(const Token token){
     if(mc_compare_token(token, MKTKN("RA"), 1))  return RA;
     if(mc_compare_token(token, MKTKN("RB"), 1))  return RB;
@@ -191,7 +173,7 @@ uint32_t get_reg(const Token token){
     return -1;
 }
 
-Operand parse_op_literal(Parser* parser, Token token){
+Operand parse_op_literal(Token token){
     
     if((token.type == TKN_FLIT) || (token.type == TKN_ILIT) || (token.type == TKN_ULIT)){
         return (Operand){.value.as_uint64 = token.value.as_uint, .type = token.type};
@@ -200,19 +182,17 @@ Operand parse_op_literal(Parser* parser, Token token){
         return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
     }
 
-    if(token.value.as_str[0] == '0'){
+    if(token.value.as_str[0] == '0' && token.size > 1){
         if(token.value.as_str[1] == 'x' || token.value.as_str[1] == 'X'){
-            const uint64_t hex = parse_hexadecimal(
-                parser,
-                (Token){
-                    .value.as_str = token.value.as_str + 2,
-                    .size = token.size - 2
+            uint64_t hex = 0;
+            for(size_t i = 2; i < token.size; i+=1){
+                const uint8_t digit = get_hex_digit(token.value.as_str[i]);
+
+                if(digit == 255){
+                    return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
                 }
-            );
-            if(parser->flags & FLAG_TEST){
-                REPORT_ERROR(parser, "Invalid Token '%.*s'\n", token.size, token.value.as_str);
-                parser->flags &= ~FLAG_TEST;
-                return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+
+                hex = (hex << 4) | digit;
             }
             return (Operand){.value.as_uint64 = hex, .type = TKN_ULIT};
         }
@@ -265,7 +245,50 @@ Operand parse_op_literal(Parser* parser, Token token){
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
 }
 
-int parse_macro(Parser* parser, const uint64_t program_position, const Token macro, StringView* include_path){
+int push_to_static(Mc_stream_t* static_memory, const Token token){
+
+    if(token.type != TKN_STR && token.type != TKN_RAW){
+        return 1;
+    }
+    if(token.type == TKN_STR){
+        if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
+            return 2;
+        }
+        mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
+        mc_stream_str(static_memory, "");
+        return 0;
+    }
+    if(token.size >= 2){
+        if(token.value.as_str[0] == '0' && (token.value.as_str[1] == 'x' || token.value.as_str[1] == 'X')){
+            for(int i = 2; i < token.size; i+=2){
+
+                uint8_t byte = 0;
+
+                for(int j = 0; (j + i) < token.size && j < 2; j+=1){
+                    const int digit = get_hex_digit(token.value.as_str[i + j]);
+                    if(digit == 255){
+                        return 1;
+                    }
+                    byte |= digit << (4 - 
+                    j * 4);
+                }
+                
+                mc_stream(static_memory, &byte, sizeof(byte));
+            }
+            return 0;
+        }
+    }
+
+    const Operand v = parse_op_literal(token);
+    if(v.type == TKN_ERROR){
+        return 1;
+    }
+
+    mc_stream(static_memory, &v.value.as_uint64, 8);
+    return 0;
+}
+
+int parse_macro(Parser* parser, Mc_stream_t* static_memory, const uint64_t program_position, const Token macro, StringView* include_path){
     
     if(COMP_TKN(macro, MKTKN("%include"))){
         const Token arg = get_next_token(parser->tokenizer);
@@ -367,20 +390,20 @@ int parse_macro(Parser* parser, const uint64_t program_position, const Token mac
         return 0;
     }
     if(COMP_TKN(macro, MKTKN("%static"))){	
-	const Token arg = get_next_token(parser->tokenizer);
-	if(arg.type != TKN_RAW || arg.type != TKN_STR){
-	    REPORT_ERROR(parser, "\n\tArgument Of %s Should Be Literal Value\n\n", "%static");
-	    return 1;
-	}
-	if(arg.type == TKN_STR){
-	    if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
-	        REPORT_ERROR(parser, "\n\tMissing Closing '%c'\n\n", '\"');
-		return 1;
-	    }
-	    mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
-	    mc_stream_str(static_memory, "");
-	    return 0;
-	}	
+        const Token arg = get_next_token(parser->tokenizer);
+        const int status = push_to_static(static_memory, arg);
+        if(status == 2){
+            REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
+            return 1;
+        }
+        if(status){
+            if(arg.type == TKN_RAW)
+                REPORT_ERROR(parser, "\n\tArgument Of %s Should Be Literal, Got %.*s Instead\n\n", "%static", arg.size, arg.value.as_str);
+            else
+                REPORT_ERROR(parser, "\n\tArgument Of %s Should Be Literal\n\n", "%static");
+            return 1;
+        }
+        return 0;
     }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
@@ -448,7 +471,7 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 op_pos_in_inst += 2;
                 continue;
             }
-            const Operand operand = parse_op_literal(parser, token);
+            const Operand operand = parse_op_literal(token);
             if(operand.type == TKN_ERROR){
                 REPORT_ERROR(
                     parser,
@@ -483,7 +506,7 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             }
             const int32_t reg = get_reg(token);
             if(reg < 0){
-                const Operand operand = parse_op_literal(parser, token);
+                const Operand operand = parse_op_literal(token);
                 if(operand.type == TKN_ERROR){
                     REPORT_ERROR(
                         parser,
@@ -549,7 +572,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         }
         if(token.type == TKN_MACRO_INST){
             StringView next_path_sv = (StringView){.str = NULL};
-            if(parse_macro(parser, program->size / sizeof(Inst), token, &next_path_sv)){
+            if(parse_macro(parser, static_memory, program->size / sizeof(Inst), token, &next_path_sv)){
                 return 1;
             }
             if(next_path_sv.str != NULL){

@@ -1,17 +1,17 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/Q_rsqrt.out
+	;; name = .\precomputed\Q_rsqrt.out
 	;; executable size = 216
 	;; inst count      = 42
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
-	;; static_memory   = { position = 0, pointer = 0xec945028, size = 16 }
+	;; static_memory   = { position = 0, pointer = 006755E8, size = 16 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%static 0x5354415449433a00
+%start
 MOVV RA 0x190; (u: 400; i: 400; f: 0.000000)
 CASTFU RA
 MOV RB RA
