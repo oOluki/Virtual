@@ -15,8 +15,6 @@ if platform.system() == "Windows":
     COMPILE = BUILD_DIR + PATH_SEP + "compile"
     DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
     RUN = BUILD_DIR + PATH_SEP + "VPU"
-    process = subprocess.run(("dir ", BUILD_DIR + PATH_SEP + "x64"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print(process.stdout)
 
 else:
     PATH_SEP = '/'
@@ -27,7 +25,6 @@ else:
 os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
 
 def run_process(*command):
-    print("CMD: " + str(command))
     return subprocess.run(
         command,
         stdout=subprocess.PIPE,
