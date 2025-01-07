@@ -12,15 +12,11 @@ if platform.system() == "Windows":
     EXAMPLES_DIR = EXAMPLES_DIR.replace("/", "\\")
     PRECOMP_DIR = PRECOMP_DIR.replace("/", "\\")
     PATH_SEP = '\\'
-    COMPILE = BUILD_DIR + PATH_SEP + "compile.exe"
-    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile.exe"
-    RUN = BUILD_DIR + PATH_SEP + "VPU.exe"
-    dummy = open(COMPILE, "rb")
-    dummy.close()
-    dummy = open(DECOMPILE, "rb")
-    dummy.close()
-    dummy = open(RUN, "rb")
-    dummy.close()
+    COMPILE = BUILD_DIR + PATH_SEP + "compile"
+    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
+    RUN = BUILD_DIR + PATH_SEP + "VPU"
+    process = subprocess.run(("dir ", BUILD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print(process.stdout)
 
 else:
     PATH_SEP = '/'
