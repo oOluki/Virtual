@@ -9,9 +9,14 @@ PRECOMP_DIR = sys.argv[3]
 
 PATH_SEP = '\\' if platform.system() == "Windows" else '/'
 
-COMPILE = BUILD_DIR + PATH_SEP + "compile"
-DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
-RUN = BUILD_DIR + PATH_SEP + "VPU"
+if platform.system() == "Windows":
+    COMPILE = BUILD_DIR + PATH_SEP + "compile.exe"
+    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile.exe"
+    RUN = BUILD_DIR + PATH_SEP + "VPU.exe"
+else:
+    COMPILE = BUILD_DIR + PATH_SEP + "compile"
+    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
+    RUN = BUILD_DIR + PATH_SEP + "VPU"
 
 os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
 
