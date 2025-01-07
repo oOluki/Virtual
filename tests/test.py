@@ -7,13 +7,16 @@ BUILD_DIR = sys.argv[1]
 EXAMPLES_DIR = sys.argv[2]
 PRECOMP_DIR = sys.argv[3]
 
-PATH_SEP = '\\' if platform.system() == "Windows" else '/'
-
 if platform.system() == "Windows":
+    BUILD_DIR = BUILD_DIR.replace("/", "\\")
+    EXAMPLES_DIR = EXAMPLES_DIR.replace("/", "\\")
+    PRECOMP_DIR = PRECOMP_DIR.replace("/", "\\")
+    PATH_SEP = '\\'
     COMPILE = BUILD_DIR + PATH_SEP + "compile.exe"
     DECOMPILE = BUILD_DIR + PATH_SEP + "decompile.exe"
     RUN = BUILD_DIR + PATH_SEP + "VPU.exe"
 else:
+    PATH_SEP = '/'
     COMPILE = BUILD_DIR + PATH_SEP + "compile"
     DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
     RUN = BUILD_DIR + PATH_SEP + "VPU"
@@ -69,9 +72,7 @@ def test_example(example_path) -> int:
     PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
     #PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
-    print(COMPILE, example_path, "-o", COMPILED)
     process = run_process(COMPILE, example_path, "-o", COMPILED)
-    
     err_status = 0
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
