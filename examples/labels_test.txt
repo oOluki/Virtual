@@ -25,13 +25,13 @@ say_hello:
     MOVV RE 1
     
     say_hello_loop:
-        READ8 RC RB
-        PUTC RC RA
-        ADD RB RE
+        READ8 RC RB R0
+        PUTC RC RA R0
+        ADD RB RE RB
     JMPF RC $say_hello_loop
 
     MOVV RC 10
-    PUTC RC RA
+    PUTC RC RA R0
     RET
 
 %unlabel say_hello_loop

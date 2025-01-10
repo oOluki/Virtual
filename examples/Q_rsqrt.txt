@@ -4,36 +4,36 @@
 
 ;; lets calculate the 1/sqrt(400)
 MOVV RA 400
-CASTFU RA
+CASTFU RA RA
 
 ;; evil bit level hacking (trivial in this case)
 MOV RB RA
 
 ;; "what the fuck"
 MOVN RC 0
-BSHIFT RB RC
+BSHIFT RB RB RC
 MOVV16 RC6 0x5fe6
 MOVV16 RC4 0xec85
 MOVV16 RC2 0xe7de
 MOVV16 RC  0x30da
-SUB RC RB
+SUB RC RC RB
 
 ; newton's method iteration
 MOVV RB 1
 MOVV RF 2
-CASTFU RB
-CASTFU RF
-DIVF RB RF
-MULF RB RA
-MULF RB RC
-MULF RB RC
+CASTFU RB RB
+CASTFU RF RF
+DIVF RB RB RF
+MULF RB RA RB
+MULF RB RC RB
+MULF RB RC RB
 MOVV RA 3
 MOVV RF 2
-CASTFU RA
-CASTFU RF
-DIVF RA RF
-SUBF RA RB
-MULF RA RC
+CASTFU RA RA
+CASTFU RF RF
+DIVF RA RA RF
+SUBF RA RA RB
+MULF RA RC RA
 
 ; display the result
 DISREG RA
@@ -41,23 +41,25 @@ DISREG RA
 ;; getting the actual exact result
 MOVV RB 1
 MOVV RC 20
-CASTFU RB
-CASTFU RC
-DIVF RB RC
+CASTFU RB RB
+CASTFU RC RC
+DIVF RC RB RC
 
 ;; getting the absolute value of the difference between the expected and actual value
-SUBF RA RC
+SUBF RA RC RA
 MOVV RB 0
 MOVV16 RB7 128
-XOR RA RB
+NEG RB
+AND RA RA RB
 
 ;; getting the precision
 MOVV RC 1
 MOVV RD 1000
-CASTFU RC
-CASTFU RD
-DIVF RC RD
-SMLF RA RC
+CASTFU RC RC
+CASTFU RD RD
+DIVF RC RC RD
+SMLF RA RC RA
+
 
 HALT RA
 

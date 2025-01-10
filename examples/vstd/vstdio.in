@@ -3,12 +3,12 @@
 
 ;; fprintf_str takes the output file from RA and the input string from RB, it then prints the string up to the first '\0'.
 __fprintf_str_start:
-    PUTC RC RA
-    ADD RB RD
-    READ8 RC RB
+    PUTC RC RA R0
+    ADD RB RD RB
+    READ8 RC RB R0
 JMPF RC $__fprintf_str_start
 MOVV RC 10
-PUTC RC RA
+PUTC RC RA R0
 ;; restoring registers RC and RD
 POP RD
 POP RC
@@ -19,7 +19,7 @@ fprintf_str:
     PUSH RD
 
     MOVV RD 1
-    READ8 RC RB
+    READ8 RC RB R0
     JMPF RC $__fprintf_str_start
     ;; restoring registers RC and RD
     POP RD

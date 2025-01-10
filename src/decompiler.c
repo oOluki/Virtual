@@ -38,6 +38,12 @@ char* get_reg_str(int reg, char* output){
 
     switch (8 * (int)(reg / 8))
     {
+    case R0:
+	output[0] = 'R';
+	output[1] = '0';
+	output[2] = get_digit_char(reg - R0);
+	output[3] = '\0';
+	return output;
     case RA:
         output[0] = 'R';
         output[1] = 'A';
@@ -110,7 +116,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         if((inst >> 24) == HINT_REG){
             fprintf(output, "%s\n", get_reg_str(L1, buff1));
         }
-        else fprintf(output, "0x%"PRIx16"; (u: %"PRIu16")\n", L1, L1);
+        else fprintf(output, "0x%"PRIx16"; (u: %"PRIi16")\n", L1, L1);
         return 0;
     case INST_MOV8:
         fprintf(output, "MOV8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
@@ -172,28 +178,28 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
             fprintf(output, "STATIC 0x%"PRIx16" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
     }   return 0;
     case INST_READ8:
-        fprintf(output, "READ8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "READ8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_READ16:
-        fprintf(output, "READ16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "READ16 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_READ32:
-        fprintf(output, "READ32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "READ32 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_READ:
-        fprintf(output, "READ %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "READ %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SET8:
-        fprintf(output, "SET8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SET8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SET16:
-        fprintf(output, "SET16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SET16 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SET32:
-        fprintf(output, "SET32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SET32 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SET:
-        fprintf(output, "SET %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SET %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_TEST:
         fprintf(output, "TEST %s\n", get_reg_str(R1, buff1));
@@ -205,19 +211,19 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "NEG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_AND:
-        fprintf(output, "AND %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "AND %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_NAND:
-        fprintf(output, "NAND %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "NAND %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_OR:
-        fprintf(output, "OR %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "OR %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_XOR:
-        fprintf(output, "XOR %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "XOR %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_BSHIFT:
-        fprintf(output, "BSHIFT %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "BSHIFT %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_JMP:
         fprintf(output, "JMP ");
@@ -243,141 +249,141 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         fprintf(output, "RET\n");
         return 0;
     case INST_ADD8:
-        fprintf(output, "ADD8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "ADD8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SUB8:
-        fprintf(output, "SUB8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SUB8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MUL8:
-        fprintf(output, "MUL8 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "MUL8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_ADD16:
-        fprintf(output, "ADD16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "ADD16 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SUB16:
-        fprintf(output, "SUB16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SUB16 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MUL16:
-        fprintf(output, "MUL16 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "MUL16 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_ADD32:
-        fprintf(output, "ADD32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "ADD32 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SUB32:
-        fprintf(output, "SUB32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SUB32 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MUL32:
-        fprintf(output, "MUL32 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "MUL32 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_ADD:
-        fprintf(output, "ADD %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "ADD %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SUB:
-        fprintf(output, "SUB %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SUB %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MUL:
-        fprintf(output, "MUL %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "MUL %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_DIVI:
-        fprintf(output, "DIVI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "DIVI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_DIVU:
-        fprintf(output, "DIVU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "DIVU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_ADDF:
-        fprintf(output, "ADDF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "ADDF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SUBF:
-        fprintf(output, "SUBF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SUBF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MULF:
-        fprintf(output, "MULF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "MULF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_DIVF:
-        fprintf(output, "DIVF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "DIVF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQI:
-        fprintf(output, "EQI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "EQI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQU:
-        fprintf(output, "EQU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "EQU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQF:
-        fprintf(output, "EQF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "EQF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_BIGI:
-        fprintf(output, "BIGI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "BIGI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_BIGU:
-        fprintf(output, "BIGU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "BIGU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_BIGF:
-        fprintf(output, "BIGF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "BIGF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SMLI:
-        fprintf(output, "SMLI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SMLI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SMLU:
-        fprintf(output, "SMLU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SMLU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_SMLF:
-        fprintf(output, "SMLF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "SMLF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_CASTIU:
-        fprintf(output, "CASTIU %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTIU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CASTIF:
-        fprintf(output, "CASTIF %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTIF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CASTUI:
-        fprintf(output, "CASTUI %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTUI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CASTUF:
-        fprintf(output, "CASTUF %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTUF %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CASTFI:
-        fprintf(output, "CASTFI %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTFI %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CASTFU:
-        fprintf(output, "CASTFU %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CASTFU %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CF3264:
-        fprintf(output, "CF3264 %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CF3264 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_CF6432:
-        fprintf(output, "CF6432 %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "CF6432 %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
 
     case INST_MEMSET:
-        fprintf(output, "MEMSET %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R2, buff3));
+        fprintf(output, "MEMSET %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MEMCPY:
-        fprintf(output, "MEMCPY %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R2, buff3));
+        fprintf(output, "MEMCPY %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MEMMOV:
-        fprintf(output, "MEMMOV %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R2, buff3));
+        fprintf(output, "MEMMOV %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MEMCMP:
-        fprintf(output, "MEMCMP %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R2, buff3));
+        fprintf(output, "MEMCMP %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_MALLOC:
-        fprintf(output, "MALLOC %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "MALLOC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_FREE:
-        fprintf(output, "FREE %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "FREE %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     
     case INST_FOPEN:
-        fprintf(output, "FOPEN %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "FOPEN %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_FCLOSE:
-        fprintf(output, "FCLOSE %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "FCLOSE %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_PUTC:
-        fprintf(output, "PUTC %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
+        fprintf(output, "PUTC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_GETC:
-        fprintf(output, "GETC %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "GETC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     
 

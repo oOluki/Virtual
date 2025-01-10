@@ -70,72 +70,72 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("READ")))   return (InstProfile){INST_READ  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_SET8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_SET16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_SET32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_SET   , OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("READ")))   return (InstProfile){INST_READ  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_SET8  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_SET16 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_SET32 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_SET   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("TEST")))   return (InstProfile){INST_TEST  , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("NOT")))    return (InstProfile){INST_NOT   , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("NEG")))    return (InstProfile){INST_NEG   , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("AND")))    return (InstProfile){INST_AND   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("NAND")))   return (InstProfile){INST_NAND  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("OR")))     return (InstProfile){INST_OR    , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("AND")))    return (InstProfile){INST_AND   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("NAND")))   return (InstProfile){INST_NAND  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("OR")))     return (InstProfile){INST_OR    , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPIF , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPIFN, OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("RET")))    return (InstProfile){INST_RET   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SUB8")))   return (InstProfile){INST_SUB8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MUL8")))   return (InstProfile){INST_MUL8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("ADD16")))  return (InstProfile){INST_ADD16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SUB16")))  return (InstProfile){INST_SUB16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MUL16")))  return (InstProfile){INST_MUL16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("ADD32")))  return (InstProfile){INST_ADD32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SUB32")))  return (InstProfile){INST_SUB32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MUL32")))  return (InstProfile){INST_MUL32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("ADD")))    return (InstProfile){INST_ADD   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SUB")))    return (InstProfile){INST_SUB   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MUL")))    return (InstProfile){INST_MUL   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("DIVI")))   return (InstProfile){INST_DIVI  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("DIVU")))   return (InstProfile){INST_DIVU  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("ADDF")))   return (InstProfile){INST_ADDF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SUBF")))   return (InstProfile){INST_SUBF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MULF")))   return (InstProfile){INST_MULF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("DIVF")))   return (InstProfile){INST_DIVF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("EQI")))    return (InstProfile){INST_EQI   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("EQU")))    return (InstProfile){INST_EQU   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("BIGI")))   return (InstProfile){INST_BIGI  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("BIGU")))   return (InstProfile){INST_BIGU  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("BIGF")))   return (InstProfile){INST_BIGF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SMLI")))   return (InstProfile){INST_SMLI  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SMLU")))   return (InstProfile){INST_SMLU  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("SMLF")))   return (InstProfile){INST_SMLF  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTIU"))) return (InstProfile){INST_CASTIU, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CASTIF"))) return (InstProfile){INST_CASTIF, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CASTUI"))) return (InstProfile){INST_CASTUI, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CASTUF"))) return (InstProfile){INST_CASTUF, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CASTFI"))) return (InstProfile){INST_CASTFI, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CASTFU"))) return (InstProfile){INST_CASTFU, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CF3264"))) return (InstProfile){INST_CF3264, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("CF6432"))) return (InstProfile){INST_CF6432, OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SUB8")))   return (InstProfile){INST_SUB8  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("MUL8")))   return (InstProfile){INST_MUL8  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ADD16")))  return (InstProfile){INST_ADD16 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SUB16")))  return (InstProfile){INST_SUB16 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("MUL16")))  return (InstProfile){INST_MUL16 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ADD32")))  return (InstProfile){INST_ADD32 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SUB32")))  return (InstProfile){INST_SUB32 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("MUL32")))  return (InstProfile){INST_MUL32 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ADD")))    return (InstProfile){INST_ADD   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SUB")))    return (InstProfile){INST_SUB   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("MUL")))    return (InstProfile){INST_MUL   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("DIVI")))   return (InstProfile){INST_DIVI  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("DIVU")))   return (InstProfile){INST_DIVU  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ADDF")))   return (InstProfile){INST_ADDF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SUBF")))   return (InstProfile){INST_SUBF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("MULF")))   return (InstProfile){INST_MULF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("DIVF")))   return (InstProfile){INST_DIVF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("EQI")))    return (InstProfile){INST_EQI   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("EQU")))    return (InstProfile){INST_EQU   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("BIGI")))   return (InstProfile){INST_BIGI  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("BIGU")))   return (InstProfile){INST_BIGU  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("BIGF")))   return (InstProfile){INST_BIGF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SMLI")))   return (InstProfile){INST_SMLI  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SMLU")))   return (InstProfile){INST_SMLU  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SMLF")))   return (InstProfile){INST_SMLF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("CASTIU"))) return (InstProfile){INST_CASTIU, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CASTIF"))) return (InstProfile){INST_CASTIF, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CASTUI"))) return (InstProfile){INST_CASTUI, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CASTUF"))) return (InstProfile){INST_CASTUF, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CASTFI"))) return (InstProfile){INST_CASTFI, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CASTFU"))) return (InstProfile){INST_CASTFU, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CF3264"))) return (InstProfile){INST_CF3264, OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("CF6432"))) return (InstProfile){INST_CF6432, OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("MEMSET"))) return (InstProfile){INST_MEMSET, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MEMCPY"))) return (InstProfile){INST_MEMCPY, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MEMMOV"))) return (InstProfile){INST_MEMMOV, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MEMCMP"))) return (InstProfile){INST_MEMCMP, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MALLOC"))) return (InstProfile){INST_MALLOC, OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("FREE")))   return (InstProfile){INST_FREE  , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("FOPEN")))  return (InstProfile){INST_FOPEN , OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("FOPEN")))  return (InstProfile){INST_FOPEN , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
 
     if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
@@ -144,6 +144,7 @@ InstProfile get_inst_profile(const Token inst_token){
 }
 
 static inline int get_major_reg_identifier(const Token token){
+    if(mc_compare_token(token, MKTKN("R0"), 1))  return R0;
     if(mc_compare_token(token, MKTKN("RA"), 1))  return RA;
     if(mc_compare_token(token, MKTKN("RB"), 1))  return RB;
     if(mc_compare_token(token, MKTKN("RC"), 1))  return RC;
@@ -553,7 +554,6 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
 int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory, Mc_stream_t* files_stream){
 
     InstProfile inst_profile = (InstProfile){.opcode = INST_ERROR, .op_profile = OP_PROFILE_NONE};
-    Token inst_token = (Token){.value.as_str = NULL};
 
     Token token = get_next_token(parser->tokenizer);
     for(;
@@ -636,7 +636,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
             return 1;
         }
         
-        if(parse_inst(parser, static_memory, program, inst_profile, (StringView){.str = inst_token.value.as_str, .size = inst_token.size})){
+        if(parse_inst(parser, static_memory, program, inst_profile, (StringView){.str = token.value.as_str, .size = token.size})){
             return 1;
         }
     }
