@@ -51,6 +51,44 @@ typedef struct Parser
 } Parser;
 
 
+void fprint_token(FILE* file, const Token token){
+    switch(token.type){
+    case TKN_NONE:
+	fprintf(file, "TOKEN_NONE");
+	break;
+    case TKN_RAW:
+    case TKN_INST:
+    case TKN_REG:
+    case TKN_STR:
+	fprintf(file, "%.*s", token.type, token.value.as_str);
+	break;
+    case TKN_ILIT:
+	fprintf("%"PRIi64"", token.value.as_int);
+	break;
+    case TKN_ULIT:
+	fprintf("%"PRIu64"", token.value.as_uint);
+	break;
+    case TKN_FLIT:
+	fprintf("%f", token.value.as_float);
+	break;
+    case TKN_SPECIAL_SYM:
+	fprintf("%c", token.value.as_str[0]);
+	break;
+    case TKN_MACRO_INST:
+    case TKN_LABEL_REF:
+    case TKN_EMPTY:
+	fprintf(file, "TOKEN_EMPTY");
+	break;
+    case TKN_ADDR_LABEL_REF:
+    case TKN_ERROR:
+    default:
+	fprintf(file, "TOKEN_ERROR");
+	break;
+    }
+
+}
+
+
 InstProfile get_inst_profile(const Token inst_token){
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 

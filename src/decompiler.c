@@ -243,7 +243,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         if(GET_OP_HINT(inst) == HINT_REG)
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
-            fprintf(output, "0x%"PRIx16"; i: %"PRIi16"\n", L1, L1);
+            fprintf(output, "0x%"PRIx16"; i: %"PRIi16"\n", L1, (int16_t) L1);
             return 0;
     case INST_RET:
         fprintf(output, "RET\n");
