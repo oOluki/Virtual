@@ -230,20 +230,20 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
         if(GET_OP_HINT(inst) == HINT_REG)
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
-            printf("%"PRIu16"\n", L1);
+            printf("0x%"PRIx16"; %"PRIi16"\n", L1, (int16_t) L1);
         return 0;
     case INST_JMPIF:
-        fprintf(output, "JMPF %s %"PRIu16"\n", get_reg_str(R1, buff1), L2);
+        fprintf(output, "JMPF %s 0x%"PRIx16"; i: %"PRIi16"\n", get_reg_str(R1, buff1), L2, (int16_t) L2);
         return 0;
     case INST_JMPIFN:
-        fprintf(output, "JMPFN %s %"PRIu16"\n", get_reg_str(R1, buff1), L2);
+        fprintf(output, "JMPFN %s 0x%"PRIx16"; i: %"PRIi16"\n", get_reg_str(R1, buff1), L2, (int16_t) L2);
         return 0;
     case INST_CALL:
         fprintf(output, "CALL ");
         if(GET_OP_HINT(inst) == HINT_REG)
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
-            fprintf(output, "%"PRIu16"\n", L1);
+            fprintf(output, "0x%"PRIx16"; i: %"PRIi16"\n", L1, L1);
             return 0;
     case INST_RET:
         fprintf(output, "RET\n");

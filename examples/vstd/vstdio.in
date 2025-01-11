@@ -6,7 +6,7 @@ __fprintf_str_start:
     PUTC RC RA R0
     ADD RB RD RB
     READ8 RC RB R0
-JMPF RC $__fprintf_str_start
+JMPF RC @__fprintf_str_start
 MOVV RC 10
 PUTC RC RA R0
 ;; restoring registers RC and RD
@@ -20,7 +20,7 @@ fprintf_str:
 
     MOVV RD 1
     READ8 RC RB R0
-    JMPF RC $__fprintf_str_start
+    JMPF RC @__fprintf_str_start
     ;; restoring registers RC and RD
     POP RD
     POP RC

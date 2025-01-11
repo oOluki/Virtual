@@ -1,19 +1,19 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/Q_rsqrt.out
-	;; executable size = 220
-	;; inst count      = 43
+	;; name = precomputed/primes.out
+	;; executable size = 264
+	;; inst count      = 54
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
-	;; static_memory   = { position = 0, pointer = 0xea25d028, size = 16 }
-	;; entry point     = 0
+	;; static_memory   = { position = 0, pointer = 0xeb148028, size = 16 }
+	;; entry point     = 54
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%start
-MOVV RA 0x190; (u: 400; i: 400; f: 0.000000)
-CASTFU RA RA
+PUSH RB
+PUSH RC
+PUSH RF
 MOV RB RA
 MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
 BSHIFT RB RB RC
@@ -37,21 +37,32 @@ CASTFU RF RF
 DIVF RA RA RF
 SUBF RA RA RB
 MULF RA RC RA
-DISREG RA
+POP RF
+POP RC
+POP RB
+RET
+PUSH RB
+CALL 0xffe1; i: 65505
 MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RC 0x14; (u: 20; i: 20; f: 0.000000)
 CASTFU RB RB
-CASTFU RC RC
-DIVF RC RB RC
-SUBF RA RC RA
-MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
-NEG RB
-AND RA RA RB
-MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
-CASTFU RC RC
-CASTFU RD RD
-DIVF RC RC RD
-SMLF RA RC RA
-HALT RA
+DIVF RA RB RA
+POP RB
+RET
+PUTC RC RA R0
+ADD RB RD RB
+READ8 RC RB R0
+JMPF RC 0xfffd; i: -3
+MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
+PUTC RC RA R0
+POP RD
+POP RC
+RET
+PUSH RC
+PUSH RD
+MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+READ8 RC RB R0
+JMPF RC 0xfff3; i: -13
+POP RD
+POP RC
+RET
+%start

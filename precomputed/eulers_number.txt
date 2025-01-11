@@ -6,7 +6,7 @@
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
-	;; static_memory   = { position = 0, pointer = 0xf220b028, size = 16 }
+	;; static_memory   = { position = 0, pointer = 0xf2e04028, size = 16 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
@@ -25,7 +25,7 @@ DIVF RE RE RB
 ADDF RA RE RA
 MOV RF RB
 SMLF RF RF RC
-JMPF RF 8
+JMPF RF 0xfffb; i: -5
 DISREG RA
 MOVV16 RB6 0x4005; (u: 16389; i: 16389; f: 0.000000)
 MOVV16 RB4 0xbf0a; (u: 48906; i: 48906; f: 0.000000)

@@ -28,7 +28,7 @@ say_hello:
         READ8 RC RB R0
         PUTC RC RA R0
         ADD RB RE RB
-    JMPF RC $say_hello_loop
+    JMPF RC @say_hello_loop
 
     MOVV RC 10
     PUTC RC RA R0
@@ -37,5 +37,5 @@ say_hello:
 %unlabel say_hello_loop
 
 %start
-    CALL $say_hello
+    CALL @say_hello
     HALT 0

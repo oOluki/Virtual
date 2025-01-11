@@ -1,0 +1,67 @@
+%ifnlabel _VMATH_IN
+%labelv _VMATH_IN
+
+; the call convention is inspired by system V
+; the first 6 arguments are passed through registers RA, RB,RC, RD, RE and RF, respectively
+; the rest is passed through the stack
+; the first 6 return values are passed through registers, similar to how arguments are passed
+; the rest is passed through the stack
+
+
+Q_rsqrt:
+    ;; saving register values
+    PUSH RB
+    PUSH RC
+    PUSH RF
+
+    ;; evil bit level hacking (trivial in this case)
+    MOV RB RA
+
+    ;; "what the fuck"
+    MOVN RC 0
+    BSHIFT RB RB RC
+    MOVV16 RC6 0x5fe6
+    MOVV16 RC4 0xec85
+    MOVV16 RC2 0xe7de
+    MOVV16 RC  0x30da
+    SUB RC RC RB
+
+    ; newton's method iteration
+    MOVV RB 1
+    MOVV RF 2
+    CASTFU RB RB
+    CASTFU RF RF
+    DIVF RB RB RF
+    MULF RB RA RB
+    MULF RB RC RB
+    MULF RB RC RB
+    MOVV RA 3
+    MOVV RF 2
+    CASTFU RA RA
+    CASTFU RF RF
+    DIVF RA RA RF
+    SUBF RA RA RB
+    MULF RA RC RA
+
+    ;; restoring register values and returning
+    POP RF
+    POP RC
+    POP RB
+    RET
+
+
+sqrt:
+    PUSH RB
+    CALL @Q_rsqrt
+    MOVV RB 1
+    CASTFU RB RB
+    DIVF RA RB RA
+    POP RB
+    RET
+
+
+
+
+
+
+%endif

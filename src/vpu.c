@@ -27,7 +27,6 @@ static inline int64_t perform_inst(Inst inst){
 
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R2.as_##TYPE OP R3.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R2.as_##TYPE OP R3.as_##TYPE
-
     
 
     switch (inst & 0XFF)
@@ -135,24 +134,14 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = R3.as_int64 < 0? R2.as_uint64 >> -(R3.as_int64) : R2.as_uint64 << R3.as_uint64;
         return 1;
     case INST_JMP:
-        IP = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
-        return 1;
+        return (GET_OP_HINT(inst) == HINT_REG)? R1.as_int64 : (int64_t) L1;
     case INST_JMPIF:
-        if(R1.as_uint8){
-            IP = L2;
-            return 0;
-        }
-        return 1;
+        return (R1.as_uint8)? (int16_t) L2 : 1;
     case INST_JMPIFN:
-        if(!(R1.as_uint8)){
-            IP = L2;
-            return 0;
-        }
-        return 1;
+        return (!(R1.as_uint8))? (int16_t) L2 : 1;
     case INST_CALL:
         vpu.stack[SP++] = IP + 1;
-        IP = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
-        return 0;
+        return (GET_OP_HINT(inst) == HINT_REG)? R1.as_int64 : (int16_t) L1;
     case INST_RET:
         IP = vpu.stack[--SP];
         return 0;
@@ -390,8 +379,10 @@ int main(int argc, char** argv){
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
-        vpu.registers[RIP / 8].as_uint64 += perform_inst(vpu.program[vpu.registers[RIP / 8].as_uint64])
-    ) vpu.registers[R0].as_uint64 = 0;
+        vpu.registers[RIP / 8].as_int64 += perform_inst(vpu.program[vpu.registers[RIP / 8].as_uint64])
+    ) {
+	    vpu.registers[R0].as_uint64 = 0;
+    }
 
     mc_destroy_stream(stream);
 

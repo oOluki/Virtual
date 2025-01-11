@@ -22,7 +22,7 @@ loop:
     ADDF RA RE RA
     MOV  RF RB
     SMLF RF RF RC
-JMPF RF $loop
+JMPF RF @loop
 
 ;; display the result
 DISREG RA

@@ -1,0 +1,11 @@
+%include "vstd/vmath.in"
+%include "vstd/vstdio.in"
+
+%label RANGE 25
+
+
+
+%start
+
+
+

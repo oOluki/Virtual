@@ -6,7 +6,7 @@
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 28
-	;; static_memory   = { position = 0, pointer = 0xe9417028, size = 28 }
+	;; static_memory   = { position = 0, pointer = 0xf505a028, size = 28 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
@@ -21,7 +21,7 @@ MOVV RC 0x00; (u: 0; i: 0; f: 0.000000)
 READ8 RC RB R0
 PUTC RC RA R0
 ADD RB RB RE
-JMPF RC 5
+JMPF RC 0xfffd; i: -3
 MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
 PUTC RC RA R0
 HALT 0x0; (u: 0)
