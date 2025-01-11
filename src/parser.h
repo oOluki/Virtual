@@ -480,22 +480,22 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             }
             token = tmp; 
         }
-	if(token.type == TKN_ADDR_LABEL_REF){
-	    token.type = TKN_LABEL_REF;
-	    const Token tmp = resolve_token(parser->labels, token);
+        if(token.type == TKN_ADDR_LABEL_REF){
+            token.type = TKN_LABEL_REF;
+            const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", token.size, token.value.as_str);
                 return 1;
             }
-	    const int64_t v = tmp.value.as_uint - (program->size / 4);
-	    if(v != (int16_t) v){
-                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
-		return 1;
-	    }
+            const int64_t v = tmp.value.as_uint - (program->size / 4);
+            if(v != (int16_t) v){
+                    REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
+                return 1;
+            }
             token = tmp;
-	    const Register dummy = (Register){.as_int16 = (int16_t) v};
-	    token.value.as_uint = dummy.as_uint64;
-	}
+            const Register dummy = (Register){.as_int16 = (int16_t) v};
+            token.value.as_uint = dummy.as_uint64;
+        }
         switch (inst_profile.op_profile & 0XFF)
         {
         case EXPECT_OP_REG:{
@@ -536,7 +536,11 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
                 return 1;
             }
             if(operand.value.as_uint16 != operand.value.as_uint64){
-                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long%c\n\n", ' ');
+                REPORT_ERROR(
+                    parser,
+                    "\n\tLiteral Has To Be Up To 16 Bits Long %"PRIu64" != %"PRIu16"\n\n",
+                    operand.value.as_uint64, operand.value.as_uint16
+                );
                 return 1;
             }
             inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);

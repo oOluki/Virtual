@@ -1,13 +1,13 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/primes.out
-	;; executable size = 264
-	;; inst count      = 54
+	;; name = .\precomputed\primes.out
+	;; executable size = 332
+	;; inst count      = 71
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
-	;; static_memory   = { position = 0, pointer = 0xeaaf2028, size = 16 }
-	;; entry point     = 54
+	;; static_memory   = { position = 0, size = 16 }
+	;; entry point     = 71
 ;; X====X (SPECIFICATIONS) X====X
 
 
@@ -42,7 +42,7 @@ POP RC
 POP RB
 RET
 PUSH RB
-CALL 0xffe1; i: 65505
+CALL 0xffe1; i: -31
 MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
 CASTFU RB RB
 DIVF RA RB RA
@@ -65,4 +65,21 @@ JMPF RC 0xfff3; i: -13
 POP RD
 POP RC
 RET
+MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
+MOVV RA 0x19; (u: 25; i: 25; f: 0.000000)
+CALL 0xffe6; i: -26
+CASTUF RA RA
+PUSH RC
+MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
+MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+ADD RC RC RD
+SMLU RD RC RA
+JMPF RD 0xfffd; i: -3
+POP RC
+RET
+MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+ADD RC RC RD
+MOVV RD 0x19; (u: 25; i: 25; f: 0.000000)
+SMLU RD RC RD
+JMPF RD 0xfffc; i: -4
 %start

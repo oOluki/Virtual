@@ -1,0 +1,39 @@
+%include "vstd/vmath.in"
+%include "vstd/vstdio.in"
+
+%label RANGE 25
+
+;; RC will serve as a conter
+MOVV RC 1
+MOVV RA $RANGE
+
+is_prime:
+    CALL @sqrt
+    CASTUF RA RA
+    PUSH RC
+    MOVV RC 2
+    loop:
+        MOVV RD 1
+        ADD RC RC RD
+        SMLU RD RC RA
+    JMPF RD @loop
+
+    POP RC
+    RET
+%unlabel loop
+
+loop:
+
+    MOVV RD 1
+    ADD RC RC RD
+    MOVV RD 25
+    SMLU RD RC RD
+JMPF RD @loop
+
+
+
+
+%start
+
+
+
