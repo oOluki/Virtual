@@ -463,7 +463,7 @@ int main(int argc, char** argv){
         "\t;; inst size       = %"PRIu32"\n"
         "\t;; flags           = %02"PRIx64"\n"
         "\t;; meta_data_size  = %"PRIu64"\n"
-        "\t;; static_memory   = { position = %"PRIu64", pointer = %p, size = %"PRIu64" }\n"
+        "\t;; static_memory   = { position = %"PRIu64", size = %"PRIu64" }\n"
         "\t;; entry point     = %"PRIu64"\n"
         ";; X====X (SPECIFICATIONS) X====X\n\n\n",
         argv[1],
@@ -472,7 +472,7 @@ int main(int argc, char** argv){
         (uint32_t) sizeof(Inst),
         flags,
         meta_data_size,
-        (uint64_t)(size_t)(static_memory - meta_data), static_memory, static_memory_size,
+        (uint64_t)(size_t)(static_memory - meta_data), static_memory_size,
         entry_point
     );
     

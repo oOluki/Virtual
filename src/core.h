@@ -2,7 +2,7 @@
 #define CORE_HEADER
 
 #include <stdlib.h>
-#include "stdint.h"
+#include <stdint.h>
 
 #ifndef VPU_MEMALIGN_TO
     #define VPU_MEMALIGN_TO 8

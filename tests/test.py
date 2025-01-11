@@ -2,6 +2,9 @@ import os
 import platform
 import sys
 import subprocess
+import locale
+
+print(f"Default encoding: {locale.getpreferredencoding()}")
 
 BUILD_DIR = sys.argv[1]
 EXAMPLES_DIR = sys.argv[2]
@@ -29,7 +32,7 @@ def run_process(*command):
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
 def cmpf(f1, f2, mode):

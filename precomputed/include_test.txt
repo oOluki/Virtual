@@ -1,12 +1,12 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/include_test.out
+	;; name = .\precomputed\include_test.out
 	;; executable size = 168
 	;; inst count      = 22
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 45
-	;; static_memory   = { position = 0, pointer = 0xeb597028, size = 45 }
+	;; static_memory   = { position = 0, size = 45 }
 	;; entry point     = 17
 ;; X====X (SPECIFICATIONS) X====X
 
@@ -33,5 +33,5 @@ RET
 STATIC 0x10 ;; "INCLUDE TEST WA"...
 POP RB
 SYS 0x00
-CALL 0xfff5; i: 65525
+CALL 0xfff5; i: -11
 HALT 0x0; (u: 0)

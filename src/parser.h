@@ -60,34 +60,33 @@ void fprint_token(FILE* file, const Token token){
     case TKN_INST:
     case TKN_REG:
     case TKN_STR:
-	fprintf(file, "%.*s", token.type, token.value.as_str);
-	break;
+        fprintf(file, "%.*s", token.type, token.value.as_str);
+        break;
     case TKN_ILIT:
-	fprintf("%"PRIi64"", token.value.as_int);
-	break;
+        fprintf(file, "%"PRIi64"", token.value.as_int);
+        break;
     case TKN_ULIT:
-	fprintf("%"PRIu64"", token.value.as_uint);
-	break;
+        fprintf(file, "%"PRIu64"", token.value.as_uint);
+        break;
     case TKN_FLIT:
-	fprintf("%f", token.value.as_float);
-	break;
+        fprintf(file, "%f", token.value.as_float);
+        break;
     case TKN_SPECIAL_SYM:
-	fprintf("%c", token.value.as_str[0]);
-	break;
+        fprintf(file, "%c", token.value.as_str[0]);
+        break;
     case TKN_MACRO_INST:
     case TKN_LABEL_REF:
     case TKN_EMPTY:
-	fprintf(file, "TOKEN_EMPTY");
-	break;
+        fprintf(file, "TOKEN_EMPTY");
+        break;
     case TKN_ADDR_LABEL_REF:
     case TKN_ERROR:
     default:
-	fprintf(file, "TOKEN_ERROR");
-	break;
+        fprintf(file, "TOKEN_ERROR");
+        break;
     }
 
 }
-
 
 InstProfile get_inst_profile(const Token inst_token){
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
@@ -490,7 +489,7 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             }
 	    const int64_t v = tmp.value.as_uint - (program->size / 4);
 	    if(v != (int16_t) v){
-                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long\n%c", '\n');
+                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
 		return 1;
 	    }
             token = tmp;
@@ -617,7 +616,6 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         if(token.type == TKN_EMPTY){
             continue;
         }
-	fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -701,7 +699,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 
