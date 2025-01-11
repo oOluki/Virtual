@@ -5,14 +5,9 @@
 ;; RE holds 1 / n!
 
 
-MOVV RA 1     
-MOVV RB 0     
-MOVV RC 10 
-
-; casting everything to double
-CASTFU RA RA
-CASTFU RB RB
-CASTFU RC RC
+LOAD2 RA 1.0f     
+MOVV RB 0.0f
+LOAD2 RC 10.0f
 MOV RD RA
 MOV RE RA
 
@@ -43,9 +38,7 @@ XOR RA RA RB
 ;; getting the precision
 MOVV RC 1
 MOVV RD 1000
-CASTFU RC RC
-CASTFU RD RD
-DIVF RC RC RD
+FLOAT RC RC RD
 SMLF RC RC RA
 
 HALT RC

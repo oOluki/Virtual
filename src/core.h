@@ -125,6 +125,22 @@ typedef enum OpCode{
     INST_PUTC,
     INST_GETC,
 
+    INST_ABS,
+    INST_ABSF,
+    INST_INC,
+    INST_DEC,
+    INST_INCF,
+    INST_DECF,
+    
+    INST_FLOAT,
+
+    INST_LOAD1,
+    INST_LOAD2,
+
+    INST_IOE,
+
+    INST_CONTAINER = 252,
+
     INST_SYS = 253,
 
     INST_DISREG = 254,

@@ -6,6 +6,7 @@
 static char buff1[10];
 static char buff2[10];
 static char buff3[10];
+static Inst* program = NULL;
 
 typedef struct Exe
 {
@@ -100,7 +101,7 @@ char* get_reg_str(int reg, char* output){
 }
 
 // \returns 0 on success or 1 otherwise
-int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
+int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
     #define R1 (uint8_t) ((inst & 0XFF00) >> 8)
     #define R2 (uint8_t) ((inst & 0XFF0000) >> 16)
     #define R3 (uint8_t) (inst >> 24)
@@ -382,8 +383,44 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
     case INST_GETC:
         fprintf(output, "GETC %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
+    case INST_ABS:
+        fprintf(output, "ABS %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        return 0;
+    case INST_ABSF:
+        fprintf(output, "ABSF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        return 0;
+    case INST_INC:
+        fprintf(output, "INC %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        return 0;
+    case INST_DEC:
+        fprintf(output, "DEC %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        return 0;
+    case INST_INCF:
+        fprintf(output, "INCF %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        return 0;
+    case INST_DECF:
+        fprintf(output, "DECF %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        return 0;
+    case INST_FLOAT:
+        fprintf(output, "FLOAT %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        return 0;
     
+    case INST_LOAD1:
+        fprintf(output, "LOAD1 %s 0x%"PRIx32"\n", get_reg_str(R1, buff1), ((program[ip + 1] & 0XFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16));
+        return 0;
+    case INST_LOAD2:
+        fprintf(output, "LOAD2 %s 0x%"PRIx64";\n", get_reg_str(R1, buff1),
+        (uint64_t) ((uint64_t) (program[ip + 2] & 0XFFFF00) << 32) |
+        ((uint64_t) (program[ip + 1] & 0XFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16));
+        return 0;
 
+    case INST_IOE:
+        fprintf(output, "IOE %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        return 0;
+    
+    case INST_CONTAINER:
+        fprintf(output, ";;CONTAINER\n");
+        return 0;
     case INST_DISREG:
         fprintf(output, "DISREG %s\n", get_reg_str(R1, buff1));
         return 0;
@@ -411,12 +448,6 @@ int main(int argc, char** argv){
         fprintf(stderr, "[ERROR] Expected At Least 1 Argument, Got %i Instead\n", argc - 1);
         return 1;
     }
-    FILE* const output = (argc == 3)? fopen(argv[2], "w") : stdout;
-
-    if(!output){
-	 fprintf(stderr, "[ERROR] Could Not Open Output File '%s'\n", argv[2]);
-	 return 1;
-    }
 
     Mc_stream_t stream = mc_create_stream(1024);
 
@@ -435,7 +466,11 @@ int main(int argc, char** argv){
 
     uint8_t* meta_data = get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags, &padding);
 
-    if(meta_data == NULL) return 1;
+    if(meta_data == NULL){
+        fprintf(stderr, "[ERROR] No Meta Data Found\n");
+        mc_destroy_stream(stream);
+        return 1;
+    }
 
     uint8_t* static_memory = NULL;
 
@@ -451,6 +486,14 @@ int main(int argc, char** argv){
     const uint64_t static_memory_size = *(uint64_t*)(static_memory);
 
     const uint64_t inst_count = (stream.size - skip - meta_data_size - padding) / sizeof(Inst);
+
+    FILE* const output = (argc == 3)? fopen(argv[2], "w") : stdout;
+
+    if(!output){
+        fprintf(stderr, "[ERROR] Could Not Open Output File '%s'\n", argv[2]);
+        mc_destroy_stream(stream);
+        return 1;
+    }
 
     fprintf( output,
         "\n;; X====X (SPECIFICATIONS) X====X\n"
@@ -482,15 +525,15 @@ int main(int argc, char** argv){
     }
 
 
-    const Inst* program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
+    program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
 
     int status = 0;
     uint64_t i = 0;
     for( ; (i < entry_point) && !status; i += 1)
-        status = print_inst(output, program[i], static_memory);
+        status = print_inst(output, program[i], static_memory, i);
     if(!status) fprintf(output, "%s\n", "%start");
     for( ; (i < inst_count) && !status; i += 1)
-        status = print_inst(output, program[i], static_memory);
+        status = print_inst(output, program[i], static_memory, i);
     
     if(argc == 3) fclose(output);
 

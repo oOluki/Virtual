@@ -109,6 +109,7 @@ const char* get_token_type_str(int type){
     case TKN_LABEL_REF:      return "TOKEN_LABEL_REF";
     case TKN_EMPTY:          return "TOKEN_EMPTY";
     case TKN_ADDR_LABEL_REF: return "TOKEN_ADDR_LABEL_REF";
+    case TKN_STATIC_SIZE:    return "TOKEN_STATIC_SIZE";
     default:                 return "TOKEN_ERROR";
     }
 
@@ -198,6 +199,17 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("INC")))    return (InstProfile){INST_INC   , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("DEC")))    return (InstProfile){INST_DEC   , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("INCF")))   return (InstProfile){INST_INCF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("DECF")))   return (InstProfile){INST_DECF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("FLOAT")))  return (InstProfile){INST_FLOAT , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("LOAD1")))  return (InstProfile){INST_LOAD1 , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("LOAD2")))  return (InstProfile){INST_LOAD2 , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("IOE")))    return (InstProfile){INST_IOE   , OP_PROFILE_RRR};
 
     if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
@@ -526,6 +538,10 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", tokenRW.size, tokenRW.value.as_str);
                 return 1;
             }
+            if(token.type == TKN_STATIC_SIZE){
+                token.value.as_uint = parser->static_memory->size;
+                token.type = TKN_ULIT;
+            }
         }
         if(token.type == TKN_ADDR_LABEL_REF){
             token.type = TKN_LABEL_REF;
@@ -570,13 +586,10 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return 1;
                 }
-                const uint64_t op_value = parser->static_memory->size;
+                token.value.as_uint = parser->static_memory->size;
+                token.type = TKN_ULIT;
                 mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
                 mc_stream_str(parser->static_memory, "");
-                inst |= (op_value & 0XFFFFFF) << 8;
-                op_token_pos += 1;
-                op_pos_in_inst += 2;
-                continue;
             }
             const Operand operand = parse_op_literal(token);
             if(operand.type == TKN_ERROR){
@@ -587,7 +600,31 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                 );
                 return 1;
             }
-            if(operand.value.as_uint64 != (uint16_t) operand.value.as_uint64){
+            if(inst_profile.opcode == INST_LOAD1){
+                if(operand.value.as_uint64 != operand.value.as_uint32){
+                    REPORT_ERROR(
+                        parser,
+                        "\n\tLOAD1 Literal Argument Has To Be Up To 32 Bits Long %"PRIu64" != %"PRIu32"\n\n",
+                        operand.value.as_uint64, operand.value.as_uint32
+                    );
+                    return 1;
+                }
+                inst |= ((operand.value.as_uint32  & 0XFFFF) << 16);
+                mc_stream(parser->program, &inst, sizeof(inst));
+                inst = INST_CONTAINER | (operand.value.as_uint32 & 0xFFFF0000) >> 8;
+                mc_stream(parser->program, &inst, sizeof(inst));
+                return 0;
+            }
+            if(inst_profile.opcode == INST_LOAD2){
+                inst |= (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
+                mc_stream(parser->program, &inst, sizeof(inst));
+                inst = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
+                mc_stream(parser->program, &inst, sizeof(inst));
+                inst = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));
+                mc_stream(parser->program, &inst, sizeof(inst));
+                return 0;
+            }
+            if(operand.value.as_uint64 != operand.value.as_uint16){
                 REPORT_ERROR(
                     parser,
                     "\n\tLiteral Has To Be Up To 16 Bits Long %"PRIu64" != %"PRIu16"\n\n",

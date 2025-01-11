@@ -1,8 +1,8 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = .\precomputed\eulers_number.out
-	;; executable size = 168
-	;; inst count      = 30
+	;; executable size = 164
+	;; inst count      = 29
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
@@ -12,12 +12,13 @@
 
 
 %start
-MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+LOAD2 RA 0xf0000000000000; f: 67553994410557440.000000
+;;CONTAINER
+;;CONTAINER
 MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
-CASTFU RA RA
-CASTFU RB RB
-CASTFU RC RC
+LOAD2 RC 0x24000000000000; f: 10133099161583616.000000
+;;CONTAINER
+;;CONTAINER
 MOV RD RA
 MOV RE RA
 ADDF RB RD RB
@@ -37,8 +38,6 @@ MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
 XOR RA RA RB
 MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
 MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
-CASTFU RC RC
-CASTFU RD RD
-DIVF RC RC RD
+FLOAT RC RC RD
 SMLF RC RC RA
 HALT RC

@@ -1,8 +1,8 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = .\precomputed\Q_rsqrt.out
-	;; executable size = 220
-	;; inst count      = 43
+	;; executable size = 196
+	;; inst count      = 37
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
@@ -24,17 +24,13 @@ MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
 SUB RC RC RB
 MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
 MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-CASTFU RB RB
-CASTFU RF RF
-DIVF RB RB RF
+FLOAT RB RB RF
 MULF RB RA RB
 MULF RB RC RB
 MULF RB RC RB
 MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
 MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-CASTFU RA RA
-CASTFU RF RF
-DIVF RA RA RF
+FLOAT RA RA RF
 SUBF RA RA RB
 MULF RA RC RA
 DISREG RA
@@ -50,8 +46,6 @@ NEG RB
 AND RA RA RB
 MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
 MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
-CASTFU RC RC
-CASTFU RD RD
-DIVF RC RC RD
+FLOAT RC RC RD
 SMLF RA RC RA
 HALT RA

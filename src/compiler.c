@@ -66,6 +66,11 @@ int main(int argc, char** argv){
     argv = malloc(argc * sizeof(char*));
     argv[1] = "../examples/hello_world.txt";
     #endif
+    const Operand op = parse_op_literal((Token){.value.as_str = "10.0", .type = TKN_RAW});
+    if(op.type == TKN_ERROR){
+        fprintf(stderr, "wtf\n");
+    }
+    printf("%f\n", op.value.as_float64);
 
     int input_file  = -1;
     int output_file = -1;

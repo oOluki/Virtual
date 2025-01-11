@@ -58,6 +58,7 @@ enum TokenTypes{
     TKN_LABEL_REF,
     TKN_EMPTY,
     TKN_ADDR_LABEL_REF,
+    TKN_STATIC_SIZE,
     TKN_ERROR = 255,
 };
 

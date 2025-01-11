@@ -306,6 +306,46 @@ static inline int64_t perform_inst(Inst inst){
     case INST_GETC:
         R1.as_int32 = fgetc((FILE*)(R2.as_ptr + R3.as_uint64));
         return 1;
+
+    case INST_ABS:{
+        const int64_t v = R2.as_uint64 - R3.as_uint64;
+        R1.as_uint64 = (v < 0)? -v : v;
+    }   return 1;
+    case INST_ABSF:{
+        const double v = R2.as_float64 - R3.as_float64;
+        R1.as_float64 = (v < 0)? -v : v;
+    }   return 1;
+    case INST_INC:
+        R1.as_uint64 += L2;
+        return 1;
+    case INST_DEC:
+        R1.as_int64 -= L1;
+        return 1;
+    case INST_INCF:
+        R1.as_float64 += (double)L2;
+        return 1;
+    case INST_DECF:
+        R1.as_float64 += (double)L2;
+        return 1;
+    case INST_FLOAT:
+        R1.as_float64 = (double) R2.as_int64 / (double) R3.as_uint64;
+        return 1;
+
+    case INST_LOAD1:
+        R1.as_uint64 = ((vpu.program[IP + 1] & 0XFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
+        return 2;
+    case INST_LOAD2:
+        R2.as_uint64 = 
+            (uint64_t) ((uint64_t) (vpu.program[IP + 2] & 0XFFFF00) << 32) |
+            ((uint64_t) (vpu.program[IP + 1] & 0XFFFF00) << 8) |
+            ((uint64_t) (inst & 0XFFFF0000) >> 16);
+        return 3;
+    
+    case INST_IOE:
+        R1.as_ptr = (uint8_t*) stdin;
+        R2.as_ptr = (uint8_t*) stdout;
+        R3.as_ptr = (uint8_t*) stderr;
+        return 1;
     
 
     case INST_SYS:

@@ -1,8 +1,8 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = .\precomputed\hello_world.out
-	;; executable size = 108
-	;; inst count      = 12
+	;; executable size = 104
+	;; inst count      = 11
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 28
@@ -15,12 +15,11 @@
 %start
 STATIC 0x10 ;; "hello world"...
 POP RB
-SYS 0x00
-MOVV RE 0x01; (u: 1; i: 1; f: 0.000000)
+IOE R0 RA R0
 MOVV RC 0x00; (u: 0; i: 0; f: 0.000000)
 READ8 RC RB R0
 PUTC RC RA R0
-ADD RB RB RE
+INC RB 0x1; u: 1
 JMPF RC 0xfffd; i: -3
 MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
 PUTC RC RA R0
