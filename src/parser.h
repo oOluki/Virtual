@@ -452,7 +452,7 @@ int parse_inst(Parser* parser, Mc_stream_t* static_memory, Mc_stream_t* program,
             }
 	    const int64_t v = tmp.value.as_uint - (program->size / 4);
 	    if(v != (int16_t) v){
-                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long %llu %lli\n\n", tmp.value.as_uint, v);
+                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long\n%c", '\n');
 		return 1;
 	    }
             token = tmp;

@@ -6,7 +6,7 @@
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
-	;; static_memory   = { position = 0, pointer = 0xea25d028, size = 16 }
+	;; static_memory   = { position = 0, pointer = 0xf0931028, size = 16 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
