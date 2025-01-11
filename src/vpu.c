@@ -109,9 +109,6 @@ static inline int64_t perform_inst(Inst inst){
     case INST_SET:
         *(uint64_t*)(R1.as_ptr + R3.as_uint64) = R2.as_uint64;
         return 1;
-    case INST_TEST:
-        R1.as_uint64 = (R1.as_uint64 != 0);
-        return 1;
     case INST_NOT:
         R1.as_uint64 = !R1.as_uint64;
         return 1;
@@ -214,10 +211,10 @@ static inline int64_t perform_inst(Inst inst){
 /                                                                                                               /
 /--------------------------------------------------------------------------------------------------------------*/
 
-    case INST_EQI:
-        COMPARE(==, int64);
+    case INST_NEQ:
+        COMPARE(!=, uint64);
         return 1;
-    case INST_EQU:
+    case INST_EQ:
         COMPARE(==, uint64);
         return 1;
     case INST_EQF:

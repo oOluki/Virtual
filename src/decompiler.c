@@ -201,9 +201,6 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
     case INST_SET:
         fprintf(output, "SET %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
-    case INST_TEST:
-        fprintf(output, "TEST %s\n", get_reg_str(R1, buff1));
-        return 0;
     case INST_NOT:
         fprintf(output, "NOT %s\n", get_reg_str(R1, buff1));
         return 0;
@@ -302,10 +299,10 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory){
     case INST_DIVF:
         fprintf(output, "DIVF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
-    case INST_EQI:
-        fprintf(output, "EQI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+    case INST_NEQ:
+        fprintf(output, "NEQI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
-    case INST_EQU:
+    case INST_EQ:
         fprintf(output, "EQU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQF:

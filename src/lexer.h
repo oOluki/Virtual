@@ -37,8 +37,8 @@ typedef struct Token
 {
     TokenValue  value;
     int         size;
-    int         line;
-    int         column;
+    //int         line;
+    //int         column;
     uint8_t     type;
 } Token;
 
@@ -68,7 +68,7 @@ typedef struct StringView
 } StringView;
 
 
-#define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .line = 0, .column = 0, .type = TKN_RAW})
+#define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .type = TKN_RAW})
 
 #define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
 
@@ -316,8 +316,6 @@ Token get_next_token(Tokenizer* tokenizer){
         const char c = string[tokenizer->pos];
         if(c == '\"'){
             token.value.as_str = string + tokenizer->pos;
-            token.line = tokenizer->line;
-            token.column = tokenizer->column;
             token.type = TKN_STR;
             const int skip = mc_find_char(string, '\"', tokenizer->pos + 1);
             if(skip < 0){
@@ -339,8 +337,6 @@ Token get_next_token(Tokenizer* tokenizer){
         }
         if(mc_find_char(special_characters, string[tokenizer->pos], 0) >= 0){
             token.value.as_str = (string + tokenizer->pos);
-            token.line = tokenizer->line;
-            token.column = tokenizer->column;
             token.size = 1;
             token.type = TKN_SPECIAL_SYM;
             tokenizer->pos += 1;
@@ -354,8 +350,6 @@ Token get_next_token(Tokenizer* tokenizer){
             break;
         }
         token.value.as_str = string + tokenizer->pos;
-        token.line = tokenizer->line;
-        token.column = tokenizer->column;
         switch (token.value.as_str[0])
         {
         case '%':

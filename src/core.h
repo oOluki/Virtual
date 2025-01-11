@@ -57,7 +57,6 @@ typedef enum OpCode{
     INST_SET32,
     INST_SET,
 
-    INST_TEST,
     INST_NOT,
     INST_NEG,
     INST_AND,
@@ -91,8 +90,8 @@ typedef enum OpCode{
     INST_MULF,
     INST_DIVF,
 
-    INST_EQI,
-    INST_EQU,
+    INST_NEQ,
+    INST_EQ,
     INST_EQF,
 
     INST_BIGI,
