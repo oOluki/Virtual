@@ -579,6 +579,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         if(token.type == TKN_EMPTY){
             continue;
         }
+	fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -662,7 +663,7 @@ int parse_file(Parser* parser, Mc_stream_t* program, Mc_stream_t* static_memory,
         return 1;
     }
 
-    return 0;
+    return 1;
 }
 
 

@@ -1,0 +1,10 @@
+%include "../examples/vstd/vstdio.in"
+
+
+%start
+    STATIC "INCLUDE TEST WAS SUCCESSFULL"
+    POP RB
+    SYS 0
+    CALL @fprintf_str
+    HALT 0
+
