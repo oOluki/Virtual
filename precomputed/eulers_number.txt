@@ -1,8 +1,8 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = precomputed/eulers_number.out
-	;; executable size = 168
-	;; inst count      = 30
+	;; executable size = 164
+	;; inst count      = 29
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 16
@@ -15,7 +15,6 @@
 LOAD2 RA 0x3ff0000000000000; (u: 4607182418800017408; 4607182418800017408; f: 1.000000)
 ;;CONTAINER 0x0
 ;;CONTAINER 0x3ff000
-DISREG RA
 MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
 LOAD2 RC 0x4024000000000000; (u: 4621819117588971520; 4621819117588971520; f: 10.000000)
 ;;CONTAINER 0x0
