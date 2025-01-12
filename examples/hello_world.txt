@@ -4,7 +4,7 @@ POP  RB
 IOE  R0 RA R0
 
 MOVV RC 0
-
+q
 loop:
 
 ;; (RB -> char*)
