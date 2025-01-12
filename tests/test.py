@@ -32,7 +32,7 @@ def run_process(*command):
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        text=False,
     )
 
 def cmpf(f1, f2, mode):
@@ -54,13 +54,13 @@ def precompute(example_path):
     process = run_process(COMPILE, example_path, "-o", PRECOMPILED)
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
-        print("stderr: " + process.stderr)
+        print("stderr: " + str(process.stderr))
         return 1
 
     process = run_process(DECOMPILE, PRECOMPILED, PREDECOMPILED)
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
-        print("stderr: " + process.stderr)
+        print("stderr: " + str(process.stderr))
         return 1
 
     return 0
@@ -82,7 +82,7 @@ def test_example(example_path) -> int:
     err_status = 0
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
-        print("stderr: " + process.stderr)
+        print("stderr: " + str(process.stderr))
         return 1
     elif cmpf(COMPILED, PRECOMPILED, "rb") == 0:
         print("Compiled " + EXAMPLE_NAME + " Does Not Match Expected")
@@ -91,13 +91,13 @@ def test_example(example_path) -> int:
     process = run_process(DECOMPILE, COMPILED, DECOMPILED)
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
-        print("stderr: " + process.stderr)
+        print("stderr: " + str(process.stderr))
         err_status = 1
     else:
         process = run_process(COMPILE, DECOMPILED, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
         if process.returncode != 0:
             print("Could Not Compile " + EXAMPLE_NAME + " Decompiled File")
-            print("stderr: " + process.stderr)
+            print("stderr: " + str(process.stderr))
             err_status = 1
         elif cmpf(BUILD_DIR + PATH_SEP + "tmp.out", COMPILED, "rb") == 0:
             print("Decompiled " + EXAMPLE_NAME + " Does Not Compile Back To Original Executable")
@@ -106,12 +106,12 @@ def test_example(example_path) -> int:
     process = run_process(RUN, COMPILED)
     if process.returncode != 0:
         print("Run Failed For " + EXAMPLE_NAME)
-        print("stderr: " + process.stderr)
+        print("stderr: " + str(process.stderr))
         err_status = 1
 
     if err_status == 0:
         print("Test " + EXAMPLE_NAME + " was successfull")
-        print("stdout: " + process.stdout)
+        print("stdout: " + str(process.stdout))
     else:
         print("*Test " + EXAMPLE_NAME + " failed ***")
     return err_status
