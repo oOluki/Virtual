@@ -132,7 +132,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_GET   , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
@@ -193,10 +193,10 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("MEMCPY"))) return (InstProfile){INST_MEMCPY, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MEMMOV"))) return (InstProfile){INST_MEMMOV, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MEMCMP"))) return (InstProfile){INST_MEMCMP, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MALLOC"))) return (InstProfile){INST_MALLOC, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("FREE")))   return (InstProfile){INST_FREE  , OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("MALLOC"))) return (InstProfile){INST_MALLOC, OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("FREE")))   return (InstProfile){INST_FREE  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("FOPEN")))  return (InstProfile){INST_FOPEN , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
@@ -316,6 +316,7 @@ Operand parse_op_literal(Token token){
             (Operand){.value.as_int64  = (int64_t)(-first_part), .type = TKN_ILIT}:
             (Operand){.value.as_uint64 =            first_part , .type = TKN_ULIT};
     }
+
     const double output = (double)(second_part) + (double)(first_part) / (double)(_10n1);
     
     return (Operand){.value.as_float64 = is_negative? -output : output, .type = TKN_FLIT};
@@ -616,12 +617,11 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                 return 0;
             }
             if(inst_profile.opcode == INST_LOAD2){
-                inst |= (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
-                mc_stream(parser->program, &inst, sizeof(inst));
-                inst = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
-                mc_stream(parser->program, &inst, sizeof(inst));
-                inst = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));
-                mc_stream(parser->program, &inst, sizeof(inst));
+		Inst container[3];
+                container[0] = inst | (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
+                container[1] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
+                container[2] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));
+		for(int i = 0; i < 3; i+=1) mc_stream(parser->program, &container[i], sizeof(inst));
                 return 0;
             }
             if(operand.value.as_uint64 != operand.value.as_uint16){

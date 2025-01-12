@@ -5,7 +5,7 @@
 ;; RE holds 1 / n!
 
 
-LOAD2 RA 1.0f     
+LOAD2 RA 1.0f
 MOVV RB 0.0f
 LOAD2 RC 10.0f
 MOV RD RA

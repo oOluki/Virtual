@@ -167,7 +167,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
         fprintf(output, "WRITE %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_GSP:
-        fprintf(output, "GSP %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "GSP %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_STATIC:
         if(GET_OP_HINT(inst) == HINT_REG){
@@ -396,36 +396,46 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
         fprintf(output, "DEC %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
         return 0;
     case INST_INCF:
-        fprintf(output, "INCF %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        fprintf(output, "INCF %s 0x%"PRIx16"; f: %f\n", get_reg_str(R1, buff1), L2, (float) L2);
         return 0;
     case INST_DECF:
-        fprintf(output, "DECF %s 0x%"PRIx16"; u: %"PRIu16"\n", get_reg_str(R1, buff1), L2, L2);
+        fprintf(output, "DECF %s 0x%"PRIx16"; f: %f\n", get_reg_str(R1, buff1), L2, (float) L2);
         return 0;
     case INST_FLOAT:
         fprintf(output, "FLOAT %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     
-    case INST_LOAD1:
-        fprintf(output, "LOAD1 %s 0x%"PRIx32"\n", get_reg_str(R1, buff1), ((program[ip + 1] & 0XFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16));
-        return 0;
-    case INST_LOAD2:
-        fprintf(output, "LOAD2 %s 0x%"PRIx64";\n", get_reg_str(R1, buff1),
-        (uint64_t) ((uint64_t) (program[ip + 2] & 0XFFFF00) << 32) |
-        ((uint64_t) (program[ip + 1] & 0XFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16));
-        return 0;
+    case INST_LOAD1:{
+	const Register v = (Register){
+            .as_uint32 = ((uint64_t) (program[ip + 1] & 0XFFFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16)
+	};
+        fprintf(output, "LOAD2 %s 0x%"PRIx32"; (u: %"PRIu32"; %"PRIi32"; f: %f)\n", get_reg_str(R1, buff1), v.as_uint32, v.as_uint32, v.as_int32, v.as_float32);
+    }   return 0;
+    case INST_LOAD2:{
+	const Register v = (Register){
+	    .as_uint64 = (uint64_t) ((uint64_t) (program[ip + 2] & 0XFFFFFF00) << 32) |
+        ((uint64_t) (program[ip + 1] & 0XFFFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16)
+	};
+        fprintf(output, "LOAD2 %s 0x%"PRIx64"; (u: %"PRIu64"; %"PRIi64"; f: %f)\n", get_reg_str(R1, buff1), v.as_uint64, v.as_uint64, v.as_int64, v.as_float64);
+    }   return 0;
 
     case INST_IOE:
         fprintf(output, "IOE %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     
     case INST_CONTAINER:
-        fprintf(output, ";;CONTAINER\n");
+        fprintf(output, ";;CONTAINER 0x%"PRIx32"\n", (inst & 0xFFFFFF00) >> 8);
         return 0;
     case INST_DISREG:
         fprintf(output, "DISREG %s\n", get_reg_str(R1, buff1));
         return 0;
     case INST_SYS:
-        fprintf(output, "SYS 0x%02"PRIx16"\n", L1);
+        fprintf(output, "SYS ");
+	if(GET_OP_HINT(inst) == HINT_REG)
+	    fprintf(output, "%s\n", get_reg_str(R1, buff1));
+	else
+	    fprintf(output, "%"PRIx16"\n", L1);
+
         return 0;
     
     

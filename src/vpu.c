@@ -325,19 +325,19 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_float64 += (double)L2;
         return 1;
     case INST_DECF:
-        R1.as_float64 += (double)L2;
+        R1.as_float64 -= (double)L2;
         return 1;
     case INST_FLOAT:
         R1.as_float64 = (double) R2.as_int64 / (double) R3.as_uint64;
         return 1;
 
     case INST_LOAD1:
-        R1.as_uint64 = ((vpu.program[IP + 1] & 0XFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
+        R1.as_uint64 = ((vpu.program[IP + 1] & 0XFFFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
         return 2;
     case INST_LOAD2:
-        R2.as_uint64 = 
-            (uint64_t) ((uint64_t) (vpu.program[IP + 2] & 0XFFFF00) << 32) |
-            ((uint64_t) (vpu.program[IP + 1] & 0XFFFF00) << 8) |
+        R1.as_uint64 = 
+            (uint64_t) ((uint64_t) (vpu.program[IP + 2] & 0XFFFFFF00) << 32) |
+            ((uint64_t) (vpu.program[IP + 1] & 0XFFFFFF00) << 8) |
             ((uint64_t) (inst & 0XFFFF0000) >> 16);
         return 3;
     
