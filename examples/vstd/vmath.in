@@ -29,17 +29,13 @@ Q_rsqrt:
     ; newton's method iteration
     MOVV RB 1
     MOVV RF 2
-    CASTFU RB RB
-    CASTFU RF RF
-    DIVF RB RB RF
+    FLOAT RB RB RF
     MULF RB RA RB
     MULF RB RC RB
     MULF RB RC RB
     MOVV RA 3
     MOVV RF 2
-    CASTFU RA RA
-    CASTFU RF RF
-    DIVF RA RA RF
+    FLOAT RA RA RF
     SUBF RA RA RB
     MULF RA RC RA
 
