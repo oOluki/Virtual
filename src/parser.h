@@ -713,7 +713,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
-        //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
+        fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -758,15 +758,15 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                 fprintf(stderr, "entering %s\n", parser->file_path);
                 if(parse_file(parser, files_stream))
                     return 1;
-                fprintf(stderr, "back to %s\n", parser->file_path);
                 files_stream->size = previous_file_stream_size;
                 parser->file_path = (char*)((uint8_t*)(files_stream->data) + file_pos);
+                fprintf(stderr, "back to %s\n", parser->file_path);
                 parser->file_path_size = previous_file_path_size;
                 parser->macro_if_depth = macro_if_depth;
                 *(parser->tokenizer) = previous_tokenizer_state;
                 parser->tokenizer->data = (char*)((uint8_t*)(files_stream->data) + file_pos + parser->file_path_size + 1);
-                const Token token = get_next_token(parser->tokenizer);
-                fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
+                //const Token token = get_next_token(parser->tokenizer);
+                fprintf(stderr, "%.*s\n", 20, parser->tokenizer->data + parser->tokenizer->pos);
             }
             continue;
         }
