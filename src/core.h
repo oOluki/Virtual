@@ -2,7 +2,8 @@
 #define CORE_HEADER
 
 #include <stdlib.h>
-#include "stdint.h"
+#include <stdint.h>
+#include <inttypes.h>
 
 #ifndef VPU_MEMALIGN_TO
     #define VPU_MEMALIGN_TO 8
@@ -57,7 +58,6 @@ typedef enum OpCode{
     INST_SET32,
     INST_SET,
 
-    INST_TEST,
     INST_NOT,
     INST_NEG,
     INST_AND,
@@ -91,8 +91,8 @@ typedef enum OpCode{
     INST_MULF,
     INST_DIVF,
 
-    INST_EQI,
-    INST_EQU,
+    INST_NEQ,
+    INST_EQ,
     INST_EQF,
 
     INST_BIGI,
@@ -126,6 +126,22 @@ typedef enum OpCode{
     INST_PUTC,
     INST_GETC,
 
+    INST_ABS,
+    INST_ABSF,
+    INST_INC,
+    INST_DEC,
+    INST_INCF,
+    INST_DECF,
+    
+    INST_FLOAT,
+
+    INST_LOAD1,
+    INST_LOAD2,
+
+    INST_IOE,
+
+    INST_CONTAINER = 252,
+
     INST_SYS = 253,
 
     INST_DISREG = 254,
@@ -144,7 +160,7 @@ enum Expects{
     EXPECT_OP_LIT,
     // LITERAL OR REGISTER
     EXPECT_OP_EITHER,
-    EXPECT_IDENTIFIER,
+    EXPECT_OPTIONAL,
 };
 
 // R: REGISTER, L: LITERAL, E: EITHER LITERAL OR REGISTER ID
@@ -161,6 +177,7 @@ typedef enum OpProfile{
     OP_PROFILE_RL = (EXPECT_OP_LIT << 8) | EXPECT_OP_REG,
     // instruction takes three registers
     OP_PROFILE_RRR = (EXPECT_OP_REG << 16) | (EXPECT_OP_REG << 8) | EXPECT_OP_REG,
+    OP_PROFILE_RROR = ((EXPECT_OPTIONAL << 20) | (EXPECT_OP_REG << 16)) | (EXPECT_OP_REG << 8) | EXPECT_OP_REG
 
 } OpProfile;
 
@@ -173,16 +190,16 @@ enum OpHint{
 
 
 enum RegisterId{
+    R0 = 0 ,
+    RA = 8 , RA1, RA2, RA3, RA4,
+    RB = 16, RB1, RB2, RB3, RB4,
+    RC = 24, RC1, RC2, RC3, RC4,
+    RD = 32, RD1, RD2, RD3, RD4,
+    RE = 40, RE1, RE2, RE3, RE4,
+    RF = 48,
 
-    RA = 0 , RA1, RA2, RA3, RA4,
-    RB = 8 , RB1, RB2, RB3, RB4,
-    RC = 16, RC1, RC2, RC3, RC4,
-    RD = 24, RD1, RD2, RD3, RD4,
-    RE = 32, RE1, RE2, RE3, RE4,
-    RF = 40,
-
-    RSP = 48,
-    RIP = 56,
+    RSP = 56,
+    RIP = 64,
 };
 
 typedef union Register{
@@ -199,7 +216,7 @@ typedef union Register{
     
     double   as_float64;
     float    as_float32;
-    void*    as_ptr;
+    uint8_t*    as_ptr;
 } Register;
 
 typedef struct VPU
@@ -211,7 +228,7 @@ typedef struct VPU
 
     uint8_t* internal_data;
 
-    Register registers[8];
+    Register registers[9];
 
     uint8_t* register_space;
 

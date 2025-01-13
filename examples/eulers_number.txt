@@ -5,24 +5,19 @@
 ;; RE holds 1 / n!
 
 
-MOVV RA 1     
-MOVV RB 0     
-MOVV RC 10 
-
-; casting everything to double
-CASTFU RA
-CASTFU RB
-CASTFU RC
+LOAD2 RA 1.0f
+MOVV RB 0.0f
+LOAD2 RC 10.0f
 MOV RD RA
 MOV RE RA
 
 loop:
-    ADDF RB RD
-    DIVF RE RB
-    ADDF RA RE
+    ADDF RB RD RB
+    DIVF RE RE RB
+    ADDF RA RE RA
     MOV  RF RB
-    SMLF RF RC
-JMPF RF $loop
+    SMLF RF RF RC
+JMPF RF @loop
 
 ;; display the result
 DISREG RA
@@ -34,18 +29,16 @@ MOVV16 RB2 0x8b14
 MOVV16 RB  0x5769
 
 ;; getting the absolute value of the difference between the expected and actual value
-SUBF RA RB
+SUBF RA RA RB
 MOVV RB 0
 ;; NOTE: this may not work depending on the endianess of the platform
 MOVV16 RB7 128
-XOR RA RB
+XOR RA RA RB
 
 ;; getting the precision
 MOVV RC 1
 MOVV RD 1000
-CASTFU RC
-CASTFU RD
-DIVF RC RD
-SMLF RC RA
+FLOAT RC RC RD
+SMLF RC RC RA
 
 HALT RC

@@ -1,10 +1,10 @@
 %include "../examples/vstd/vstdio.in"
-
+%include "vstd/vmath.in"
 
 %start
     STATIC "INCLUDE TEST WAS SUCCESSFULL"
     POP RB
-    SYS 0
-    CALL $fprintf_str
+    IOE  R0 RA R0
+    CALL @fprintf_str
     HALT 0
 

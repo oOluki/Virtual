@@ -132,12 +132,14 @@ int main(int argc, char** argv){
     parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
     parser.file_path_size = *(uint32_t*)(files.data);
     parser.labels = &labels;
+    parser.static_memory = &static_memory;
+    parser.program = &program;
     parser.tokenizer = &tokenizer;
     parser.entry_point = 0;
     parser.flags = FLAG_NONE;
     parser.macro_if_depth = 0;
     
-    int status = parse_file(&parser, &program, &static_memory, &files);
+    int status = parse_file(&parser, &files);
     if(status) goto defer;
 
     *(uint64_t*)(static_memory.data) = static_memory.size;

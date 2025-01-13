@@ -2,6 +2,9 @@ import os
 import platform
 import sys
 import subprocess
+import locale
+
+print(f"Default encoding: {locale.getpreferredencoding()}")
 
 BUILD_DIR = sys.argv[1]
 EXAMPLES_DIR = sys.argv[2]
@@ -29,7 +32,7 @@ def run_process(*command):
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
 def cmpf(f1, f2, mode):
@@ -66,6 +69,7 @@ def precompute(example_path):
 def test_example(example_path) -> int:
     EXAMPLE_NAME = example_path.removesuffix(".txt").split(PATH_SEP)
     EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
+    print("Beggining Test " + EXAMPLE_NAME)
 
     COMPILED = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
     DECOMPILED = BUILD_DIR + PATH_SEP + "tmp.txt"

@@ -33,9 +33,9 @@ int sys_call(VPU* vpu, uint64_t call){
     case SYS_GET_SPECIAL_ADDRESS:
         switch (op_mask)
         {
-        case SYS_ADDRESS_STDOUT: vpu->registers[RA / 8].as_ptr = stdout; break;
-        case SYS_ADDRESS_STDERR: vpu->registers[RA / 8].as_ptr = stderr; break;
-        case SYS_ADDRESS_STDIN:  vpu->registers[RA / 8].as_ptr = stdin;  break;
+        case SYS_ADDRESS_STDOUT: vpu->registers[RA / 8].as_ptr = (uint8_t*)stdout; break;
+        case SYS_ADDRESS_STDERR: vpu->registers[RA / 8].as_ptr = (uint8_t*)stderr; break;
+        case SYS_ADDRESS_STDIN:  vpu->registers[RA / 8].as_ptr = (uint8_t*)stdin;  break;
         default:                 vpu->registers[RA / 8].as_ptr = NULL;   break;
         }
         break;

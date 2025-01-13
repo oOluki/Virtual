@@ -82,13 +82,11 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
 Token resolve_token(const Mc_stream_t* labels, const Token token){
     if(token.type != TKN_LABEL_REF) return token;
     const Label* const label = get_label(labels, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1});
-    if(!label) return (Token){.value.as_str = token.value.as_str, .size = token.size, .line = token.line, .column = token.column, .type = TKN_ERROR};
+    if(!label) return (Token){.value.as_str = token.value.as_str, .size = token.size, .type = TKN_ERROR};
     if(label->definition.type == TKN_STR)
         return (Token){
             .value.as_str = (char*)((uint8_t*)(label) + label->definition.value.as_uint),
             .size = label->definition.size,
-            .line = label->definition.line,
-            .column = label->definition.column,
             .type = TKN_STR
         };
     return label->definition;

@@ -1,37 +1,66 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = .\precomputed\include_test.out
-	;; executable size = 168
-	;; inst count      = 22
+	;; name = precomputed/include_test.out
+	;; executable size = 284
+	;; inst count      = 51
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 45
-	;; static_memory   = { position = 0, pointer = 00A255E8, size = 45 }
-	;; entry point     = 17
+	;; static_memory   = { position = 0, size = 45 }
+	;; entry point     = 46
 ;; X====X (SPECIFICATIONS) X====X
 
 
 %static 0x494e434c554445205445535420574153205355434345535346554c4c00
-PUTC RC RA
-ADD RB RD
-READ8 RC RB
-JMPF RC 0
+PUTC RC RA R0
+INC RB 0x1; u: 1
+READ8 RC RB R0
+JMPF RC 0xfffd; i: -3
 MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
-PUTC RC RA
-POP RD
+PUTC RC RA R0
 POP RC
 RET
 PUSH RC
-PUSH RD
-MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
-READ8 RC RB
-JMPF RC 0
-POP RD
+READ8 RC RB R0
+JMPF RC 0xfff6; i: -10
 POP RC
+RET
+PUSH RB
+PUSH RC
+PUSH RF
+MOV RB RA
+MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
+BSHIFT RB RB RC
+MOVV16 RC6 0x5fe6; (u: 24550; i: 24550; f: 0.000000)
+MOVV16 RC4 0xec85; (u: 60549; i: 60549; f: 0.000000)
+MOVV16 RC2 0xe7de; (u: 59358; i: 59358; f: 0.000000)
+MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
+SUB RC RC RB
+MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+FLOAT RB RB RF
+MULF RB RA RB
+MULF RB RC RB
+MULF RB RC RB
+MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
+MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+FLOAT RA RA RF
+SUBF RA RA RB
+MULF RA RC RA
+POP RF
+POP RC
+POP RB
+RET
+PUSH RB
+CALL 0xffe5; i: -27
+MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+CASTFU RB RB
+DIVF RA RB RA
+POP RB
 RET
 %start
 STATIC 0x10 ;; "INCLUDE TEST WA"...
 POP RB
-SYS 0x00
-CALL 9
+IOE R0 RA R0
+CALL 0xffd7; i: -41
 HALT 0x0; (u: 0)
