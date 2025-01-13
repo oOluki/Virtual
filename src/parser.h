@@ -713,7 +713,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
-        fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
+        //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -749,6 +749,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                 const int macro_if_depth = parser->macro_if_depth;
                 const size_t file_pos = (size_t)((uint8_t*)(parser->file_path) - (uint8_t*)(files_stream->data));
                 const int previous_file_path_size = parser->file_path_size;
+		parser->file_path_size = mother_directory.size + next_path_sv.size;
                 parser->macro_if_depth = 0;
                 *(parser->tokenizer) = (Tokenizer){
                     .data = (char*)((uint8_t*)(new_file) + mother_directory.size + next_path_sv.size + 1 + sizeof(uint32_t)),

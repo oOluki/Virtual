@@ -441,7 +441,7 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
 
 // this automatically includes the concatonated file path as stringview (first size (uint32) then cstr (null terminated))
 // to the stream before the file contents, only if on success
-char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView relative_path){
+char* read_file_relative(Mc_stream_t* stream, const StringView mother_dir, const StringView relative_path){
 
     const uint64_t ssize = stream->size;
     const uint32_t path_str_size = mother_dir.size + relative_path.size;
