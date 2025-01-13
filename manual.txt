@@ -79,13 +79,241 @@ Section 2: Assembly (VASM)
         saved for the case of the LOAD1 and LOAD2 arguments)
     
     Subsection instructions
-
-
-
-
-    Subsection macros
+        NOP:
+            does nothing
+        HALT:
+            halts the program with the status given in the argument
+            exit(E.as_int8)
+        MOV8:
+            R1.8 = R2.8
+        MOV16:
+            R1.16 = R2.16
+        MOV32:
+            R1.32 = R2.32
+        MOV:
+            R1.64 = R2.64
+        MOVC:
+            if(R1.8 != 0x00) R2.64 = R3.64
+        MOVV:
+            R1 = L2
+        MOVN:
+            R1 = ~L2
+        MOVV16:
+            R1.16 = L2
+        PUSH:
+            pushes E on to the stack
+        POP:
+            pop the top of the stack into R1
+        GET:
+            R1 = STACK[RSP - L2]
+        WRITE:
+            STACK[RSP - L2] = R1
+        GSP:
+            R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
+        STATIC:
+            STACK[RSP++] = STATIC_POINTER + E.as_uint64
+        READ8:
+            R1.8 = *(uint8_t*)(R2.as_ptr + R3.as_uint64)
+        READ16:
+            R1.16 = *(uint16_t*)(R2.as_ptr + R3.as_uint64)
+        READ32:
+            R1.32 = *(uint32_t*)(R2.as_ptr + R3.as_uint64)
+        READ:
+            R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
+        SET8:
+            *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
+        SET16:
+            *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
+        SET32:
+            *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.32
+        SET:
+            *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
+        NOT:
+            R1 = !R2
+        NEG:
+            R1 = ~R2 | R3
+        AND:
+            R1 = R2 & R3
+        NAND:
+            R1 = ~(R2 & R3)
+        OR:
+            R1 = R2 | R3
+        XOR:
+            R1 = R2 ^ R3
+        BSHIFT:
+            if(R2.as_int8 > 0) R1 = R2 <<  R3.as_uint8
+            else               R1 = R2 >> -R3.as_int8
+        JMP:
+            RIP += E.as_int64 + 1
+        JMPF:
+            if(R1.8 != 0x00) RIP += L2.as_int16
+            else             RIP += 1
+        JMPFN:
+            if(R1.8 == 0x00) RIP += L2.as_int16
+            else             RIP += 1
+        CALL:
+            STACK[RSP++] = RIP.as_uint64 + 1
+            RIP += E.as_int64
+        RET:
+            RIP = STACK[--RSP]
+        ADD8:
+            R1.as_uint8 = R2.as_uint8 + R3.as_uint8
+        SUB8:
+            R1.as_uint8 = R2.as_uint8 - R3.as_uint8
+        MUL8:
+            R1.as_uint8 = R2.as_uint8 * R3.as_uint8
+        ADD16:
+            R1.as_uint16 = R2.as_uint16 + R3.as_uint16
+        SUB16:
+            R1.as_uint16 = R2.as_uint16 - R3.as_uint16
+        MUL16:
+            R1.as_uint16 = R2.as_uint16 * R3.as_uint16
+        ADD32:
+            R1.as_uint32 = R2.as_uint32 + R3.as_uint32
+        SUB32:
+            R1.as_uint32 = R2.as_uint32 - R3.as_uint32
+        MUL32:
+            R1.as_uint32 = R2.as_uint32 * R3.as_uint32
+        ADD:
+            R1.as_uint64 = R2.as_uint64 + R3.as_uint64
+        SUB:
+            R1.as_uint64 = R2.as_uint64 - R3.as_uint64
+        MUL:
+            R1.as_uint64 = R2.as_uint64 * R3.as_uint64
+        DIVI:
+            R1.as_int64 = R2.as_int64 / R3.as_int64
+        DIVU:
+            R1.as_uint64 = R2.as_uint64 / R3.as_uint64
+        ADDF:
+            R1.as_float64 = R2.as_float64 + R3.as_float64
+        SUBF:
+            R1.as_float64 = R2.as_float64 - R3.as_float64
+        MULF:
+            R1.as_float64 = R2.as_float64 * R3.as_float64
+        DIVF:
+            R1.as_float64 = R2.as_float64 / R3.as_float64
+        NEQ:
+            R1.as_uint8 = R2 != R3
+        EQ:
+            R1.as_uint8 = R2 == R3
+        EQF:
+            R1.as_uint8 = R2.as_float64 == R3.as_float64
+        BIGI:
+            R1.as_uint8 = R2.as_int64 > R3.as_int64
+        BIGU:
+            R1.as_uint8 = R2.as_uint64 > R3.as_uint64
+        BIGF:
+            R1.as_uint8 = R2.as_float64 > R3.as_float64
+        SMLI:
+            R1.as_uint8 = R2.as_int64 < R3.as_int64
+        SMLU:
+            R1.as_uint8 = R2.as_int64 < R3.as_int64
+        SMLF:
+            R1.as_uint8 = R2.as_float64 < R3.as_float64
+        CASTIU:
+            R1.as_int64 = (int64_t) R2.as_uint64
+        CASTIF:
+            R1.as_int64 = (int64_t) R2.as_float64
+        CASTUI:
+            R1.as_uint64 = (uint64_t) R2.as_int64
+        CASTUF:
+            R1.as_uint64 = (uint64_t) R2.as_float64
+        CASTFI:
+            R1.as_float64 = (double) R2.as_int64
+        CASTFU:
+            R1.as_float64 = (double) R2.as_uint64
+        CF3264:
+            R1.as_float32 = (float) R2.as_float64
+        CF6432:
+            R1.as_float64 = (double) R2.as_float32
+        MEMSET:
+            sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
+        MEMCPY:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
+        MEMMOV:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
+        MEMCMP:
+            compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
+        MALLOC:
+            allocates R2.as_uint64 bytes aligned to R3.as_uint8 + 1 and stores it to R1.as_ptr
+        FREE:
+            frees a block of memory allocated with MALLOC in R1.as_ptr + R2.as_int64 aligned to R3.as_uint8 + 1
+        FOPEN:
+            opens a file given by the string in R2.as_ptr in mode R3.as_uint8 and stores it to R1.as_ptr
+        FCLOSE:
+            closes a file in R2.as_ptr + R3.as_int64, sets R1.as_int64 to an error value on failure
+        PUTC:
+            puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
+        GETC:
+            gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
+        ABS:
+            R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
+        ABSF:
+            R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
+        INC:
+            R1.as_uint64 += L2.as_uint16
+        DEC:
+            R1.as_uint64 -= L2.as_uint16
+        INCF:
+            R1.as_float64 += (double) L2.as_uint16
+        DECF:
+            R1.as_float64 -= (double) L2.as_uint16
+        FLOAT:
+            R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
+        LOAD1:
+            loads up to a 32 bit long value to a register
+            R1 = L2.32
+        LOAD2:
+            loads up to a 64 bit long value to a register
+            R1 = L2.64
+        IOE:
+            sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
+        SYS:
+            perfomrs a syscall identified by the value in E
+        DISREG:
+            displays a register's value, for debugging purposes
 
     Subsection labels
+        labels are a way to use compile time definitions and values. To create a label you can
+        put a ':' symbol after it and the current instruction position will be labeled as that symbol,
+        alternatively you can use the %label and %labelv macros (see subsection macros). To access the
+        label's definition you can preffix it with '$' to get the actual value or, in the case of a label
+        defined as a number, you can preffix it with '@' to get the value relative to the current instruction position
+        (good for the JMP, JMPF, JMPFN and CALL instructions).
+        example:
+            loop:
+                ;; code
+            JMP @loop
+            ;; jumps to label 'loop'
+        example:
+            %label value 5
+            MOVV RA $value
+            ;; moves the value 5 to register RA
+
+    Subsection macros
+        all macros should start with the % character.
+        %start:
+            marks the entry point of the program, if there are multiple of this the last one is taken
+        %include:
+            includes a file in the passed string argument path relative to the current one (c style),
+            example usage: %include "dir/file.txt"
+        %label:
+            creates a new label with the given value, you can NOT create a label that already exists
+            in that case you can use %unlabel to unlabel it and then label again to something else
+        %labelv:
+            creates a dummy label, i.e a label without a definition
+        %unlabel:
+            removes a label
+        %iflabel:
+            parsers the code enclosed by this %iflabel and its respective %endif
+            if the following symbol is labeled
+        %ifnlabel:
+            parsers the code enclosed by this %ifnlabel and its respective %endif
+            if the following symbol is not labeled
+        %endif:
+            marks the end of a macro if
+        %static:
+            pushes the following data to the static memory
 
 
 

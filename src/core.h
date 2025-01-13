@@ -107,7 +107,7 @@ typedef enum OpCode{
     // else             RIP += 1
     INST_JMPFN,
     // STACK[RSP++] = RIP.as_uint64 + 1
-    // RIP += L2
+    // RIP += E.as_int64
     INST_CALL,
     // RIP = STACK[--RSP]
     INST_RET,
@@ -226,7 +226,7 @@ typedef enum OpCode{
 // -------------------------------------------------------------------------------------------------
     // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
     INST_CONTAINER = 252,
-    // perfomrs a syscall identifies by the value in E
+    // perfomrs a syscall identified by the value in E
     INST_SYS = 253,
     // displays a register's value, for debugging purposes
     INST_DISREG = 254,
