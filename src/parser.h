@@ -313,7 +313,7 @@ Operand parse_op_literal(Token token){
 
     if((dot_position < 0) && !float_identifier){
         return is_negative?
-            (Operand){.value.as_int64  = (int64_t)(-first_part), .type = TKN_ILIT}:
+            (Operand){.value.as_int64  = -(int64_t)(first_part), .type = TKN_ILIT}:
             (Operand){.value.as_uint64 =            first_part , .type = TKN_ULIT};
     }
 
@@ -729,7 +729,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             }
             if(next_path_sv.str != NULL){
                 StringView mother_directory = (StringView){.str = parser->file_path, .size = parser->file_path_size};
-                for(int i = 0; i < mother_directory.size; i+=1){
+                for(unsigned int i = 0; i < mother_directory.size; i+=1){
                     const char c = mother_directory.str[mother_directory.size - i - 1];
                     if(c == '/'){
                         mother_directory.size -= i;

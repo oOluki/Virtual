@@ -57,7 +57,6 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
     Label label;
     label.str = sizeof(label);
     label.str_size = label_tkn.size;
-    const size_t lpos = labels->size;
 
     if(definition.type == TKN_STR){
         label.definition.value.as_uint = sizeof(label) + label.str_size;

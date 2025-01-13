@@ -101,7 +101,7 @@ char* get_reg_str(int reg, char* output){
 }
 
 // \returns 0 on success or 1 otherwise
-int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
+int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, uint64_t ip){
     #define R1 (uint8_t) ((inst & 0XFF00) >> 8)
     #define R2 (uint8_t) ((inst & 0XFF0000) >> 16)
     #define R3 (uint8_t) (inst >> 24)
@@ -242,7 +242,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
             fprintf(output, "0x%"PRIx16"; i: %"PRIi16"\n", L1, (int16_t) L1);
-            return 0;
+        return 0;
     case INST_RET:
         fprintf(output, "RET\n");
         return 0;
