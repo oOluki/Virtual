@@ -1,6 +1,8 @@
 %ifnlabel _VMATH_IN
 %labelv _VMATH_IN
 
+%include "vstdio.in"
+
 ; the call convention is inspired by system V
 ; the first 6 arguments are passed through registers RA, RB,RC, RD, RE and RF, respectively
 ; the rest is passed through the stack

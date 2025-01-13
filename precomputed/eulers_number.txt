@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = .\precomputed\eulers_number.out
+	;; name = precomputed/eulers_number.out
 	;; executable size = 164
 	;; inst count      = 29
 	;; inst size       = 4

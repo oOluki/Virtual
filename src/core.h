@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #ifndef VPU_MEMALIGN_TO
     #define VPU_MEMALIGN_TO 8
