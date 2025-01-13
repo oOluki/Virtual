@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/labels_test.out
+	;; name = .\precomputed\labels_test.out
 	;; executable size = 128
 	;; inst count      = 13
 	;; inst size       = 4

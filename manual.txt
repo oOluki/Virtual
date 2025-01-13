@@ -2,35 +2,85 @@ UNFINNISHED: this file is not complete yet
 
 
 Welcome to the VPU manual!
-(c compilers known to work for this project are clang, cl and gcc, but i see no reason why any compiler won't work).
+(c compilers known to work for this project are clang, cl and gcc,
+but i see no reason why any compiler won't work).
 
-This manual is divided in 3 sections:
+This manual is divided in 4 sections:
 section 1 (build and use): contains information about building and using the executables.
 section 2 (assembly): information about the assembly language for the VPU
-section 3 (TODO: API): when finnished, will contain information about the API's for the Virtual Machine.
+section 3 (byte code): how the program is structured.
+section 4 (TODO: API): when finnished, will contain information about the API's for the Virtual Machine.
 
 
 Section 1: Build And Use
 
     Subsection assembler
         Requirements: standard c library
-        To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code, this is done through our custom assembler. To build the assembler for the VPU simply compile the src/assembler.c file using a c compiler of your choice.
-	To use the assembler simply pass the path to your assembly code to the assembler program, you can use the "-o" flag to pass the output file to the assembler like so: ./assembler <input_file> -o <output_file>. If not passed the output file will be defaulted to output.bin.
+        To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code,
+        this is done through our custom assembler.
+        To build the assembler for the VPU simply compile the src/assembler.c file using a c compiler of your
+        choice.
+	    To use the assembler simply pass the path to your assembly code to the assembler program,
+        you can use the "-o" flag to pass the output file to the assembler like so:
+        ./assembler <input_file> -o <output_file>.
+        If not passed the output file will be defaulted to output.bin.
 
     Subsection VPU
         Requirements: standard c library
-        To build the VPU virtual machine simply compile the src/vpu.c file with a c compiler of your choice. To use the virtual machine pass the path to your program to the vpu program, it will then execute it.
+        To build the VPU virtual machine simply compile the src/vpu.c file with a c compiler of your choice.
+        To use the virtual machine pass the path to your program to the vpu program, it will then execute it.
     
-    Subsection desassembler
+    Subsection disassembler
         Requirements: standard c library
-	If you wish to desassemble a vpu program you can use the desassembler to do so. To build the desassembler simply compile the src/desassembler.c file with a c compiler of your choice, to use the desassembler pass the path to the program to the desassembler and it will print it to the standard output, if you wish to write the output to a file pass the output file to the desassembler using the "-o" flag: ./desassemble <input_file> -o <output_file>.
+        If you wish to desassemble a vpu program you can use the disassembler to do so.
+        To build the disassembler simply compile the src/disassembler.c file with a c compiler of your choice,
+        to use the disassembler pass the path to the program to the disassembler and it will print it to the
+        standard output, if you wish to write the output to a file pass the output file to the disassembler
+        using the "-o" flag: ./disassemble <input_file> -o <output_file>.
 
 
 Section 2: Assembly (VASM)
 
-    To write programs to the VPU you can use our custom assembly! VASM has a set of instructions you can use to do virtually anything, each instruction has a fixed size of 4 bytes and takes up to three arguments, each argument can be a register, a literal or either of them, literal arguments take 2 bytes, register arguments take 1 byte and instructions that take either use 2 bytes to store the value and an extra byte for storing is the value was a literal or register, the first byte is always the opcode.
+    To write programs to the VPU you can use our custom assembly!
+    VASM has a set of instructions you can use to do virtually anything,
+    each instruction has a fixed size of 4 bytes and takes up to three arguments,
+    each argument can be a register, a literal or either of them, literal arguments take 2 bytes,
+    register arguments take 1 byte and instructions that take either use 2 bytes to store the value
+    and an extra byte for storing if the value was a literal or register,
+    the first byte is always the opcode.
+
+    registers:
+        R0, RA, RB, RC, RD, RE, RF, RSP and RIP are 64 bit registers, you can put a number from 0 to 7
+        immediately after a register identifier to take a subregister starting from that byte offset,
+        for example RD4 is a subregister that starts at the address of RD + 4. You can use subregisters
+        as 8, 16, 32 or 64 bit registers, but it is worth noting that taking some subregisters with some sizes
+        may lead into manipulation of more than one register at once (which can be good or bad). The size of
+        the register that will be used is determined by the instructions.
+    R0:
+        the zero register, this register always holds the value 0, ALWAYS!
+        It is very usefull in some instructions as it serves as a dummy argument
+    RSP:
+        the register that holds the stack position
+    RIP:
+        the register that holds the instruction position
+    R<n>:
+        stands for the <n>th argument which is a register in this case
+    L<n>:
+        stands for the <n>th argument which is a literal in this case
+    E:
+        stands for the only argument which can be either a literal or a register
+    STACK:
+        refers to the stack (64 bit)
+    suffixes:
+        the .as_<type> suffix indicates that the value is to be read as the <type>,
+        which also means that if the argument is a register it only needs sizeof(<type>) bytes.
+        the .<size> suffix indicates that only the first <size> less significant bits will be taken into account
+        if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit,
+        saved for the case of the LOAD1 and LOAD2 arguments)
     
     Subsection instructions
+
+
 
 
     Subsection macros
@@ -38,7 +88,13 @@ Section 2: Assembly (VASM)
     Subsection labels
 
 
-Section 3: API's
+
+Section 3: Byte Code
+    TODO: write this section
+
+
+
+Section 4: API's
 
     The VPU will eventually have API's such as a Web version, but this is not done yet...
 

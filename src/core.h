@@ -3,14 +3,17 @@
 
 /*
  * QUICK MANUAL:
+ * R0 the zero register, this register always holds the value 0, ALWAYS!. It is very usefull in some instructions as it serves as a dummy argument
+ * RSP the register that holds the stack position
+ * RIP the register that holds the instruction position
  * Rn stands for the nth argument which is a register in this case
  * Ln stands for the nth argument which is a literal in this case
  * E stands for the only argument which can be either a literal or a register
  * the .as_<type> suffix indicates that the value is to be read as the <type>, which also means that if the argument is a register it only needs sizeof(<type>) bytes.
- * the .<size> suffix indicates that only the first <size> less significant bytes will be taken into account
+ * the .<size> suffix indicates that only the first <size> less significant bits will be taken into account
  * if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit, saved for the LOAD1 and LOAD2 arguments)
  * STACK refers to the stack (64 bit)
- * 
+ * for valid instructions: <instruction_name> refers to INST_<instruction_name> in the enum OpCode
  */
 
 #include <stdlib.h>
@@ -64,108 +67,170 @@ typedef enum OpCode{
     INST_GSP,
     // STACK[RSP++] = STATIC_POINTER + E.as_uint64
     INST_STATIC,
-    // R1.8 = *((uint8_t*)(R2.as_ptr) + R3.as_uint64);
+    // R1.8 = *(uint8_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ8,
-    // R1.16 = *((uint16_t*)(R2.as_ptr) + R3.as_uint64);
+    // R1.16 = *(uint16_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ16,
-    // R1.32 = *((uint32_t*)(R2.as_ptr) + R3.as_uint64);
+    // R1.32 = *(uint32_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ32,
-    // R1 = *((uint64_t*)(R2.as_ptr) + R3.as_uint64);
+    // R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ,
-    // R1.8 = *((uint8_t*)(R2.as_ptr) + R3.as_uint64);
+    // *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
     INST_SET8,
+    // *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
     INST_SET16,
+    // *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.32
     INST_SET32,
+    // *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
     INST_SET,
-
+    // R1 = !R2
     INST_NOT,
+    // R1 = ~R2 | R3
     INST_NEG,
+    // R1 = R2 & R3
     INST_AND,
+    // R1 = ~(R2 & R3)
     INST_NAND,
+    // R1 = R2 | R3
     INST_OR,
+    // R1 = R2 ^ R3
     INST_XOR,
+    // if(R2.as_int8 > 0) R1 = R2 <<  R3.as_uint8
+    // else               R1 = R2 >> -R3.as_int8
     INST_BSHIFT,
-
+    // RIP += E.as_int64 + 1
     INST_JMP,
-    INST_JMPIF,
-    INST_JMPIFN,
+    // if(R1.8 != 0x00) RIP += L2.as_int16
+    // else             RIP += 1
+    INST_JMPF,
+    // if(R1.8 == 0x00) RIP += L2.as_int16
+    // else             RIP += 1
+    INST_JMPFN,
+    // STACK[RSP++] = RIP.as_uint64 + 1
+    // RIP += L2
     INST_CALL,
+    // RIP = STACK[--RSP]
     INST_RET,
-
+    // R1.as_uint8 = R2.as_uint8 + R3.as_uint8
     INST_ADD8,
+    // R1.as_uint8 = R2.as_uint8 - R3.as_uint8
     INST_SUB8,
+    // R1.as_uint8 = R2.as_uint8 * R3.as_uint8
     INST_MUL8,
+    // R1.as_uint16 = R2.as_uint16 + R3.as_uint16
     INST_ADD16,
+    // R1.as_uint16 = R2.as_uint16 - R3.as_uint16
     INST_SUB16,
+    // R1.as_uint16 = R2.as_uint16 * R3.as_uint16
     INST_MUL16,
+    // R1.as_uint32 = R2.as_uint32 + R3.as_uint32
     INST_ADD32,
+    // R1.as_uint32 = R2.as_uint32 - R3.as_uint32
     INST_SUB32,
+    // R1.as_uint32 = R2.as_uint32 * R3.as_uint32
     INST_MUL32,
+    // R1.as_uint64 = R2.as_uint64 + R3.as_uint64
     INST_ADD,
+    // R1.as_uint64 = R2.as_uint64 - R3.as_uint64
     INST_SUB,
+    // R1.as_uint64 = R2.as_uint64 * R3.as_uint64
     INST_MUL,
+    // R1.as_int64 = R2.as_int64 / R3.as_int64
     INST_DIVI,
+    // R1.as_uint64 = R2.as_uint64 / R3.as_uint64
     INST_DIVU,
+    // R1.as_float64 = R2.as_float64 + R3.as_float64
     INST_ADDF,
+    // R1.as_float64 = R2.as_float64 - R3.as_float64
     INST_SUBF,
+    // R1.as_float64 = R2.as_float64 * R3.as_float64
     INST_MULF,
+    // R1.as_float64 = R2.as_float64 / R3.as_float64
     INST_DIVF,
-
+    // R1.as_uint8 = R2 != R3
     INST_NEQ,
+    // R1.as_uint8 = R2 == R3
     INST_EQ,
+    // R1.as_uint8 = R2.as_float64 == R3.as_float64
     INST_EQF,
-
+    // R1.as_uint8 = R2.as_int64 > R3.as_int64
     INST_BIGI,
+    // R1.as_uint8 = R2.as_uint64 > R3.as_uint64
     INST_BIGU,
+    // R1.as_uint8 = R2.as_float64 > R3.as_float64
     INST_BIGF,
-
+    // R1.as_uint8 = R2.as_int64 < R3.as_int64
     INST_SMLI,
+    // R1.as_uint8 = R2.as_int64 < R3.as_int64
     INST_SMLU,
+    // R1.as_uint8 = R2.as_float64 < R3.as_float64
     INST_SMLF,
-
+    // R1.as_int64 = (int64_t) R2.as_uint64
     INST_CASTIU,
+    // R1.as_int64 = (int64_t) R2.as_float64
     INST_CASTIF,
-
+    // R1.as_uint64 = (uint64_t) R2.as_int64
     INST_CASTUI,
+    // R1.as_uint64 = (uint64_t) R2.as_float64
     INST_CASTUF,
-
+    // R1.as_float64 = (double) R2.as_int64
     INST_CASTFI,
+    // R1.as_float64 = (double) R2.as_uint64
     INST_CASTFU,
+    // R1.as_float32 = (float) R2.as_float64
     INST_CF3264,
+    // R1.as_float64 = (double) R2.as_float32
     INST_CF6432,
-
+    // sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
     INST_MEMSET,
+    // copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
     INST_MEMCPY,
+    // copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
     INST_MEMMOV,
+    // compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
     INST_MEMCMP,
+    // allocates R2.as_uint64 bytes aligned to R3.as_uint8 + 1 and stores it to R1.as_ptr
     INST_MALLOC,
+    // frees a block of memory allocated with MALLOC in R1.as_ptr + R2.as_int64 aligned to R3.as_uint8 + 1
     INST_FREE,
-
+    // opens a file given by the string in R2.as_ptr in mode R3.as_uint8 and stores it to R1.as_ptr
     INST_FOPEN,
+    // closes a file in R2.as_ptr + R3.as_int64, sets R1.as_int64 to an error value on failure
     INST_FCLOSE,
+    // puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
     INST_PUTC,
+    // gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
     INST_GETC,
-
+    // R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
     INST_ABS,
+    // R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
     INST_ABSF,
+    // R1.as_uint64 += L2.as_uint16
     INST_INC,
+    // R1.as_uint64 -= L2.as_uint16
     INST_DEC,
+    // R1.as_float64 += (double) L2.as_uint16
     INST_INCF,
+    // R1.as_float64 -= (double) L2.as_uint16
     INST_DECF,
-    
+    // R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
     INST_FLOAT,
-
+    // loads up to a 32 bit long value to a register
+    // R1 = L2.32
     INST_LOAD1,
+    // loads up to a 64 bit long value to a register
+    // R1 = L2.64
     INST_LOAD2,
-
+    // sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
     INST_IOE,
-
+// -------------------------------------------------------------------------------------------------
+    // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
     INST_CONTAINER = 252,
-
+    // perfomrs a syscall identifies by the value in E
     INST_SYS = 253,
-
+    // displays a register's value, for debugging purposes
     INST_DISREG = 254,
-
+    // this instruction is used for parsing purposes to signal an error while parsing a file, IT SHOULD NEVER APPEAR IN YOUR PROGRAM
     INST_ERROR = 255
 
 } OpCode;

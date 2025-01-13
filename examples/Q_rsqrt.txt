@@ -45,7 +45,7 @@ DIVF RC RB RC
 SUBF RA RC RA
 MOVV RB 0
 MOVV16 RB7 128
-NEG RB
+NEG RB RB R0
 AND RA RA RB
 
 ;; getting the precision
