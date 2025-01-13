@@ -277,7 +277,7 @@ Token get_next_token(Tokenizer* tokenizer){
         if(c == '\"'){
             token.value.as_str = string + tokenizer->pos;
             token.type = TKN_STR;
-            const int skip = mc_find_char(string, '\"', tokenizer->pos + 1);
+            const int skip = mc_find_char(string + tokenizer->pos + 1, '\"', 0);
             if(skip < 0){
                 for(token.size = 0; string[tokenizer->pos + token.size]; token.size += 1);
             }
@@ -339,11 +339,10 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
     if(_only_compare_till_smaller == 0 && token1.size != token2.size)
         return 0;
 
-    const int range = (token1.size < token2.size)? token1.size : token2.size;
+    const unsigned int range = (token1.size < token2.size)? token1.size : token2.size;
     
-    unsigned int i = 0;
-    for( ; i < range; i+=1){
-        if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
+    for(unsigned int i = 0; i < range; i+=1){
+	if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
     }
     return 1;
 }

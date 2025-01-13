@@ -1,0 +1,46 @@
+UNFINNISHED: this file is not complete yet
+
+
+Welcome to the VPU manual!
+(c compilers known to work for this project are clang, cl and gcc, but i see no reason why any compiler won't work).
+
+This manual is divided in 3 sections:
+section 1 (build and use): contains information about building and using the executables.
+section 2 (assembly): information about the assembly language for the VPU
+section 3 (TODO: API): when finnished, will contain information about the API's for the Virtual Machine.
+
+
+Section 1: Build And Use
+
+    Subsection assembler
+        Requirements: standard c library
+        To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code, this is done through our custom assembler. To build the assembler for the VPU simply compile the src/assembler.c file using a c compiler of your choice.
+	To use the assembler simply pass the path to your assembly code to the assembler program, you can use the "-o" flag to pass the output file to the assembler like so: ./assembler <input_file> -o <output_file>. If not passed the output file will be defaulted to output.bin.
+
+    Subsection VPU
+        Requirements: standard c library
+        To build the VPU virtual machine simply compile the src/vpu.c file with a c compiler of your choice. To use the virtual machine pass the path to your program to the vpu program, it will then execute it.
+    
+    Subsection desassembler
+        Requirements: standard c library
+	If you wish to desassemble a vpu program you can use the desassembler to do so. To build the desassembler simply compile the src/desassembler.c file with a c compiler of your choice, to use the desassembler pass the path to the program to the desassembler and it will print it to the standard output, if you wish to write the output to a file pass the output file to the desassembler using the "-o" flag: ./desassemble <input_file> -o <output_file>.
+
+
+Section 2: Assembly (VASM)
+
+    To write programs to the VPU you can use our custom assembly! VASM has a set of instructions you can use to do virtually anything, each instruction has a fixed size of 4 bytes and takes up to three arguments, each argument can be a register, a literal or either of them, literal arguments take 2 bytes, register arguments take 1 byte and instructions that take either use 2 bytes to store the value and an extra byte for storing is the value was a literal or register, the first byte is always the opcode.
+    
+    Subsection instructions
+
+
+    Subsection macros
+
+    Subsection labels
+
+
+Section 3: API's
+
+    The VPU will eventually have API's such as a Web version, but this is not done yet...
+
+
+

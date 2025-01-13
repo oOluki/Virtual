@@ -1,6 +1,18 @@
 #ifndef CORE_HEADER
 #define CORE_HEADER
 
+/*
+ * QUICK MANUAL:
+ * Rn stands for the nth argument which is a register in this case
+ * Ln stands for the nth argument which is a literal in this case
+ * E stands for the only argument which can be either a literal or a register
+ * the .as_<type> suffix indicates that the value is to be read as the <type>, which also means that if the argument is a register it only needs sizeof(<type>) bytes.
+ * the .<size> suffix indicates that only the first <size> less significant bytes will be taken into account
+ * if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit, saved for the LOAD1 and LOAD2 arguments)
+ * STACK refers to the stack (64 bit)
+ * 
+ */
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -20,39 +32,47 @@ typedef enum OpCode{
 
     // does nothing
     INST_NOP = 0,
+    // halts the program with the status given in the argument
+    // exit(E.as_int8)
     INST_HALT,
 
-    // moves an 8 bit value from a register into another register
+    // R1.8 = R2.8
     INST_MOV8,
-    // moves a 16 bit value from a register into another register
+    // R1.16 = R2.16
     INST_MOV16,
-    // moves a 32 bit value from a register into another register
+    // R1.32 = R2.32
     INST_MOV32,
-    // moves a 64 bit value from the first register into the second register
+    // R1.64 = R2.64
     INST_MOV,
-    // moves a 64 bit value from the second register into the third register if the first register value is not 0
+    // if(R1.8 != 0x00) R2.64 = R3.64
     INST_MOVC,
-    // moves an immediate value directly into a 64 bit register
+    // R1 = L2
     INST_MOVV,
-    // moves the bitwise not of an immediate value directly into a register
+    // R1 = ~L2
     INST_MOVN,
-    // moves an immediate value directly into the first 16 bits of a register
+    // R1.16 = L2
     INST_MOVV16,
-    // pushes a 64 bit value to the stack
+    // pushes E on to the stack
     INST_PUSH,
-    // pops a 64 bit value from the stack into a register
+    // pop the top of the stack into R1
     INST_POP,
-    // reads a 64 bit value from the stack into a register
+    // R1 = STACK[RSP - L2]
     INST_GET,
-    // writes a 64 bit value from a register to the stack
+    // STACK[RSP - L2] = R1
     INST_WRITE,
-    // writes the pointer to the beginning of the stack into a register
+    // R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
     INST_GSP,
+    // STACK[RSP++] = STATIC_POINTER + E.as_uint64
     INST_STATIC,
+    // R1.8 = *((uint8_t*)(R2.as_ptr) + R3.as_uint64);
     INST_READ8,
+    // R1.16 = *((uint16_t*)(R2.as_ptr) + R3.as_uint64);
     INST_READ16,
+    // R1.32 = *((uint32_t*)(R2.as_ptr) + R3.as_uint64);
     INST_READ32,
+    // R1 = *((uint64_t*)(R2.as_ptr) + R3.as_uint64);
     INST_READ,
+    // R1.8 = *((uint8_t*)(R2.as_ptr) + R3.as_uint64);
     INST_SET8,
     INST_SET16,
     INST_SET32,
