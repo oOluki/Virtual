@@ -1,7 +1,6 @@
 %include "../examples/vstd/vstdio.in"
 %include "vstd/vmath.in"
-;; purposely failing this test for debugging reasons
-k
+
 %start
     STATIC "INCLUDE TEST WAS SUCCESSFULL"
     POP RB

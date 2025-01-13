@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = .\precomputed\include_test.out
+	;; name = precomputed/include_test.out
 	;; executable size = 284
 	;; inst count      = 51
 	;; inst size       = 4
