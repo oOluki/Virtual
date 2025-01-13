@@ -749,7 +749,6 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                 const Tokenizer previous_tokenizer_state = *(parser->tokenizer);
                 const int macro_if_depth = parser->macro_if_depth;
                 const int previous_file_path_size = parser->file_path_size;
-		fprintf(stderr, "%zu %s\n", file_pos, parser->file_path);
 		parser->file_path_size = mother_directory.size + next_path_sv.size;
                 parser->macro_if_depth = 0;
                 *(parser->tokenizer) = (Tokenizer){
@@ -757,19 +756,14 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                     .pos = 0, .line = 0, .column = 0
                 };
                 parser->file_path = (char*)((uint8_t*)(new_file) + sizeof(uint32_t));
-                fprintf(stderr, "entering %s \n", parser->file_path);
                 if(parse_file(parser, files_stream))
                     return 1;
                 files_stream->size = previous_file_stream_size;
                 parser->file_path = (char*)((uint8_t*)(files_stream->data) + file_pos);
-		fprintf(stderr, "%zu %s\n", file_pos, (char*)(files_stream->data) + 4);
-                fprintf(stderr, "back to %s\n", parser->file_path);
                 parser->file_path_size = previous_file_path_size;
                 parser->macro_if_depth = macro_if_depth;
                 *(parser->tokenizer) = previous_tokenizer_state;
                 parser->tokenizer->data = (char*)((uint8_t*)(files_stream->data) + file_pos + parser->file_path_size + 1);
-                //const Token token = get_next_token(parser->tokenizer);
-                fprintf(stderr, "%.*s\n", 20, parser->tokenizer->data + parser->tokenizer->pos);
             }
             continue;
         }
