@@ -101,7 +101,7 @@ char* get_reg_str(int reg, char* output){
 }
 
 // \returns 0 on success or 1 otherwise
-int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
+int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, uint64_t ip){
     #define R1 (uint8_t) ((inst & 0XFF00) >> 8)
     #define R2 (uint8_t) ((inst & 0XFF0000) >> 16)
     #define R3 (uint8_t) (inst >> 24)
@@ -203,10 +203,10 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
         fprintf(output, "SET %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_NOT:
-        fprintf(output, "NOT %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "NOT %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2));
         return 0;
     case INST_NEG:
-        fprintf(output, "NEG %s\n", get_reg_str(R1, buff1));
+        fprintf(output, "NEG %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_AND:
         fprintf(output, "AND %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
@@ -230,10 +230,10 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
         else
             printf("0x%"PRIx16"; %"PRIi16"\n", L1, (int16_t) L1);
         return 0;
-    case INST_JMPIF:
+    case INST_JMPF:
         fprintf(output, "JMPF %s 0x%"PRIx16"; i: %"PRIi16"\n", get_reg_str(R1, buff1), L2, (int16_t) L2);
         return 0;
-    case INST_JMPIFN:
+    case INST_JMPFN:
         fprintf(output, "JMPFN %s 0x%"PRIx16"; i: %"PRIi16"\n", get_reg_str(R1, buff1), L2, (int16_t) L2);
         return 0;
     case INST_CALL:
@@ -242,7 +242,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, int ip){
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
             fprintf(output, "0x%"PRIx16"; i: %"PRIi16"\n", L1, (int16_t) L1);
-            return 0;
+        return 0;
     case INST_RET:
         fprintf(output, "RET\n");
         return 0;
@@ -497,12 +497,23 @@ int main(int argc, char** argv){
 
     const uint64_t inst_count = (stream.size - skip - meta_data_size - padding) / sizeof(Inst);
 
-    FILE* const output = (argc == 3)? fopen(argv[2], "w") : stdout;
+    FILE* output = stdout;
 
-    if(!output){
-        fprintf(stderr, "[ERROR] Could Not Open Output File '%s'\n", argv[2]);
-        mc_destroy_stream(stream);
-        return 1;
+    for(int i = 2; i < argc; i+=1){
+        if(mc_compare_str(argv[i], "-o", 0)){
+            if(argc <= i + 1){
+                fprintf(stderr, "[ERROR] Missing Output File After Flag \"-o\"\n");
+                mc_destroy_stream(stream);
+                return 1;
+            }
+            output = fopen(argv[i + 1], "w");
+            if(!output){
+                fprintf(stderr, "[ERROR] Could Not Open Output File '%s'\n", argv[i + 1]);
+                mc_destroy_stream(stream);
+                return 1;
+            }
+            break;
+        }
     }
 
     fprintf( output,

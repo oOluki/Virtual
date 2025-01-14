@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/Q_rsqrt.out
+	;; name = .\precomputed\Q_rsqrt.out
 	;; executable size = 196
 	;; inst count      = 37
 	;; inst size       = 4
@@ -42,7 +42,7 @@ DIVF RC RB RC
 SUBF RA RC RA
 MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
 MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
-NEG RB
+NEG RB RB R0
 AND RA RA RB
 MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
 MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)

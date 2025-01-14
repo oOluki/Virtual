@@ -15,17 +15,15 @@ if platform.system() == "Windows":
     EXAMPLES_DIR = EXAMPLES_DIR.replace("/", "\\")
     PRECOMP_DIR = PRECOMP_DIR.replace("/", "\\")
     PATH_SEP = '\\'
-    COMPILE = BUILD_DIR + PATH_SEP + "compile"
-    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
+    ASSEMBLE = BUILD_DIR + PATH_SEP + "assemble"
+    DISASSEMBLE = BUILD_DIR + PATH_SEP + "disassemble"
     RUN = BUILD_DIR + PATH_SEP + "VPU"
 
 else:
     PATH_SEP = '/'
-    COMPILE = BUILD_DIR + PATH_SEP + "compile"
-    DECOMPILE = BUILD_DIR + PATH_SEP + "decompile"
+    ASSEMBLE = BUILD_DIR + PATH_SEP + "assemble"
+    DISASSEMBLE = BUILD_DIR + PATH_SEP + "disassemble"
     RUN = BUILD_DIR + PATH_SEP + "VPU"
-
-os.makedirs(BUILD_DIR + PATH_SEP + "compiled", exist_ok=True)
 
 def run_process(*command):
     return subprocess.run(
@@ -51,13 +49,13 @@ def precompute(example_path):
  
     PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
     
-    process = run_process(COMPILE, example_path, "-o", PRECOMPILED)
+    process = run_process(ASSEMBLE, example_path, "-o", PRECOMPILED)
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
         return 1
 
-    process = run_process(DECOMPILE, PRECOMPILED, PREDECOMPILED)
+    process = run_process(DISASSEMBLE, PRECOMPILED, "-o", PREDECOMPILED)
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
@@ -71,14 +69,14 @@ def test_example(example_path) -> int:
     EXAMPLE_NAME = EXAMPLE_NAME[len(EXAMPLE_NAME) - 1]
     print("Beggining Test " + EXAMPLE_NAME)
 
-    COMPILED = BUILD_DIR + PATH_SEP + "compiled" + PATH_SEP + EXAMPLE_NAME + ".out"
+    COMPILED = BUILD_DIR + PATH_SEP + "assembled" + PATH_SEP + EXAMPLE_NAME + ".out"
     DECOMPILED = BUILD_DIR + PATH_SEP + "tmp.txt"
     
     PRECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".out"
     #PREDECOMPILED = PRECOMP_DIR + PATH_SEP + EXAMPLE_NAME + ".txt"
 
     #print(COMPILE, example_path, "-o" , COMPILED)
-    process = run_process(COMPILE, example_path, "-o", COMPILED)
+    process = run_process(ASSEMBLE, example_path, "-o", COMPILED)
     err_status = 0
     if process.returncode != 0:
         print("Compilation Failed For " + EXAMPLE_NAME)
@@ -88,13 +86,13 @@ def test_example(example_path) -> int:
         print("Compiled " + EXAMPLE_NAME + " Does Not Match Expected")
         err_status = 1
  
-    process = run_process(DECOMPILE, COMPILED, DECOMPILED)
+    process = run_process(DISASSEMBLE, COMPILED, "-o", DECOMPILED)
     if process.returncode != 0:
         print("Decompilation Failed For " + EXAMPLE_NAME)
         print("stderr: " + process.stderr)
         err_status = 1
     else:
-        process = run_process(COMPILE, DECOMPILED, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
+        process = run_process(ASSEMBLE, DECOMPILED, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
         if process.returncode != 0:
             print("Could Not Compile " + EXAMPLE_NAME + " Decompiled File")
             print("stderr: " + process.stderr)
@@ -122,6 +120,7 @@ test_count = len(examples)
 failed_tests = 0
 
 if len(sys.argv) < 5:
+    os.makedirs(BUILD_DIR + PATH_SEP + "assembled", exist_ok=True)
     for example in examples:
         failed_tests += test_example(EXAMPLES_DIR + PATH_SEP + example)
     

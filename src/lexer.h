@@ -236,48 +236,6 @@ void mc_destroy_stream(Mc_stream_t stream){
     vpu_free_aligned(stream.data);
 }
 
-// changes the capacity of the stream to new_cap, resizing it accordingly
-//void mc_change_stream_cap(Mc_stream_t* stream, size_t new_cap){
-//    stream->capacity = new_cap;
-//
-//    void* old_data = stream->data;
-//
-//    stream->data = malloc(new_cap);
-//
-//    if(new_cap < stream->size) stream->size = new_cap;
-//
-//    memcpy(stream->data, old_data, stream->size);
-//
-//    free(old_data);
-//}
-
-
-
-void set_tokenizer_pos(Tokenizer* tokenizer, size_t pos){
-
-    int step = (pos < tokenizer->pos)? -1 : 1;
-
-    for(; tokenizer->pos != pos; tokenizer->pos += step){
-
-        if(tokenizer->data[tokenizer->pos] == '\n'){
-            tokenizer->line += step;
-        }
-
-    }
-
-    if(tokenizer->pos == 1){
-        tokenizer->column = (tokenizer->data[0] != '\n');
-    }
-
-    for(size_t i = 1; i < tokenizer->pos; i+=1){
-        if(tokenizer->data[tokenizer->pos - i] == '\n'){
-            tokenizer->column = i - 1;
-            return;
-        }
-    }
-    tokenizer->column = (int)tokenizer->pos;
-}
-
 
 void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
 
@@ -294,6 +252,7 @@ void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
     }
 
 }
+
 
 Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
@@ -318,7 +277,7 @@ Token get_next_token(Tokenizer* tokenizer){
         if(c == '\"'){
             token.value.as_str = string + tokenizer->pos;
             token.type = TKN_STR;
-            const int skip = mc_find_char(string, '\"', tokenizer->pos + 1);
+            const int skip = mc_find_char(string + tokenizer->pos + 1, '\"', 0);
             if(skip < 0){
                 for(token.size = 0; string[tokenizer->pos + token.size]; token.size += 1);
             }
@@ -380,11 +339,10 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
     if(_only_compare_till_smaller == 0 && token1.size != token2.size)
         return 0;
 
-    const int range = (token1.size < token2.size)? token1.size : token2.size;
+    const unsigned int range = (token1.size < token2.size)? token1.size : token2.size;
     
-    unsigned int i = 0;
-    for( ; i < range; i+=1){
-        if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
+    for(unsigned int i = 0; i < range; i+=1){
+	if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
     }
     return 1;
 }
@@ -401,7 +359,7 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
         return NULL;
     }
 
-    long size = ftell(file);
+    const unsigned long size = (unsigned long) ftell(file);
 
     if(fseek(file, 0, 0)){
         fclose(file);

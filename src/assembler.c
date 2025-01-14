@@ -34,8 +34,6 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
     errstatus |= (fwrite(&meta_data_size, 8, 1, file) != 1);
 
-    uint64_t dummy = *(uint64_t*)meta_data;
-
     errstatus |= meta_data_size && (fwrite(meta_data, meta_data_size, 1, file) != 1);
 
     for( ; padding > 0; padding -= 1) errstatus |= (fwrite(&errstatus, 1, 1, file) != 1);
@@ -49,14 +47,6 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
     return errstatus;
 }
-
-static inline Token token_from_cstr(char* cstr){
-    Token token;
-    token.value.as_str = cstr;
-    for(token.size = 0; cstr[token.size]; token.size+=1);
-    return token;
-}
-
 
 
 int main(int argc, char** argv){

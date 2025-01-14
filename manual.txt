@@ -1,0 +1,369 @@
+UNFINNISHED: this file is not complete yet
+
+
+Welcome to the VPU manual!
+(c compilers known to work for this project are clang, cl and gcc,
+but i see no reason why any compiler won't work).
+
+This manual is divided in 4 sections:
+section 1 (build and use): contains information about building and using the executables.
+section 2 (assembly): information about the assembly language for the VPU
+section 3 (byte code): how the program is structured.
+section 4 (TODO: API): when finnished, will contain information about the API's for the Virtual Machine.
+
+
+Section 1: Build And Use
+
+    Subsection assembler
+        Requirements: standard c library
+        To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code,
+        this is done through our custom assembler.
+        To build the assembler for the VPU simply compile the src/assembler.c file using a c compiler of your
+        choice.
+	    To use the assembler simply pass the path to your assembly code to the assembler program,
+        you can use the "-o" flag to pass the output file to the assembler like so:
+        ./assembler <input_file> -o <output_file>.
+        If not passed the output file will be defaulted to output.bin.
+
+    Subsection VPU
+        Requirements: standard c library
+        To build the VPU virtual machine simply compile the src/vpu.c file with a c compiler of your choice.
+        To use the virtual machine pass the path to your program to the vpu program, it will then execute it.
+    
+    Subsection disassembler
+        Requirements: standard c library
+        If you wish to desassemble a vpu program you can use the disassembler to do so.
+        To build the disassembler simply compile the src/disassembler.c file with a c compiler of your choice,
+        to use the disassembler pass the path to the program to the disassembler and it will print it to the
+        standard output, if you wish to write the output to a file pass the output file to the disassembler
+        using the "-o" flag: ./disassemble <input_file> -o <output_file>.
+
+
+Section 2: Assembly (VASM)
+
+    To write programs to the VPU you can use our custom assembly!
+    VASM has a set of instructions you can use to do virtually anything,
+    each instruction has a fixed size of 4 bytes and takes up to three arguments,
+    each argument can be a register, a literal or either of them, literal arguments take 2 bytes,
+    register arguments take 1 byte and instructions that take either use 2 bytes to store the value
+    and an extra byte for storing if the value was a literal or register,
+    the first byte is always the opcode.
+
+    registers:
+        R0, RA, RB, RC, RD, RE, RF, RSP and RIP are 64 bit registers, you can put a number from 0 to 7
+        immediately after a register identifier to take a subregister starting from that byte offset,
+        for example RD4 is a subregister that starts at the address of RD + 4. You can use subregisters
+        as 8, 16, 32 or 64 bit registers, but it is worth noting that taking some subregisters with some sizes
+        may lead into manipulation of more than one register at once (which can be good or bad). The size of
+        the register that will be used is determined by the instructions.
+        Special registers are:
+            R0: 
+                the zero register, this register always holds the value 0, ALWAYS!
+                It is very usefull in some instructions as it serves as a dummy argument.
+            RSP:
+                the register that holds the stack position
+            RIP:
+                the register that holds the instruction position
+
+    instructions documentation notation:
+        R<n>:
+            stands for the <n>th argument which is a register in this case
+        L<n>:
+            stands for the <n>th argument which is a literal in this case
+        E:
+            stands for the only argument which can be either a literal or a register
+        STACK:
+            refers to the stack (64 bit)
+        STACK_POINTER:
+            the pointer to the beggining of the stack
+        suffixes:
+            the .as_<type> suffix indicates that the value is to be read as the <type>,
+            which also means that if the argument is a register it only needs sizeof(<type>) bytes.
+            the .<size> suffix indicates that only the first <size> less significant bits will be taken into account
+            if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit,
+            saved for the case of the LOAD1 and LOAD2 arguments)
+        instructions are documentaded below as follows:
+            <instruction identifier>:
+                <description>
+            the <instruction identifier> is the same that should be used in the assembly code, the description
+            decribes the functionality of the instruction using the notation above and, through it, the arguments
+            taken by the instruction are immediately clear,
+            for example:
+                GET:
+                    R1 = STACK[RSP - L2.as_uint16]
+                indicates that the instruction takes a register and a literal (in this order) as arguments,
+                and it writes the value located at RSP - L2.as_uint16 (L2.as_uint16 being the passed literal
+                with its bits being interpreted as uint16_t) in the stack to the passed register (it is implied
+                that the full 64 bit register is used).
+        NOTE:
+            addition, subtraction and multiplication for integers are done in unsigned style, but as the result
+            works if the bits represented a signed integer as well (except for overflow which is undefined
+            behaviour anyways) only one instruction is needed for each of this operations for each size.
+
+    
+    Subsection instructions
+        NOP:
+            does nothing
+        HALT:
+            halts the program with the status given in the argument
+            exit(E.as_int8)
+        MOV8:
+            R1.8 = R2.8
+        MOV16:
+            R1.16 = R2.16
+        MOV32:
+            R1.32 = R2.32
+        MOV:
+            R1.64 = R2.64
+        MOVC:
+            if(R1.8 != 0x00) R2.64 = R3.64
+        MOVV:
+            R1 = L2
+        MOVN:
+            R1 = ~L2
+        MOVV16:
+            R1.16 = L2
+        PUSH:
+            pushes E on to the stack
+            STACK[RSP++] = E
+        POP:
+            pop the top of the stack into R1
+            R1 = STACK[--RSP]
+        GET:
+            R1 = STACK[RSP - L2.as_uint16]
+        WRITE:
+            STACK[RSP - L2.as_uint16] = R1
+        GSP:
+            R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
+        STATIC:
+            STACK[RSP++] = STATIC_POINTER + E.as_uint64
+        READ8:
+            R1.8 = *(uint8_t*)(R2.as_ptr + R3.as_uint64)
+        READ16:
+            R1.16 = *(uint16_t*)(R2.as_ptr + R3.as_uint64)
+        READ32:
+            R1.32 = *(uint32_t*)(R2.as_ptr + R3.as_uint64)
+        READ:
+            R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
+        SET8:
+            *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
+        SET16:
+            *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
+        SET32:
+            *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.32
+        SET:
+            *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
+        NOT:
+            R1 = !R2
+        NEG:
+            R1 = ~R2 | R3
+        AND:
+            R1 = R2 & R3
+        NAND:
+            R1 = ~(R2 & R3)
+        OR:
+            R1 = R2 | R3
+        XOR:
+            R1 = R2 ^ R3
+        BSHIFT:
+            if(R2.as_int8 > 0) R1 = R2 <<  R3.as_uint8
+            else               R1 = R2 >> -R3.as_int8
+        JMP:
+            RIP += E.as_int64 + 1
+        JMPF:
+            if(R1.8 != 0x00) RIP += L2.as_int16
+            else             RIP += 1
+        JMPFN:
+            if(R1.8 == 0x00) RIP += L2.as_int16
+            else             RIP += 1
+        CALL:
+            STACK[RSP++] = RIP.as_uint64 + 1
+            RIP += E.as_int64
+        RET:
+            RIP = STACK[--RSP]
+        ADD8:
+            R1.as_uint8 = R2.as_uint8 + R3.as_uint8
+        SUB8:
+            R1.as_uint8 = R2.as_uint8 - R3.as_uint8
+        MUL8:
+            R1.as_uint8 = R2.as_uint8 * R3.as_uint8
+        ADD16:
+            R1.as_uint16 = R2.as_uint16 + R3.as_uint16
+        SUB16:
+            R1.as_uint16 = R2.as_uint16 - R3.as_uint16
+        MUL16:
+            R1.as_uint16 = R2.as_uint16 * R3.as_uint16
+        ADD32:
+            R1.as_uint32 = R2.as_uint32 + R3.as_uint32
+        SUB32:
+            R1.as_uint32 = R2.as_uint32 - R3.as_uint32
+        MUL32:
+            R1.as_uint32 = R2.as_uint32 * R3.as_uint32
+        ADD:
+            R1.as_uint64 = R2.as_uint64 + R3.as_uint64
+        SUB:
+            R1.as_uint64 = R2.as_uint64 - R3.as_uint64
+        MUL:
+            R1.as_uint64 = R2.as_uint64 * R3.as_uint64
+        DIVI:
+            R1.as_int64 = R2.as_int64 / R3.as_int64
+        DIVU:
+            R1.as_uint64 = R2.as_uint64 / R3.as_uint64
+        ADDF:
+            R1.as_float64 = R2.as_float64 + R3.as_float64
+        SUBF:
+            R1.as_float64 = R2.as_float64 - R3.as_float64
+        MULF:
+            R1.as_float64 = R2.as_float64 * R3.as_float64
+        DIVF:
+            R1.as_float64 = R2.as_float64 / R3.as_float64
+        NEQ:
+            R1.as_uint8 = R2 != R3
+        EQ:
+            R1.as_uint8 = R2 == R3
+        EQF:
+            R1.as_uint8 = R2.as_float64 == R3.as_float64
+        BIGI:
+            R1.as_uint8 = R2.as_int64 > R3.as_int64
+        BIGU:
+            R1.as_uint8 = R2.as_uint64 > R3.as_uint64
+        BIGF:
+            R1.as_uint8 = R2.as_float64 > R3.as_float64
+        SMLI:
+            R1.as_uint8 = R2.as_int64 < R3.as_int64
+        SMLU:
+            R1.as_uint8 = R2.as_int64 < R3.as_int64
+        SMLF:
+            R1.as_uint8 = R2.as_float64 < R3.as_float64
+        CASTIU:
+            R1.as_int64 = (int64_t) R2.as_uint64
+        CASTIF:
+            R1.as_int64 = (int64_t) R2.as_float64
+        CASTUI:
+            R1.as_uint64 = (uint64_t) R2.as_int64
+        CASTUF:
+            R1.as_uint64 = (uint64_t) R2.as_float64
+        CASTFI:
+            R1.as_float64 = (double) R2.as_int64
+        CASTFU:
+            R1.as_float64 = (double) R2.as_uint64
+        CF3264:
+            R1.as_float32 = (float) R2.as_float64
+        CF6432:
+            R1.as_float64 = (double) R2.as_float32
+        MEMSET:
+            sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
+        MEMCPY:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
+        MEMMOV:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
+        MEMCMP:
+            compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
+        MALLOC:
+            allocates R2.as_uint64 bytes aligned to R3.as_uint8 + 1 and stores it to R1.as_ptr
+        FREE:
+            frees a block of memory allocated with MALLOC in R1.as_ptr + R2.as_int64 aligned to R3.as_uint8 + 1
+        FOPEN:
+            opens a file given by the string in R2.as_ptr in mode R3.as_uint8 and stores it to R1.as_ptr
+        FCLOSE:
+            closes a file in R2.as_ptr + R3.as_int64, sets R1.as_int64 to an error value on failure
+        PUTC:
+            puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
+        GETC:
+            gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
+        ABS:
+            R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
+        ABSF:
+            R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
+        INC:
+            R1.as_uint64 += L2.as_uint16
+        DEC:
+            R1.as_uint64 -= L2.as_uint16
+        INCF:
+            R1.as_float64 += (double) L2.as_uint16
+        DECF:
+            R1.as_float64 -= (double) L2.as_uint16
+        FLOAT:
+            R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
+        LOAD1:
+            loads up to a 32 bit long value to a register
+            R1 = L2.32
+        LOAD2:
+            loads up to a 64 bit long value to a register
+            R1 = L2.64
+        IOE:
+            sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
+        SYS:
+            perfomrs a syscall identified by the value in E
+        DISREG:
+            displays a register's value, for debugging purposes
+
+    Subsection labels
+        labels are a way to use compile time definitions and values. To create a label you can
+        put a ':' symbol after it and the current instruction position will be labeled as that symbol,
+        alternatively you can use the %label and %labelv macros (see subsection macros). To access the
+        label's definition you can preffix it with '$' to get the actual value or, in the case of a label
+        defined as a number, you can preffix it with '@' to get the value relative to the current instruction position
+        (good for the JMP, JMPF, JMPFN and CALL instructions).
+        example:
+            loop:
+                ;; code
+            JMP @loop
+            ;; jumps to label 'loop'
+        example:
+            %label value 5
+            MOVV RA $value
+            ;; moves the value 5 to register RA
+
+    Subsection macros
+        all macros should start with the % character.
+        %start:
+            marks the entry point of the program, if there are multiple of this the last one is taken
+        %include:
+            includes a file in the passed string argument path relative to the current one (c style),
+            example usage: %include "dir/file.txt"
+        %label:
+            creates a new label with the given value, you can NOT create a label that already exists
+            in that case you can use %unlabel to unlabel it and then label again to something else
+        %labelv:
+            creates a dummy label, i.e a label without a definition
+        %unlabel:
+            removes a label
+        %iflabel:
+            parsers the code enclosed by this %iflabel and its respective %endif
+            if the following symbol is labeled
+        %ifnlabel:
+            parsers the code enclosed by this %ifnlabel and its respective %endif
+            if the following symbol is not labeled
+        %endif:
+            marks the end of a macro if
+        %static:
+            pushes the following data to the static memory
+
+
+
+Section 3: Byte Code
+    The program binary data starts with a 4 bytes magic number "VPU:", the padding bytes count (4 bytes),
+    the flags (8 bytes), the entry point position (relative to the beginning of the byte code) (8 bytes),
+    the meta data size (8 bytes), the meta data (meta data size bytes), padding bytes (padding bytes count bytes)
+    and the byte code. The padding bytes are needed to garantee the alignment of the byte code to 8 bytes.
+
+    Subsection meta data:
+        The meta data consists of blocks of memory with an 8 byte number for the total size
+        of the memory block (including the number) and an 8 byte number to identify the block,
+        the only memory block for now is the static memory, memory identified with an 8 bytes
+        number "STATIC:\0" it contains the static memory of the program.
+
+    Each instruction has a fixed size of 4 bytes the first byte is the opcode, the other 3 bytes
+    are for the arguments or hints, literal arguments take 2 bytes where registers take 1, they are
+    placed in order in the instruction (opcode, arg1, arg2, arg3/hint). Hints are always placed in
+    the last byte and indicate if the the argument is a literal or a register for instructions that
+    can take either of them.
+
+
+Section 4: API's
+
+    The VPU will eventually have API's such as a Web version, but this is not done yet...
+
+
+
