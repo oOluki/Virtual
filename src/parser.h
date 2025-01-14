@@ -63,6 +63,7 @@ void fprint_token(FILE* file, const Token token){
     case TKN_INST:
     case TKN_REG:
     case TKN_STR:
+    case TKN_CHAR:
     case TKN_MACRO_INST:
     case TKN_LABEL_REF:
     case TKN_ADDR_LABEL_REF:
@@ -104,6 +105,7 @@ const char* get_token_type_str(int type){
     case TKN_ULIT:           return "TOKEN_ULIT";
     case TKN_FLIT:           return "TOKEN_FLIT";
     case TKN_STR:            return "TOKEN_STR";
+    case TKN_CHAR:           return "TOKEN_CHAR";
     case TKN_SPECIAL_SYM:    return "TOKEN_SPECIAL_SYM";
     case TKN_MACRO_INST:     return "TOKEN_MACRO_INST";
     case TKN_LABEL_REF:      return "TOKEN_LABEL_REF";
@@ -227,10 +229,11 @@ static inline int get_major_reg_identifier(const Token token){
     if(mc_compare_token(token, MKTKN("RF"), 1))  return RF;
     if(mc_compare_token(token, MKTKN("RSP"), 1)) return RSP;
     if(mc_compare_token(token, MKTKN("RIP"), 1)) return RIP;
+
     return -1;
 }
 
-uint32_t get_reg(const Token token){
+int get_reg(const Token token){
     if(token.type == TKN_REG) return (int)token.value.as_uint;
     if(token.type != TKN_RAW) return -1;
     const int reg = get_major_reg_identifier(token);
@@ -238,7 +241,18 @@ uint32_t get_reg(const Token token){
         if(token.size == 2){
             return reg;
         }
-        if(token.size == 3){
+        if(reg == RSP || reg == RIP){
+	    if(token.size > 4) return -1;
+	    if(token.size == 4){
+                const int i = get_digit(token.value.as_str[3]);
+                if((i < 0) || (i > 7)){
+                    return -1;
+                }
+                return reg + i;
+	    }
+	    return reg;
+        }
+	if(token.size == 3){
             const int i = get_digit(token.value.as_str[2]);
             if((i < 0) || (i > 7)){
                 return -1;
@@ -253,6 +267,9 @@ Operand parse_op_literal(Token token){
     
     if((token.type == TKN_FLIT) || (token.type == TKN_ILIT) || (token.type == TKN_ULIT)){
         return (Operand){.value.as_uint64 = token.value.as_uint, .type = token.type};
+    }
+    if(token.type == TKN_CHAR){
+	return (Operand){.value.as_uint64 = token.value.as_str[1], .type = TKN_ULIT};
     }
     if(token.type != TKN_RAW){
         return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
@@ -331,7 +348,7 @@ int push_to_static(Mc_stream_t* static_memory, const Token token){
         if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
             return 2;
         }
-        mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
+	mc_stream(static_memory, token.value.as_str + 1, token.size);
         mc_stream_str(static_memory, "");
         return 0;
     }
@@ -568,7 +585,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
         switch (inst_profile.op_profile & 0XFF)
         {
         case EXPECT_OP_REG:{
-            const int32_t reg = get_reg(token);
+            const int reg = get_reg(token);
             if(reg < 0){
                 REPORT_ERROR(
                     parser,
@@ -652,7 +669,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                 op_pos_in_inst += 3;
                 break;
             }
-            const int32_t reg = get_reg(token);
+            const int reg = get_reg(token);
             if(reg < 0){
                 const Operand operand = parse_op_literal(token);
                 if(operand.type == TKN_ERROR){

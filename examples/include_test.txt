@@ -2,7 +2,7 @@
 %include "vstd/vmath.in"
 
 %start
-    STATIC "INCLUDE TEST WAS SUCCESSFULL"
+    STATIC "INCLUDE TEST WAS SUCCESSFULL\n"
     POP RB
     IOE  R0 RA R0
     CALL @fprintf_str

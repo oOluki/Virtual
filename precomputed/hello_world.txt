@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = .\precomputed\hello_world.out
+	;; name = precomputed/hello_world.out
 	;; executable size = 104
 	;; inst count      = 11
 	;; inst size       = 4

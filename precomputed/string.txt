@@ -1,0 +1,55 @@
+
+;; X====X (SPECIFICATIONS) X====X
+	;; name = precomputed/string.out
+	;; executable size = 296
+	;; inst count      = 40
+	;; inst size       = 4
+	;; flags           = 00
+	;; meta_data_size  = 102
+	;; static_memory   = { position = 0, size = 102 }
+	;; entry point     = 11
+;; X====X (SPECIFICATIONS) X====X
+
+
+%static 0x0954686973202069732061207465737420666f722074657374696e672074686520737472696e6720616e64206368617261637465722070617273696e670a0909693d3d690a0909393d3d390a0909533d3d535c0a0000
+PUTC RC RA R0
+INC RB 0x1; u: 1
+READ8 RC RB R0
+JMPF RC 0xfffd; i: -3
+POP RC
+RET
+PUSH RC
+READ8 RC RB R0
+JMPF RC 0xfff8; i: -8
+POP RC
+RET
+%start
+STATIC 0x10 ;; "	This  is a tes"...
+IOE R0 RA R0
+POP RB
+CALL 0xfff8; i: -8
+MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x5c; (u: 92; i: 92; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x09; (u: 9; i: 9; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x42; (u: 66; i: 66; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x39; (u: 57; i: 57; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x42; (u: 66; i: 66; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x39; (u: 57; i: 57; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x3e; (u: 62; i: 62; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
+PUTC RB RA R0
+MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+PUTC RB RA R0
+HALT 0x0; (u: 0)

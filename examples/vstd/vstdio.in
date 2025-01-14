@@ -7,8 +7,6 @@ __fprintf_str_start:
     INC RB 1
     READ8 RC RB R0
 JMPF RC @__fprintf_str_start
-MOVV RC 10
-PUTC RC RA R0
 ;; restoring register RC
 POP RC
 RET

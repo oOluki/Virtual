@@ -1,28 +1,26 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = .\precomputed\include_test.out
-	;; executable size = 284
-	;; inst count      = 51
+	;; name = precomputed/include_test.out
+	;; executable size = 276
+	;; inst count      = 49
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 45
-	;; static_memory   = { position = 0, size = 45 }
-	;; entry point     = 46
+	;; meta_data_size  = 46
+	;; static_memory   = { position = 0, size = 46 }
+	;; entry point     = 44
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%static 0x494e434c554445205445535420574153205355434345535346554c4c00
+%static 0x494e434c554445205445535420574153205355434345535346554c4c0a00
 PUTC RC RA R0
 INC RB 0x1; u: 1
 READ8 RC RB R0
 JMPF RC 0xfffd; i: -3
-MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
-PUTC RC RA R0
 POP RC
 RET
 PUSH RC
 READ8 RC RB R0
-JMPF RC 0xfff6; i: -10
+JMPF RC 0xfff8; i: -8
 POP RC
 RET
 PUSH RB

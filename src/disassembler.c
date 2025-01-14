@@ -92,7 +92,7 @@ char* get_reg_str(int reg, char* output){
         output[0] = 'R';
         output[1] = 'I';
         output[2] = 'P';
-        output[2] = get_digit_char(reg - RIP);
+        output[3] = get_digit_char(reg - RIP);
         output[4] = '\0';
         return output;
     

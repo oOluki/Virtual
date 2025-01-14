@@ -1,6 +1,3 @@
-UNFINNISHED: this file is not complete yet
-
-
 Welcome to the VPU manual!
 (c compilers known to work for this project are clang, cl and gcc,
 but i see no reason why any compiler won't work).
