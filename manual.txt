@@ -56,27 +56,50 @@ Section 2: Assembly (VASM)
         as 8, 16, 32 or 64 bit registers, but it is worth noting that taking some subregisters with some sizes
         may lead into manipulation of more than one register at once (which can be good or bad). The size of
         the register that will be used is determined by the instructions.
-    R0:
-        the zero register, this register always holds the value 0, ALWAYS!
-        It is very usefull in some instructions as it serves as a dummy argument
-    RSP:
-        the register that holds the stack position
-    RIP:
-        the register that holds the instruction position
-    R<n>:
-        stands for the <n>th argument which is a register in this case
-    L<n>:
-        stands for the <n>th argument which is a literal in this case
-    E:
-        stands for the only argument which can be either a literal or a register
-    STACK:
-        refers to the stack (64 bit)
-    suffixes:
-        the .as_<type> suffix indicates that the value is to be read as the <type>,
-        which also means that if the argument is a register it only needs sizeof(<type>) bytes.
-        the .<size> suffix indicates that only the first <size> less significant bits will be taken into account
-        if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit,
-        saved for the case of the LOAD1 and LOAD2 arguments)
+        Special registers are:
+            R0: 
+                the zero register, this register always holds the value 0, ALWAYS!
+                It is very usefull in some instructions as it serves as a dummy argument.
+            RSP:
+                the register that holds the stack position
+            RIP:
+                the register that holds the instruction position
+
+    instructions documentation notation:
+        R<n>:
+            stands for the <n>th argument which is a register in this case
+        L<n>:
+            stands for the <n>th argument which is a literal in this case
+        E:
+            stands for the only argument which can be either a literal or a register
+        STACK:
+            refers to the stack (64 bit)
+        STACK_POINTER:
+            the pointer to the beggining of the stack
+        suffixes:
+            the .as_<type> suffix indicates that the value is to be read as the <type>,
+            which also means that if the argument is a register it only needs sizeof(<type>) bytes.
+            the .<size> suffix indicates that only the first <size> less significant bits will be taken into account
+            if no suffix is provided the default is .64 for registers and .16 for literals (as literals have to be up to 16 bit,
+            saved for the case of the LOAD1 and LOAD2 arguments)
+        instructions are documentaded below as follows:
+            <instruction identifier>:
+                <description>
+            the <instruction identifier> is the same that should be used in the assembly code, the description
+            decribes the functionality of the instruction using the notation above and, through it, the arguments
+            taken by the instruction are immediately clear,
+            for example:
+                GET:
+                    R1 = STACK[RSP - L2.as_uint16]
+                indicates that the instruction takes a register and a literal (in this order) as arguments,
+                and it writes the value located at RSP - L2.as_uint16 (L2.as_uint16 being the passed literal
+                with its bits being interpreted as uint16_t) in the stack to the passed register (it is implied
+                that the full 64 bit register is used).
+        NOTE:
+            addition, subtraction and multiplication for integers are done in unsigned style, but as the result
+            works if the bits represented a signed integer as well (except for overflow which is undefined
+            behaviour anyways) only one instruction is needed for each of this operations for each size.
+
     
     Subsection instructions
         NOP:
@@ -102,12 +125,14 @@ Section 2: Assembly (VASM)
             R1.16 = L2
         PUSH:
             pushes E on to the stack
+            STACK[RSP++] = E
         POP:
             pop the top of the stack into R1
+            R1 = STACK[--RSP]
         GET:
-            R1 = STACK[RSP - L2]
+            R1 = STACK[RSP - L2.as_uint16]
         WRITE:
-            STACK[RSP - L2] = R1
+            STACK[RSP - L2.as_uint16] = R1
         GSP:
             R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
         STATIC:
@@ -318,8 +343,22 @@ Section 2: Assembly (VASM)
 
 
 Section 3: Byte Code
-    TODO: write this section
+    The program binary data starts with a 4 bytes magic number "VPU:", the padding bytes count (4 bytes),
+    the flags (8 bytes), the entry point position (relative to the beginning of the byte code) (8 bytes),
+    the meta data size (8 bytes), the meta data (meta data size bytes), padding bytes (padding bytes count bytes)
+    and the byte code. The padding bytes are needed to garantee the alignment of the byte code to 8 bytes.
 
+    Subsection meta data:
+        The meta data consists of blocks of memory with an 8 byte number for the total size
+        of the memory block (including the number) and an 8 byte number to identify the block,
+        the only memory block for now is the static memory, memory identified with an 8 bytes
+        number "STATIC:\0" it contains the static memory of the program.
+
+    Each instruction has a fixed size of 4 bytes the first byte is the opcode, the other 3 bytes
+    are for the arguments or hints, literal arguments take 2 bytes where registers take 1, they are
+    placed in order in the instruction (opcode, arg1, arg2, arg3/hint). Hints are always placed in
+    the last byte and indicate if the the argument is a literal or a register for instructions that
+    can take either of them.
 
 
 Section 4: API's

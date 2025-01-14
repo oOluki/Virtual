@@ -59,9 +59,9 @@ typedef enum OpCode{
     INST_PUSH,
     // pop the top of the stack into R1
     INST_POP,
-    // R1 = STACK[RSP - L2]
+    // R1 = STACK[RSP - L2.as_uint16]
     INST_GET,
-    // STACK[RSP - L2] = R1
+    // STACK[RSP - L2.as_uint16] = R1
     INST_WRITE,
     // R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
     INST_GSP,
