@@ -53,6 +53,7 @@ enum TokenTypes{
     TKN_ULIT,
     TKN_FLIT,
     TKN_STR,
+    TKN_CHAR,
     TKN_SPECIAL_SYM,
     TKN_MACRO_INST,
     TKN_LABEL_REF,
@@ -67,6 +68,12 @@ typedef struct StringView
     char*    str;
     uint32_t size;
 } StringView;
+
+typedef struct LexizedString{
+    char* str;
+    int   read;
+    int   written;
+} LexizedString;
 
 
 #define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .type = TKN_RAW})
@@ -253,6 +260,69 @@ void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
 
 }
 
+static inline char get_escaped_char(char c){
+
+    switch(c){
+
+    case '0': return '\0';
+    case 'n': return '\n';
+    case 't': return '\t';
+    default : return c;
+
+    }
+
+}
+
+LexizedString lexize_str(char* str, char delim){
+    int read_pos = 0;
+    if(str[0] == delim) read_pos+=1;
+    int write_pos = read_pos;
+    
+    while(str[read_pos] && (str[read_pos] != delim) && (str[read_pos] != '\n')){
+	
+	if(str[read_pos] == '\\'){
+	    if(str[++read_pos] == '\0'){
+		return (LexizedString){.str = NULL, .read = read_pos, .written = write_pos};
+	    }
+	    int d = get_digit(str[read_pos]);
+	    if((d < 8) && (d > -1)){
+	        char c = 0;
+	        for(int i = 0; (d < 8) && (i < 3) && (d > -1); i+=1){
+		    c = (c << 3) + d;
+		    d = get_digit(str[++read_pos]);
+	        }
+		str[write_pos++] = c;
+		if(!str[read_pos] || (str[read_pos] == delim)) break;
+		continue;
+	    }
+	    if(str[read_pos] == 'x'){
+		uint8_t digit = get_hex_digit(str[++read_pos]);
+		char c = digit;
+		if(digit != 255){
+		    digit = get_hex_digit(str[++read_pos]);
+		    if(digit != 255){
+			c = (c << 4) | digit;
+			read_pos+=1;
+		    }
+		    str[write_pos++] = c;
+		    if(!str[read_pos] || (str[read_pos] == delim)) break;
+		}
+		else str[write_pos++] = 'x';
+		continue;
+	    }
+	    
+	    str[write_pos++] = get_escaped_char(str[read_pos++]);
+	    continue;
+	}
+	str[write_pos++] = str[read_pos++];
+
+    }
+    return (LexizedString){
+	.str = (str[read_pos] == delim)? str : NULL,
+	.read = read_pos, .written = write_pos
+    };
+}
+
 
 Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
@@ -275,15 +345,35 @@ Token get_next_token(Tokenizer* tokenizer){
 
         const char c = string[tokenizer->pos];
         if(c == '\"'){
-            token.value.as_str = string + tokenizer->pos;
+	    token.value.as_str = string + tokenizer->pos;
+	    const LexizedString ls = lexize_str(token.value.as_str + 1, '\"');
+	    tokenizer->column += ls.read + 2;
+	    tokenizer->pos += ls.read + 2;
+	    if(ls.str == NULL){
+		token.type = TKN_ERROR;
+		token.size = ls.written + 1;
+		return token;
+	    }
+            token.value.as_str = ls.str - 1;
+	    token.size = ls.written + 2;
+	    token.value.as_str[token.size - 1] = '\"';
             token.type = TKN_STR;
-            const int skip = mc_find_char(string + tokenizer->pos + 1, '\"', 0);
-            if(skip < 0){
-                for(token.size = 0; string[tokenizer->pos + token.size]; token.size += 1);
-            }
-            else token.size = skip + 2;
-            tokenizer->pos += token.size;
-            tokenizer->column += token.size;
+            return token;
+        }
+	if(c == '\''){
+	    token.value.as_str = string + tokenizer->pos;
+	    const LexizedString ls = lexize_str(token.value.as_str + 1, '\'');
+	    tokenizer->column += ls.read + 2;
+	    tokenizer->pos += ls.read + 2;
+	    if((ls.str == NULL) || (ls.written != 1)){
+		token.type = TKN_ERROR;
+		token.size = ls.written + 1;
+		return token;
+	    }
+            token.value.as_str = ls.str - 1;
+	    token.size = ls.written + 2;
+	    token.value.as_str[token.size - 1] = '\'';
+            token.type = TKN_CHAR;
             return token;
         }
         if(c == line_comment){
