@@ -1,0 +1,102 @@
+%include "vstd/vstdio.in"
+%include "vstd/vmath.in"
+
+;; gets an uint number through RA and returns if the number is prime or not through the same register
+is_prime_ret_false:
+    POP RD
+    POP RC
+    POP RB
+    MOVV RA 0
+    RET
+is_prime_ret_true:
+    POP RD
+    POP RC
+    POP RB
+    MOVV RA 1
+    RET
+is_prime:
+    PUSH RB
+    PUSH RC
+    PUSH RD
+    MOV RB RA
+
+    MOVV RC 2
+    EQ   RD RB RC
+    JMPF RD @is_prime_ret_true
+    SMLU RD RB RC
+    JMPF RD @is_prime_ret_false
+
+    CASTFU RA RA
+    CALL @sqrt
+    CASTUF RA RA
+
+    loop:
+        DIVU RD RB RA
+	MUL  RD RD RA
+	EQ   RD RD RB
+	JMPF RD @is_prime_ret_false
+	DEC  RA 1
+	SMLU RD RA RC
+    JMPFN RD @loop
+    JMP @is_prime_ret_true
+%unlabel loop
+%unlabel is_prime_ret_true
+%unlabel is_prime_ret_false
+
+
+;; takes a range from RB.as_uint64 to RC.as_uint64 and prints
+;; the primes in that range to RA.as_ptr file
+primes_ret:
+    MOVV RB '\n'
+    PUTC RB RA R0
+    POP RE
+    POP RD
+    POP RC
+    POP RB
+    RET
+primes:
+    PUSH RB
+    PUSH RC
+    PUSH RD
+    PUSH RE
+
+    SMLU RD RB RC
+    JMPFN RD @primes_ret
+
+    MOV RE RA
+
+    loop:
+        MOV RA RB
+	CALL @is_prime
+	JMPFN RA 7
+	MOV RA RE
+	CALL @fprint_uint
+	MOVV RD ','
+	PUTC RD RA R0
+	MOVV RD ' '
+	PUTC RD RA R0
+	INC  RB 1
+	SMLU RD RB RC
+    JMPF RD @loop
+
+    MOV RA RE
+    JMP @primes_ret
+%unlabel loop
+%unlabel primes_ret
+
+
+
+%start
+
+IOE R0 RA R0
+
+MOVV RB 1
+MOVV RC 100
+
+CALL @primes
+
+MOVV RB '\n'
+
+PUTC RB RA R0
+
+

@@ -228,7 +228,7 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, uint64_t i
         if(GET_OP_HINT(inst) == HINT_REG)
             fprintf(output, "%s\n", get_reg_str(R1, buff1));
         else
-            printf("0x%"PRIx16"; %"PRIi16"\n", L1, (int16_t) L1);
+            fprintf(output, "0x%"PRIx16"; %"PRIi16"\n", L1, (int16_t) L1);
         return 0;
     case INST_JMPF:
         fprintf(output, "JMPF %s 0x%"PRIx16"; i: %"PRIi16"\n", get_reg_str(R1, buff1), L2, (int16_t) L2);
@@ -301,10 +301,10 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, uint64_t i
         fprintf(output, "DIVF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_NEQ:
-        fprintf(output, "NEQI %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        fprintf(output, "NEQ %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQ:
-        fprintf(output, "EQU %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
+        fprintf(output, "EQ %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;
     case INST_EQF:
         fprintf(output, "EQF %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));

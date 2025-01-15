@@ -1,13 +1,13 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = precomputed/string.out
-	;; executable size = 296
-	;; inst count      = 40
+	;; executable size = 460
+	;; inst count      = 81
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 102
 	;; static_memory   = { position = 0, size = 102 }
-	;; entry point     = 11
+	;; entry point     = 52
 ;; X====X (SPECIFICATIONS) X====X
 
 
@@ -23,11 +23,52 @@ READ8 RC RB R0
 JMPF RC 0xfff8; i: -8
 POP RC
 RET
+DIVU RE RB RC
+MUL RE RE RC
+SUB RF RB RE
+DIVU RC RC RD
+DIVU RE RF RC
+MOVV RF 0x30; (u: 48; i: 48; f: 0.000000)
+ADD RF RF RE
+PUTC RF RA R0
+MOVV RF 0x01; (u: 1; i: 1; f: 0.000000)
+BIGU RF RC RF
+JMPF RF 0xfff6; i: -10
+POP RF
+POP RE
+POP RD
+POP RC
+RET
+PUSH RC
+PUSH RD
+PUSH RE
+PUSH RF
+MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
+MOVV RD 0x0a; (u: 10; i: 10; f: 0.000000)
+DIVI RE RB RC
+NOT RE RE
+JMPF RE 0xffe8; i: -24
+MUL RC RC RD
+JMP 0xfffc; -4
+MOVV RC 0x2d; (u: 45; i: 45; f: 0.000000)
+PUTC RC RA R0
+PUSH RB
+ABS RB RB R0
+CALL 0xfff1; i: -15
+POP RB
+POP RC
+RET
+PUSH RC
+SMLI RC RB R0
+JMPF RC 0xfff6; i: -10
+CALL 0xffea; i: -22
+POP RC
+RET
 %start
 STATIC 0x10 ;; "	This  is a tes"...
 IOE R0 RA R0
 POP RB
-CALL 0xfff8; i: -8
+CALL 0xffcf; i: -49
 MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)
 PUTC RB RA R0
 MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)

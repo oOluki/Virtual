@@ -330,7 +330,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 += L2;
         return 1;
     case INST_DEC:
-        R1.as_int64 -= L1;
+        R1.as_int64 -= L2;
         return 1;
     case INST_INCF:
         R1.as_float64 += (double)L2;

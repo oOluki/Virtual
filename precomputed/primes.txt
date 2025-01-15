@@ -1,17 +1,16 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/include_test.out
-	;; executable size = 440
-	;; inst count      = 90
+	;; name = precomputed/primes.out
+	;; executable size = 644
+	;; inst count      = 149
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 46
-	;; static_memory   = { position = 0, size = 46 }
-	;; entry point     = 85
+	;; meta_data_size  = 16
+	;; static_memory   = { position = 0, size = 16 }
+	;; entry point     = 143
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%static 0x494e434c554445205445535420574153205355434345535346554c4c0a00
 PUTC RC RA R0
 INC RB 0x1; u: 1
 READ8 RC RB R0
@@ -97,9 +96,68 @@ CASTFU RB RB
 DIVF RA RB RA
 POP RB
 RET
-%start
-STATIC 0x10 ;; "INCLUDE TEST WA"...
+POP RD
+POP RC
 POP RB
+MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+RET
+POP RD
+POP RC
+POP RB
+MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+RET
+PUSH RB
+PUSH RC
+PUSH RD
+MOV RB RA
+MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
+EQ RD RB RC
+JMPF RD 0xfff5; i: -11
+SMLU RD RB RC
+JMPF RD 0xffee; i: -18
+CASTFU RA RA
+CALL 0xffe5; i: -27
+CASTUF RA RA
+DIVU RD RB RA
+MUL RD RD RA
+EQ RD RD RB
+JMPF RD 0xffe7; i: -25
+DEC RA 0x1; u: 1
+SMLU RD RA RC
+JMPFN RD 0xfffa; i: -6
+JMP 0xffe8; -24
+MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
+PUTC RB RA R0
+POP RE
+POP RD
+POP RC
+POP RB
+RET
+PUSH RB
+PUSH RC
+PUSH RD
+PUSH RE
+SMLU RD RB RC
+JMPFN RD 0xfff4; i: -12
+MOV RE RA
+MOV RA RB
+CALL 0xffdd; i: -35
+JMPFN RA 0x7; i: 7
+MOV RA RE
+CALL 0xff96; i: -106
+MOVV RD 0x2c; (u: 44; i: 44; f: 0.000000)
+PUTC RD RA R0
+MOVV RD 0x20; (u: 32; i: 32; f: 0.000000)
+PUTC RD RA R0
+INC RB 0x1; u: 1
+SMLU RD RB RC
+JMPF RD 0xfff5; i: -11
+MOV RA RE
+JMP 0xffe5; -27
+%start
 IOE R0 RA R0
-CALL 0xffae; i: -82
-HALT 0x0; (u: 0)
+MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+MOVV RC 0x64; (u: 100; i: 100; f: 0.000000)
+CALL 0xffe8; i: -24
+MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
+PUTC RB RA R0

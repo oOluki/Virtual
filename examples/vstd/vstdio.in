@@ -11,7 +11,7 @@ JMPF RC @__fprintf_str_start
 POP RC
 RET
 fprintf_str:
-    ;; saving registers RC and RD
+    ;; saving registers RC
     PUSH RC
     
     READ8 RC RB R0
@@ -20,6 +20,66 @@ fprintf_str:
     POP RC
     RET
 %unlabel __fprintf_str_start
+
+;; fprint_uint takes the output file from RA and an unsigned integer from RB, it then prints the unsigned integer to the output file
+fprint_uint_print:
+    loop:
+        DIVU RE RB RC
+        MUL  RE RE RC
+	SUB  RF RB RE
+        DIVU RC RC RD
+        DIVU RE RF RC
+	MOVV RF '0'
+	ADD  RF RF RE
+	PUTC RF RA R0
+	MOVV RF 1
+	BIGU RF RC RF
+    JMPF RF @loop
+    POP RF
+    POP RE
+    POP RD
+    POP RC
+    RET
+%unlabel loop
+fprint_uint:
+    ; saving auxiliary registers
+    PUSH RC
+    PUSH RD
+    PUSH RE
+    PUSH RF
+
+    MOVV RC 10
+    MOVV RD 10
+    loop:
+        DIVI RE RB RC
+        NOT  RE RE
+        JMPF RE @fprint_uint_print
+        MUL  RC RC RD
+    JMP @loop
+%unlabel loop
+%unlabel fprint_uint_print
+
+
+;; fprint_int takes the output file from RA and a signed integer from RB, it then prints the signed integer to the output file
+fprint_int_neg:
+    MOVV RC '-'
+    PUTC RC RA R0
+    PUSH RB
+    ABS  RB RB R0
+    CALL @fprint_uint
+    POP RB
+    POP RC
+    RET
+fprint_int:
+    PUSH RC
+    
+    SMLI RC RB R0
+    JMPF RC @fprint_int_neg
+
+    CALL @fprint_uint
+    POP RC
+    RET
+%unlabel fprint_int_neg
 
 
 %endif
