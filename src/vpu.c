@@ -431,7 +431,6 @@ int main(int argc, char** argv){
     ) {
 	    vpu.registers[R0].as_uint64 = 0;
     }
-    printf("%"PRIu64"- %u\n", vpu.registers[RIP/8].as_uint64, vpu.program[vpu.registers[RIP/8].as_uint64]);
 
     mc_destroy_stream(stream);
 
