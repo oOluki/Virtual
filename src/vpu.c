@@ -142,7 +142,7 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint64 = R3.as_int8 < 0? R2.as_uint64 >> -(R3.as_int8) : R2.as_uint64 << R3.as_uint8;
         return 1;
     case INST_JMP:
-        return (GET_OP_HINT(inst) == HINT_REG)? R1.as_int64 : (int64_t) L1;
+        return (GET_OP_HINT(inst) == HINT_REG)? R1.as_int64 : (int16_t) L1;
     case INST_JMPF:
         return (R1.as_uint8)? (int16_t) L2 : 1;
     case INST_JMPFN:
@@ -431,6 +431,7 @@ int main(int argc, char** argv){
     ) {
 	    vpu.registers[R0].as_uint64 = 0;
     }
+    printf("%"PRIu64"- %u\n", vpu.registers[RIP/8].as_uint64, vpu.program[vpu.registers[RIP/8].as_uint64]);
 
     mc_destroy_stream(stream);
 
