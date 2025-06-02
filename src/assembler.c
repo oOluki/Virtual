@@ -1,4 +1,3 @@
-#define MC_INITMACRO_FORCE_64BIT 1
 #include <stdio.h>
 #include "parser.h"
 #include <inttypes.h>

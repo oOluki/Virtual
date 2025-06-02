@@ -4,12 +4,25 @@
 #include "stdio.h"
 #include "core.h"
 
-typedef enum SysCall{
+// in case you want to link a function for the default sys_call method
+#ifdef CUSTOM_SYSTEM
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+int sys_call(VPU* vpu, uint64_t call);
+#ifdef __cplusplus
+}
+#endif
+
+#else
+
+enum SysCall{
 
     SYS_GET_SPECIAL_ADDRESS = 0,
     SYS_GET_SYSTEM_SPECIFICATIONS
 
-} SysCall;
+};
 
 
 enum SysSpecialAddress{
@@ -18,7 +31,7 @@ enum SysSpecialAddress{
     SYS_ADDRESS_STDERR,
     SYS_ADDRESS_STDIN,
 
-} SysSpecialAddress;
+};
 
 
 
@@ -50,6 +63,8 @@ int sys_call(VPU* vpu, uint64_t call){
 
     return 0;    
 }
+
+#endif
 
 
 #endif // =====================  END OF FILE SYSTEM_HEADER ===========================

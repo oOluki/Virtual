@@ -361,10 +361,10 @@ static inline int64_t perform_inst(Inst inst){
 
     case INST_SYS:
         if(sys_call(&vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
-	    fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
+            fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
             vpu.return_status = 1;
-	    return 0xFFFFFFFFFFFFFFFF - IP;
-	}
+            return 0xFFFFFFFFFFFFFFFF - IP;
+	    }
         return 1;
     case INST_DISREG:
         printf("(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
