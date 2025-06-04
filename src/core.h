@@ -341,19 +341,19 @@ static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
     // it may be a good idea to only allow alignment to powers of 2
     //if(alignment & (alignment - 1)) return NULL;
 
-    const uintptr_t addr = (uintptr_t)malloc(n + sizeof(void*) + alignment) + sizeof(void*);
+    const uintptr_t alloc_addr = (uintptr_t)malloc(n + sizeof(void*) + alignment) + sizeof(void*);
 
-    if(addr == sizeof(void*)) return NULL;
+    if(alloc_addr == sizeof(void*)) return NULL;
 
-    *(void**)(addr - sizeof(void*)) = (void*)(addr - sizeof(void*));
-    const uintptr_t offset = (alignment - (addr % alignment)) % alignment;
+    const uintptr_t addr = alloc_addr + (alignment - (addr % alignment)) % alignment;
+    *(void**)(addr - sizeof(void*)) = (void*)(alloc_addr - sizeof(void*));
 
-    return (void *)(addr + offset);
+    return (void *)(addr);
 }
 
 static inline void vpu_free_aligned(void* ptr){
 
-    if(ptr) free((void*) ((uintptr_t)(ptr) - sizeof(void*)));
+    if(ptr) free(*(void**) ((uintptr_t)(ptr) - sizeof(void*)));
 
 }
 

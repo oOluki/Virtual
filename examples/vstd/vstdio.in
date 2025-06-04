@@ -1,6 +1,44 @@
 %ifnlabel _VSTDIO_IN
 %labelv   _VSTDIO_IN
 
+;; fread reads RB.as_uint64 bytes from the stream in RC.as_ptr to RA.as_ptr
+fread:
+
+    JMPF RB 2
+    RET
+
+    ;; read byte
+    PUSH RD
+    ;; position
+    PUSH RE
+    PUSH RF
+
+    
+    
+    XOR RD RD RD
+    XOR RE RE RE
+    XOR RF RF RF
+
+    loop:
+        GETC RD RC R0
+        SET8 RA RD RE
+        INC  RE 1
+        MOV32 RD4 RD
+        BIGI RD RD R0
+        MOVV RF 0xFF
+        AND  RD RD RF
+        SMLU RF RE RB
+        NEQ  RF RF R0
+        NEQ  RD RD R0
+        AND  RF RF RD
+    JMPF RF @loop
+
+    POP RF
+    POP RE
+    POP RD
+    RET
+%unlabel loop
+
 ;; fprintf_str takes the output file from RA and the input string from RB, it then prints the string up to the first '\0'.
 __fprintf_str_start:
     PUTC RC RA R0

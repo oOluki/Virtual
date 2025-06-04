@@ -306,6 +306,14 @@ static inline int64_t perform_inst(Inst inst){
         case 1: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "w"); break;
         case 2: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "rb"); break;
         case 3: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "wb"); break;
+        case 4: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "a"); break;
+        case 5: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "ab"); break;
+        case 6: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "r+"); break;
+        case 7: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "w+"); break;
+        case 8: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "rb+"); break;
+        case 9: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "wb+"); break;
+        case 10: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "a+"); break;
+        case 11: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "ab+"); break;
         }
         return 1;
     case INST_FCLOSE:

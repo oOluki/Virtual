@@ -2,6 +2,7 @@
 #include "lexer.h"
 #include <stdio.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 static char buff1[10];
 static char buff2[10];
@@ -171,13 +172,18 @@ int print_inst(FILE* output, Inst inst, const uint8_t* static_memory, uint64_t i
         return 0;
     case INST_STATIC:
         if(GET_OP_HINT(inst) == HINT_REG){
-	    fprintf(output, "STATIC %s\n", get_reg_str(R1, buff1));
-	}
-	else {
-            const char* string = (char*)(static_memory + L1);
-            const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
-            fprintf(output, "STATIC 0x%"PRIx16" ;; \"%.*s\"...\n", L1, (15 < max_size)? (int)15 : (int)max_size, string);
-    }   return 0;
+	        fprintf(output, "STATIC %s\n", get_reg_str(R1, buff1));
+        }
+        else {
+                const char* string = (char*)(static_memory + L1);
+                const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
+                fprintf(output, "STATIC 0x%"PRIx16" ;; \"", L1);
+                for(int i = 0; i < ((15 < max_size)? (int)15 : (int)max_size); i+=1){
+                    if(isprint(string[i])) fputc(string[i], output);
+                    else                   fputc('.', output);
+                }
+                fprintf(output, "\"...\n");
+        }   return 0;
     case INST_READ8:
         fprintf(output, "READ8 %s %s %s\n", get_reg_str(R1, buff1), get_reg_str(R2, buff2), get_reg_str(R3, buff3));
         return 0;

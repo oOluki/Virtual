@@ -217,7 +217,7 @@ void mc_stream(Mc_stream_t* stream, const void* data, size_t size){
     if(size + stream->size > stream->capacity){
         void* old_data = stream->data;
         stream->capacity *= 1 + (size_t)((size + stream->size) / stream->capacity);
-        stream->data = vpu_alloc_aligned(stream->capacity, 8);
+        stream->data = vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
         memcpy(stream->data, old_data, stream->size);
         vpu_free_aligned(old_data);
     }
@@ -233,6 +233,8 @@ void mc_stream_str(Mc_stream_t* stream, const char* data){
 
     mc_stream(stream, data, size * sizeof(char));
 }
+
+static inline void* mc_stream_on(const Mc_stream_t* stream, uint64_t index){ return (void*)((uint8_t*)(stream->data) + index);}
 
 // \returns (Mc_stream_t){.data = vpu_alloc_aligned(capacity, VPU_MEMALIGN_TO), .size = 0, .capacity = capacity};
 Mc_stream_t mc_create_stream(uint64_t capacity){
@@ -474,7 +476,7 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
     if(stream->size + size + 1 > stream->capacity){
         stream->capacity = (size_t)(size + stream->size + 1);
         void* odata = stream->data;
-        stream->data = (char*)vpu_alloc_aligned(stream->capacity, 8);
+        stream->data = (char*)vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
         memcpy(stream->data, odata, stream->size);
         vpu_free_aligned(odata);
     }
@@ -490,10 +492,25 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
 
 // this automatically includes the concatonated file path as stringview (first size (uint32) then cstr (null terminated))
 // to the stream before the file contents, only if on success
-char* read_file_relative(Mc_stream_t* stream, const StringView mother_dir, const StringView relative_path){
+char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView relative_path){
 
     const uint64_t ssize = stream->size;
     const uint32_t path_str_size = mother_dir.size + relative_path.size;
+
+    // storing the position of the strings on the stream before any eventual
+    // realocation of the stream which would invalidade the pointers
+    // this way we can restore the pointers afterwars
+    const size_t mother_dir_str_pos = mother_dir.str - (char*)((uint8_t*)(stream->data));
+    const size_t relative_path_str_pos = relative_path.str - (char*)((uint8_t*)(stream->data));
+
+    // reserve enough space in the stream for the new file path
+    stream->size += path_str_size + sizeof(path_str_size);
+    mc_stream(stream, "", 0);
+    stream->size -= path_str_size + sizeof(path_str_size);
+
+    // restore pointers
+    mother_dir.str = (char*) mc_stream_on(stream, mother_dir_str_pos);
+    relative_path.str = (char*) mc_stream_on(stream, relative_path_str_pos);
 
     mc_stream(stream, &path_str_size, sizeof(path_str_size));
     mc_stream(stream, mother_dir.str, mother_dir.size);
@@ -501,14 +518,15 @@ char* read_file_relative(Mc_stream_t* stream, const StringView mother_dir, const
     const char nullterm_ = '\0';
     mc_stream(stream, &nullterm_, sizeof(nullterm_));
 
-    char* const status = read_file(stream, (char*)((uint8_t*)(stream->data) + ssize + sizeof(path_str_size)), 0, 0);
+    char* const status = read_file(stream, (char*) mc_stream_on(stream, ssize + sizeof(path_str_size)), 0, 0);
 
     if(status == NULL){
+        printf("oi\n");
         stream->size = ssize;
         return NULL;
     }
 
-    return (char*)((uint8_t*)(stream->data) + ssize);
+    return (char*) mc_stream_on(stream, ssize);
 }
 
 #endif

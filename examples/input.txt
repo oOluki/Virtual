@@ -1,0 +1,67 @@
+%include "vstd/vstdio.in"
+
+
+;; reads bytes from the stream in RB.as_ptr to RA.as_ptr up to the next new line, returns the number of characters read
+fread_line:
+    ;; read byte
+    PUSH RD
+    ;; position
+    PUSH RE
+    PUSH RF
+    
+    XOR RD RD RD
+    XOR RE RE RE
+    MOVV RF '\n'
+
+    loop:
+        GETC RD RB R0
+        SET8 RA RD RE
+        INC  RE 1
+        NEQ  RD RD RF
+    JMPF RD @loop
+
+    MOV RA RE
+
+    POP RF
+    POP RE
+    POP RD
+    RET
+%unlabel loop
+
+
+%start
+
+IOE RC RD R0
+
+MOV RA RD
+
+STATIC "Enter message:\n"
+POP RB
+CALL @fprintf_str
+
+
+MOV RB RC
+PUSH RSP
+MOVV RA 8
+MUL RA RA RSP
+GSP RA RA
+INC RSP 100
+
+MOV RC RA
+CALL @fread_line
+DEC RA 1
+MOVV RB '\0'
+SET8 RC RB RA
+
+MOV RA RD
+
+STATIC "You said: \'"
+POP RB
+CALL @fprintf_str
+
+MOV RB RC
+CALL @fprintf_str
+
+STATIC "\'\n"
+POP RB
+CALL @fprintf_str

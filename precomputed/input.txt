@@ -1,17 +1,17 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/string.out
-	;; executable size = 556
-	;; inst count      = 105
+	;; name = precomputed/input.out
+	;; executable size = 548
+	;; inst count      = 117
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 102
-	;; static_memory   = { position = 0, size = 102 }
-	;; entry point     = 76
+	;; meta_data_size  = 47
+	;; static_memory   = { position = 0, size = 47 }
+	;; entry point     = 92
 ;; X====X (SPECIFICATIONS) X====X
 
 
-%static 0x0954686973202069732061207465737420666f722074657374696e672074686520737472696e6720616e64206368617261637465722070617273696e670a0909693d3d690a0909393d3d390a0909533d3d535c0a0000
+%static 0x456e746572206d6573736167653a0a00596f7520736169643a202700270a00
 JMPF RB 0x2; i: 2
 RET
 PUSH RD
@@ -88,33 +88,45 @@ JMPF RC 0xfff6; i: -10
 CALL 0xffea; i: -22
 POP RC
 RET
+PUSH RD
+PUSH RE
+PUSH RF
+XOR RD RD RD
+XOR RE RE RE
+MOVV RF 0x0a; (u: 10; i: 10; f: 0.000000)
+GETC RD RB R0
+SET8 RA RD RE
+INC RE 0x1; u: 1
+NEQ RD RD RF
+JMPF RD 0xfffc; i: -4
+MOV RA RE
+POP RF
+POP RE
+POP RD
+RET
 %start
-STATIC 0x10 ;; ".This  is a tes"...
-IOE R0 RA R0
+IOE RC RD R0
+MOV RA RD
+STATIC 0x10 ;; "Enter message:."...
 POP RB
-CALL 0xffcf; i: -49
-MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x44; (u: 68; i: 68; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x5c; (u: 92; i: 92; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x09; (u: 9; i: 9; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x42; (u: 66; i: 66; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x39; (u: 57; i: 57; f: 0.000000)
-PUTC RB RA R0
+CALL 0xffbe; i: -66
+MOV RB RC
+PUSH RSP
+MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+MUL RA RA RSP
+GSP RA RA
+INC RSP 0x64; u: 100
+MOV RC RA
+CALL 0xffe4; i: -28
+DEC RA 0x1; u: 1
 MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x42; (u: 66; i: 66; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x39; (u: 57; i: 57; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x3e; (u: 62; i: 62; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
-PUTC RB RA R0
-MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-PUTC RB RA R0
-HALT 0x0; (u: 0)
+SET8 RC RB RA
+MOV RA RD
+STATIC 0x20 ;; "You said: '.'.."...
+POP RB
+CALL 0xffaf; i: -81
+MOV RB RC
+CALL 0xffad; i: -83
+STATIC 0x2c ;; "'.."...
+POP RB
+CALL 0xffaa; i: -86
