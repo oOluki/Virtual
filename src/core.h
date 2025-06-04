@@ -345,7 +345,7 @@ static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
 
     if(alloc_addr == sizeof(void*)) return NULL;
 
-    const uintptr_t addr = alloc_addr + (alignment - (addr % alignment)) % alignment;
+    const uintptr_t addr = alloc_addr + (alignment - (alloc_addr % alignment)) % alignment;
     *(void**)(addr - sizeof(void*)) = (void*)(alloc_addr - sizeof(void*));
 
     return (void *)(addr);
