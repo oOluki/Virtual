@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static VPU vpu;
-
 #define as_uint8(ptr)   *(uint8_t*) (ptr)
 #define as_uint16(ptr)  *(uint16_t*)(ptr)
 #define as_uint32(ptr)  *(uint32_t*)(ptr)
@@ -19,22 +17,22 @@ static VPU vpu;
 #define as_float64(ptr) *(double*)  (ptr)
 
 // returns the number of instruction to sum to RIP
-static inline int64_t perform_inst(Inst inst){
+int64_t perform_inst(VPU* vpu, Inst inst){
 
     // the first register operand
-    #define R1 (*(Register*)(vpu.register_space + (uint8_t) ((inst & 0XFF00)      >> 8)))
+    #define R1 (*(Register*)(vpu->register_space + (uint8_t) ((inst & 0XFF00)      >> 8)))
     // the second register operand
-    #define R2 (*(Register*)(vpu.register_space +(uint8_t) ((inst & 0XFF0000)    >> 16)))
+    #define R2 (*(Register*)(vpu->register_space +(uint8_t) ((inst & 0XFF0000)    >> 16)))
     // the third register operand
-    #define R3 (*(Register*)(vpu.register_space +(uint8_t) ((inst & 0XFF000000)  >> 24)))
+    #define R3 (*(Register*)(vpu->register_space +(uint8_t) ((inst & 0XFF000000)  >> 24)))
     // the first literal operand
     #define L1 (uint16_t) ((inst & 0X00FFFF00) >> 8)
     // the second literal operand
     #define L2 (uint16_t) ((inst & 0XFFFF0000) >> 16)
     // the current stack position
-    #define SP (*(Register*)(vpu.register_space + RSP)).as_uint64
+    #define SP (*(Register*)(vpu->register_space + RSP)).as_uint64
     // the instruction position
-    #define IP (*(Register*)(vpu.register_space + RIP)).as_uint64
+    #define IP (*(Register*)(vpu->register_space + RIP)).as_uint64
 
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R2.as_##TYPE OP R3.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R2.as_##TYPE OP R3.as_##TYPE
@@ -52,7 +50,7 @@ static inline int64_t perform_inst(Inst inst){
     case INST_NOP:
         return 1;
     case INST_HALT:
-        vpu.return_status = (GET_OP_HINT(inst) == HINT_REG)? (int) R1.as_int8 : (int) L1;
+        vpu->return_status = (GET_OP_HINT(inst) == HINT_REG)? (int) R1.as_int8 : (int) L1;
         return 0XFFFFFFFFFFFFFFFF - IP;
     case INST_MOV8:
         R1.as_uint8 = R2.as_uint8;
@@ -79,22 +77,22 @@ static inline int64_t perform_inst(Inst inst){
         R1.as_uint16 = L2;
         return 1;
     case INST_PUSH:
-        vpu.stack[SP++] = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
+        vpu->stack[SP++] = (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1;
         return 1;
     case INST_POP:
-        R1.as_uint64 = vpu.stack[--SP];
+        R1.as_uint64 = vpu->stack[--SP];
         return 1;
     case INST_GET:
-        R1.as_uint64 = vpu.stack[SP - L2];
+        R1.as_uint64 = vpu->stack[SP - L2];
         return 1;
     case INST_WRITE:
-        vpu.stack[SP - L2] = R1.as_uint64;
+        vpu->stack[SP - L2] = R1.as_uint64;
         return 1;
     case INST_GSP:
-        R1.as_ptr = (uint8_t*)vpu.stack + R2.as_uint64;
+        R1.as_ptr = (uint8_t*)vpu->stack + R2.as_uint64;
         return 1;
     case INST_STATIC:
-        vpu.stack[SP++] = (uint64_t)(uintptr_t)(vpu.static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
+        vpu->stack[SP++] = (uint64_t)(uintptr_t)(vpu->static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
         return 1;
     case INST_READ8:
         R1.as_uint8 = *(uint8_t*)(R2.as_ptr + R3.as_int64);
@@ -148,10 +146,10 @@ static inline int64_t perform_inst(Inst inst){
     case INST_JMPFN:
         return (!(R1.as_uint8))? (int16_t) L2 : 1;
     case INST_CALL:
-        vpu.stack[SP++] = IP + 1;
+        vpu->stack[SP++] = IP + 1;
         return (GET_OP_HINT(inst) == HINT_REG)? R1.as_int64 : (int16_t) L1;
     case INST_RET:
-        IP = vpu.stack[--SP];
+        IP = vpu->stack[--SP];
         return 0;
 
 /*--------------------------------------------------------------------------------------------------------------/
@@ -351,12 +349,12 @@ static inline int64_t perform_inst(Inst inst){
         return 1;
 
     case INST_LOAD1:
-        R1.as_uint64 = ((vpu.program[IP + 1] & 0XFFFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
+        R1.as_uint64 = ((vpu->program[IP + 1] & 0XFFFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
         return 2;
     case INST_LOAD2:
         R1.as_uint64 = 
-            (uint64_t) ((uint64_t) (vpu.program[IP + 2] & 0XFFFFFF00) << 32) |
-            ((uint64_t) (vpu.program[IP + 1] & 0XFFFFFF00) << 8) |
+            (uint64_t) ((uint64_t) (vpu->program[IP + 2] & 0XFFFFFF00) << 32) |
+            ((uint64_t) (vpu->program[IP + 1] & 0XFFFFFF00) << 8) |
             ((uint64_t) (inst & 0XFFFF0000) >> 16);
         return 3;
     
@@ -368,9 +366,9 @@ static inline int64_t perform_inst(Inst inst){
     
 
     case INST_SYS:
-        if(sys_call(&vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
+        if(sys_call(vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
             fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
-            vpu.return_status = 1;
+            vpu->return_status = 1;
             return 0xFFFFFFFFFFFFFFFF - IP;
 	    }
         return 1;
@@ -381,7 +379,7 @@ static inline int64_t perform_inst(Inst inst){
     
     default:
         fprintf(stderr, "[ERROR] Unknwon Instruction '%u' At Instuction Position %"PRIu64"\n", (unsigned int)inst, IP);
-	vpu.return_status = 1;
+	    vpu->return_status = 1;
         return 0xFFFFFFFFFFFFFFFF - IP;
     }
 
@@ -414,6 +412,12 @@ int main(int argc, char** argv){
 
     if(!meta_data) return 1;
 
+    static uint64_t stack[1000];
+
+    VPU vpu;
+
+    vpu.stack = &stack[0];
+
     for(size_t i = 0; i + 8 < meta_data_size; ){
         const uint64_t block_size = *(uint64_t*)((uint8_t*)(stream.data) + i);
         const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
@@ -435,7 +439,7 @@ int main(int argc, char** argv){
     for(
         vpu.registers[RIP / 8].as_uint64 = entry_point;
         vpu.registers[RIP / 8].as_uint64 < program_size;
-        vpu.registers[RIP / 8].as_int64 += perform_inst(vpu.program[vpu.registers[RIP / 8].as_uint64])
+        vpu.registers[RIP / 8].as_int64 += perform_inst(&vpu, vpu.program[vpu.registers[RIP / 8].as_uint64])
     ) {
 	    vpu.registers[R0].as_uint64 = 0;
     }

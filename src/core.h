@@ -319,7 +319,7 @@ typedef struct VPU
 
     Inst*    program;
 
-    uint64_t stack[1000];
+    uint64_t* stack;
     
 } VPU;
 
