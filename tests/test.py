@@ -25,15 +25,15 @@ if platform.system() == "Windows":
     EXAMPLES_DIR = EXAMPLES_DIR.replace("/", "\\")
     PRECOMP_DIR = PRECOMP_DIR.replace("/", "\\")
     PATH_SEP = '\\'
-    ASSEMBLE = BUILD_DIR + PATH_SEP + "assemble"
-    DISASSEMBLE = BUILD_DIR + PATH_SEP + "disassemble"
-    RUN = BUILD_DIR + PATH_SEP + "VPU"
+    VPU = BUILD_DIR + PATH_SEP + "virtual"
 
 else:
     PATH_SEP = '/'
-    ASSEMBLE = BUILD_DIR + PATH_SEP + "assemble"
-    DISASSEMBLE = BUILD_DIR + PATH_SEP + "disassemble"
-    RUN = BUILD_DIR + PATH_SEP + "VPU"
+    VPU = BUILD_DIR + PATH_SEP + "virtual"
+
+ASSEMBLE    = VPU + " -assemble"
+DISASSEMBLE = VPU + " -disassemble"
+RUN         = VPU + " -execute"
 
 def run_process(*command, text=True, shell=False, _input=None):
     cmd = ""

@@ -11,29 +11,22 @@ section 4 (TODO: API): when finnished, will contain information about the API's 
 
 Section 1: Build And Use
 
-    Subsection assembler
-        Requirements: standard c library
-        To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code,
-        this is done through our custom assembler.
-        To build the assembler for the VPU simply compile the src/assembler.c file using a c compiler of your
-        choice.
-	    To use the assembler simply pass the path to your assembly code to the assembler program,
-        you can use the "-o" flag to pass the output file to the assembler like so:
-        ./assembler <input_file> -o <output_file>.
-        If not passed the output file will be defaulted to output.bin.
-
-    Subsection VPU
-        Requirements: standard c library
-        To build the VPU virtual machine simply compile the src/vpu.c file with a c compiler of your choice.
-        To use the virtual machine pass the path to your program to the vpu program, it will then execute it.
-    
-    Subsection disassembler
-        Requirements: standard c library
-        If you wish to desassemble a vpu program you can use the disassembler to do so.
-        To build the disassembler simply compile the src/disassembler.c file with a c compiler of your choice,
-        to use the disassembler pass the path to the program to the disassembler and it will print it to the
-        standard output, if you wish to write the output to a file pass the output file to the disassembler
-        using the "-o" flag: ./disassemble <input_file> -o <output_file>.
+    Requirements: standard c library
+    To use the Virtual Machine you need to compile your assembly code to the custom VPU byte code,
+    this is done through our custom assembler.
+    To build the executable simply compile the src/virtual.c file using a c compiler of your
+    choice.
+	Use the virtual executable like so: virtual [options] <input>
+    this will either assemble assembly program in <input> to byte code, disassemble byte code in <input> or execute byte code in <input>
+    options are:
+        --help:             displays this help message
+        --version:          displays virtual current version
+        -assemble:          assemble mode
+        -disassemble:       disassemble mode
+        -execute:           execute mode
+        -o <output>:        place output to <file>
+        -i <input>:         take <input> as the input
+        -args:              marks the beggining of the arguments to pass to executable
 
 
 Section 2: Assembly (VASM)
@@ -214,6 +207,18 @@ Section 2: Assembly (VASM)
             R1.as_float64 = R2.as_float64 * R3.as_float64
         DIVF:
             R1.as_float64 = R2.as_float64 / R3.as_float64
+        INC:
+            R1.as_uint64 += L2.as_uint16
+        DEC:
+            R1.as_uint64 -= L2.as_uint16
+        INCF:
+            R1.as_float64 += (double) L2.as_uint16
+        DECF:
+            R1.as_float64 -= (double) L2.as_uint16
+        ABS:
+            R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
+        ABSF:
+            R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
         NEQ:
             R1.as_uint8 = R2 != R3
         EQ:
@@ -268,18 +273,11 @@ Section 2: Assembly (VASM)
             puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
         GETC:
             gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
-        ABS:
-            R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
-        ABSF:
-            R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
-        INC:
-            R1.as_uint64 += L2.as_uint16
-        DEC:
-            R1.as_uint64 -= L2.as_uint16
-        INCF:
-            R1.as_float64 += (double) L2.as_uint16
-        DECF:
-            R1.as_float64 -= (double) L2.as_uint16
+        INST_FPOS:
+            gets the current read/overwrite position in the file at R2.as_ptr + R3.as_int64 to R1.as_uint64
+        INST_FGOTO:
+            sets the current read/overwrite position in the file at R1.as_ptr to R2.as_int32 + R3.as_uint64
+            sets R1.as_int32 to 0 on success or 1 on failure
         FLOAT:
             R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
         LOAD1:
@@ -290,6 +288,8 @@ Section 2: Assembly (VASM)
             R1 = L2.64
         IOE:
             sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
+        INST_EXEC:
+            executes the instructions given by R1.as_uint32
         SYS:
             perfomrs a syscall identified by the value in E
         DISREG:
@@ -360,7 +360,7 @@ Section 3: Byte Code
 
 Section 4: API's
 
-    The VPU will eventually have API's such as a Web version, but this is not done yet...
+    The VPU will eventually have API's, but this is not done yet...
 
 
 

@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/primes.out
+	;; name = precomputed//primes.out
 	;; executable size = 740
 	;; inst count      = 173
 	;; inst size       = 4

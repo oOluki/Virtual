@@ -1,6 +1,6 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/Q_rsqrt.out
+	;; name = precomputed//Q_rsqrt.out
 	;; executable size = 196
 	;; inst count      = 37
 	;; inst size       = 4

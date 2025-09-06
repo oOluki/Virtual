@@ -24,6 +24,10 @@
     #define VPU_MEMALIGN_TO 8
 #endif
 
+#ifndef VERSION
+    #define VERSION "1.5.0"
+#endif
+
 typedef enum ExeFlags{
 
     EXE_DEFAULT = 0,
@@ -147,6 +151,18 @@ typedef enum OpCode{
     INST_MULF,
     // R1.as_float64 = R2.as_float64 / R3.as_float64
     INST_DIVF,
+    // R1.as_uint64 += L2.as_uint16
+    INST_INC,
+    // R1.as_uint64 -= L2.as_uint16
+    INST_DEC,
+    // R1.as_float64 += (double) L2.as_uint16
+    INST_INCF,
+    // R1.as_float64 -= (double) L2.as_uint16
+    INST_DECF,
+    // R1.as_uint64 = abs(R2.as_int64 - R3.as_int64)
+    INST_ABS,
+    // R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
+    INST_ABSF,
     // R1.as_uint8 = R2 != R3
     INST_NEQ,
     // R1.as_uint8 = R2 == R3
@@ -199,20 +215,13 @@ typedef enum OpCode{
     INST_FCLOSE,
     // puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
     INST_PUTC,
-    // gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
+    // gets a byte from the file at R2.as_ptr + R3.as_int64 to R1.as_int32, sets R1.as_int32 to an error value on failure
     INST_GETC,
-    // R1.as_uint64 = abs(R2.as_uint64 - R3.as_uint64)
-    INST_ABS,
-    // R1.as_float64 = abs(R2.as_float64 - R3.as_float64)
-    INST_ABSF,
-    // R1.as_uint64 += L2.as_uint16
-    INST_INC,
-    // R1.as_uint64 -= L2.as_uint16
-    INST_DEC,
-    // R1.as_float64 += (double) L2.as_uint16
-    INST_INCF,
-    // R1.as_float64 -= (double) L2.as_uint16
-    INST_DECF,
+    // gets the current read/overwrite position in the file at R2.as_ptr + R3.as_int64 to R1.as_uint64
+    INST_FPOS,
+    // sets the current read/overwrite position in the file at R1.as_ptr to R2.as_int32 + R3.as_uint64
+    // sets R1.as_int32 to 0 on success or 1 on failure
+    INST_FGOTO,
     // R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
     INST_FLOAT,
     // loads up to a 32 bit long value to a register
@@ -223,13 +232,16 @@ typedef enum OpCode{
     INST_LOAD2,
     // sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
     INST_IOE,
-// -------------------------------------------------------------------------------------------------
-    // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
-    INST_CONTAINER = 252,
+    // executes the instruction given by R1.as_uint32
+    INST_EXEC,
     // perfomrs a syscall identified by the value in E
-    INST_SYS = 253,
+    INST_SYS,
     // displays a register's value, for debugging purposes
-    INST_DISREG = 254,
+    INST_DISREG,
+    // for counting putposes
+    INST_TOTAL_COUNT,
+    // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
+    INST_CONTAINER = 254,
     // this instruction is used for parsing purposes to signal an error while parsing a file, IT SHOULD NEVER APPEAR IN YOUR PROGRAM
     INST_ERROR = 255
 
@@ -287,6 +299,11 @@ enum RegisterId{
     RIP = 64,
 };
 
+enum VPUFlags{
+    VPUFLAG_NONE = 0,
+    VPUFLAG_EXEPTION_
+};
+
 typedef union Register{
     
     int64_t  as_int64;
@@ -304,16 +321,17 @@ typedef union Register{
     uint8_t*    as_ptr;
 } Register;
 
+// Virtual Processing Unit
 typedef struct VPU
 {
 
-    int      return_status;
+    int      status;
 
     uint8_t* static_memory;
 
     uint8_t* internal_data;
 
-    Register registers[9];
+    Register* registers;
 
     uint8_t* register_space;
 
@@ -324,6 +342,89 @@ typedef struct VPU
 } VPU;
 
 #define GET_OP_HINT(INST) (INST >> 31)
+
+
+char get_digit_char(int i){
+    switch (i)
+    {
+    case 1: return '1';
+    case 2: return '2';
+    case 3: return '3';
+    case 4: return '4';
+    case 5: return '5';
+    case 6: return '6';
+    case 7: return '7';
+    case 8: return '8';
+    case 9: return '9';
+
+    default: return '\0';
+    }
+}
+
+char* get_reg_str(int reg, char* output){
+
+    switch (8 * (int)(reg / 8))
+    {
+    case R0:
+	output[0] = 'R';
+	output[1] = '0';
+	output[2] = get_digit_char(reg - R0);
+	output[3] = '\0';
+	return output;
+    case RA:
+        output[0] = 'R';
+        output[1] = 'A';
+        output[2] = get_digit_char(reg - RA);
+        output[3] = '\0';
+        return output;
+    case RB:
+        output[0] = 'R';
+        output[1] = 'B';
+        output[2] = get_digit_char(reg - RB);
+        output[3] = '\0';
+        return output;
+    case RC:
+        output[0] = 'R';
+        output[1] = 'C';
+        output[2] = get_digit_char(reg - RC);
+        output[3] = '\0';
+        return output;
+    case RD:
+        output[0] = 'R';
+        output[1] = 'D';
+        output[2] = get_digit_char(reg - RD);
+        output[3] = '\0';
+        return output;
+    case RE:
+        output[0] = 'R';
+        output[1] = 'E';
+        output[2] = get_digit_char(reg - RE);
+        output[3] = '\0';
+        return output;
+    case RF:
+        output[0] = 'R';
+        output[1] = 'F';
+        output[2] = get_digit_char(reg - RF);
+        output[3] = '\0';
+        return output;
+    case RSP:
+        output[0] = 'R';
+        output[1] = 'S';
+        output[2] = 'P';
+        output[3] = get_digit_char(reg - RSP);
+        output[4] = '\0';
+        return output;
+    case RIP:
+        output[0] = 'R';
+        output[1] = 'I';
+        output[2] = 'P';
+        output[3] = get_digit_char(reg - RIP);
+        output[4] = '\0';
+        return output;
+    
+    default: return NULL;
+    }
+}
 
 static inline int is_little_endian(){ return (*(unsigned short *)"\x01\x00" == 0x01); }
 

@@ -174,6 +174,12 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("SUBF")))   return (InstProfile){INST_SUBF  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("MULF")))   return (InstProfile){INST_MULF  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("DIVF")))   return (InstProfile){INST_DIVF  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("INC")))    return (InstProfile){INST_INC   , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("DEC")))    return (InstProfile){INST_DEC   , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("INCF")))   return (InstProfile){INST_INCF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("DECF")))   return (InstProfile){INST_DECF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("NEQ")))    return (InstProfile){INST_NEQ   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("EQ")))    return (InstProfile){INST_EQ   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RRR};
@@ -201,18 +207,14 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("INC")))    return (InstProfile){INST_INC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DEC")))    return (InstProfile){INST_DEC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("INCF")))   return (InstProfile){INST_INCF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DECF")))   return (InstProfile){INST_DECF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("FPOS")))   return (InstProfile){INST_FPOS  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("FGOTO")))  return (InstProfile){INST_FGOTO , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("FLOAT")))  return (InstProfile){INST_FLOAT , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("LOAD1")))  return (InstProfile){INST_LOAD1 , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("LOAD2")))  return (InstProfile){INST_LOAD2 , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("IOE")))    return (InstProfile){INST_IOE   , OP_PROFILE_RRR};
 
+    if(COMP_TKN(inst_token, MKTKN("EXEC")))   return (InstProfile){INST_EXEC  , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
 
