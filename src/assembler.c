@@ -47,19 +47,23 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
     return errstatus;
 }
 
+#ifdef _WIN32
+// assembles program in input_path to output_path
+int assemble(char* input_path, char* output_path){
+    
+    // changing file separator to default '/'
+    for(size_t i = 0; input_path[i]; i+=1){
+        if(input_path[i] == '\\') input_path[i] = '/';
+    }
+    for(size_t i = 0; output_path[i]; i+=1){
+        if(output_path[i] == '\\') output_path[i] = '/';
+    }
+#else
+
 // assembles program in input_path to output_path
 int assemble(const char* input_path, const char* output_path){
 
-    #ifdef _WIN32 // changing file separator to default '/'
-
-        for(size_t i = 0; input_path[i]; i+=1){
-            if(input_path[i] == '\\') input_path[i] = '/';
-        }
-        for(size_t i = 0; output_path[i]; i+=1){
-            if(output_path[i] == '\\') output_path[i] = '/';
-        }
-
-    #endif
+#endif
 
     Mc_stream_t files = mc_create_stream(1000);
 
