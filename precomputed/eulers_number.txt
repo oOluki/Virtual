@@ -1,43 +1,45 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed//eulers_number.out
-	;; executable size = 164
+	;; name = precomputed/eulers_number.out
+	;; executable size = 208
 	;; inst count      = 29
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 16
+	;; meta_data_size  = 58
 	;; static_memory   = { position = 0, size = 16 }
+	;; labels          = { position = 32, size = 26 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
 
 %start
-LOAD2 RA 0x3ff0000000000000; (u: 4607182418800017408; 4607182418800017408; f: 1.000000)
+	LOAD2 RA 0x3ff0000000000000; (u: 4607182418800017408; 4607182418800017408; f: 1.000000)
 ;;CONTAINER 0x0
 ;;CONTAINER 0x3ff000
-MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-LOAD2 RC 0x4024000000000000; (u: 4621819117588971520; 4621819117588971520; f: 10.000000)
+	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+	LOAD2 RC 0x4024000000000000; (u: 4621819117588971520; 4621819117588971520; f: 10.000000)
 ;;CONTAINER 0x0
 ;;CONTAINER 0x402400
-MOV RD RA
-MOV RE RA
-ADDF RB RD RB
-DIVF RE RE RB
-ADDF RA RE RA
-MOV RF RB
-SMLF RF RF RC
-JMPF RF 0xfffb; i: -5
-DISREG RA
-MOVV16 RB6 0x4005; (u: 16389; i: 16389; f: 0.000000)
-MOVV16 RB4 0xbf0a; (u: 48906; i: 48906; f: 0.000000)
-MOVV16 RB2 0x8b14; (u: 35604; i: 35604; f: 0.000000)
-MOVV16 RB 0x5769; (u: 22377; i: 22377; f: 0.000000)
-SUBF RA RA RB
-MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
-XOR RA RA RB
-MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
-FLOAT RC RC RD
-SMLF RC RC RA
-HALT RC
+	MOV RD RA
+	MOV RE RA
+loop:
+	ADDF RB RD RB
+	DIVF RE RE RB
+	ADDF RA RE RA
+	MOV RF RB
+	SMLF RF RF RC
+	JMPF RF 0xfffb; i: -5
+	DISREG RA
+	MOVV16 RB6 0x4005; (u: 16389; i: 16389; f: 0.000000)
+	MOVV16 RB4 0xbf0a; (u: 48906; i: 48906; f: 0.000000)
+	MOVV16 RB2 0x8b14; (u: 35604; i: 35604; f: 0.000000)
+	MOVV16 RB 0x5769; (u: 22377; i: 22377; f: 0.000000)
+	SUBF RA RA RB
+	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+	MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
+	XOR RA RA RB
+	MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
+	FLOAT RC RC RD
+	SMLF RC RC RA
+	HALT RC

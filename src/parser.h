@@ -19,13 +19,6 @@
 
 #define REP_INVALID_REGID(PARSER, TOKEN) REPORT_ERROR(PARSER, "\n\tInvalid Register Identifier '%.*s', No Such Register\n", TOKEN.size, TOKEN.value.as_str)
 
-enum ParsingFlags{
-
-    FLAG_NONE = 0,
-    FLAG_TEST  = 1 << 0,
-    FLAG_ADD_SYM_TABLE = 1 << 1
-};
-
 typedef struct Operand{
     
     Register value;
@@ -67,11 +60,12 @@ void fprint_token(FILE* file, const Token token){
     case TKN_MACRO_INST:
     case TKN_LABEL_REF:
     case TKN_ADDR_LABEL_REF:
-        fprintf(file, "%.*s", token.type, token.value.as_str);
+        fprintf(file, "%.*s", token.size, token.value.as_str);
         break;
     case TKN_ILIT:
         fprintf(file, "%"PRIi64"", token.value.as_int);
         break;
+    case TKN_INST_POSITION:
     case TKN_ULIT:
         fprintf(file, "%"PRIu64"", token.value.as_uint);
         break;
@@ -86,7 +80,7 @@ void fprint_token(FILE* file, const Token token){
         break;
     case TKN_ERROR:
     default:
-        fprintf(file, "TOKEN_ERROR");
+        fprintf(file, "TOKEN_ERROR(%"PRIu8")", token.type);
         break;
     }
 
@@ -152,8 +146,8 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPF , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPFN, OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPF  , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPFN , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("RET")))    return (InstProfile){INST_RET   , OP_PROFILE_NONE};
     if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RRR};
@@ -181,7 +175,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("NEQ")))    return (InstProfile){INST_NEQ   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("EQ")))    return (InstProfile){INST_EQ   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("EQ")))    return (InstProfile){INST_EQ     , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("BIGI")))   return (InstProfile){INST_BIGI  , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("BIGU")))   return (InstProfile){INST_BIGU  , OP_PROFILE_RRR};
@@ -217,6 +211,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("EXEC")))   return (InstProfile){INST_EXEC  , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
+    if(COMP_TKN(inst_token, MKTKN("BREAKP"))) return (InstProfile){INST_BREAKP, OP_PROFILE_L};
 
     return (InstProfile){INST_ERROR, 0};
 }
@@ -267,13 +262,18 @@ int get_reg(const Token token){
 
 Operand parse_op_literal(Token token){
     
-    if((token.type == TKN_FLIT) || (token.type == TKN_ILIT) || (token.type == TKN_ULIT)){
-        return (Operand){.value.as_uint64 = token.value.as_uint, .type = token.type};
-    }
-    if(token.type == TKN_CHAR){
-	return (Operand){.value.as_uint64 = token.value.as_str[1], .type = TKN_ULIT};
-    }
-    if(token.type != TKN_RAW){
+    switch (token.type)
+    {
+    case TKN_RAW:
+        break;
+    case TKN_ILIT:
+    case TKN_ULIT:
+    case TKN_FLIT:
+    case TKN_INST_POSITION:
+        return (Operand){.value.as_uint64 = token.value.as_uint, .type = TKN_ULIT};
+    case TKN_CHAR:
+        return (Operand){.value.as_uint64 = token.value.as_str[1], .type = TKN_ULIT};
+    default: // unsupported type for operand literal
         return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
     }
 
@@ -414,6 +414,12 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
     if(COMP_TKN(macro, MKTKN("%label"))){
         const Token arg1 = get_next_token(parser->tokenizer);
         Token arg2 = get_next_token(parser->tokenizer);
+        const Token original_arg2 = arg2;
+
+        if(arg1.type != TKN_RAW){
+            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
+            return 1;
+        }
         if(arg2.type == TKN_LABEL_REF){
             arg2 = resolve_token(parser->labels, arg2);
             if(arg2.type == TKN_ERROR){
@@ -436,19 +442,15 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             }
             arg2.value.as_int -= (parser->program->size / 4);
         }
-        if(arg1.type != TKN_RAW){
-            REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
-            return 1;
-        }
         else if(arg2.type == TKN_NONE){
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
         }
         if(add_label(parser->labels, arg1, arg2)){
             REPORT_ERROR(
-                parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifined Already Labeled Labels\n\n",
+                parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifine Already Labeled Labels\n\n",
                 "%label",
-                arg1.size, arg1.value.as_str, arg2.size, arg2.value.as_str
+                arg1.size, arg1.value.as_str, original_arg2.size, original_arg2.value.as_str
             );
             return 1;
         }
@@ -507,7 +509,11 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         parser->macro_if_depth += 1;
         return 0;
     }
-    if(COMP_TKN(macro, MKTKN("%static"))){	
+    if(COMP_TKN(macro, MKTKN("%static"))){
+        if(!parser->static_memory){
+            REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
+            return 1;
+        }
         const Token arg = get_next_token(parser->tokenizer);
         const int status = push_to_static(parser->static_memory, arg);
         if(status == 2){
@@ -540,8 +546,8 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
     return 1;
 }
 
-// \returns 0 on success or 1 on failure
-int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_sv){
+// \returns the parsed instruction on success or INST_ERROR on failure
+Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_sv){
 
     Inst inst = inst_profile.opcode;
     int op_pos_in_inst = 1;
@@ -556,7 +562,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
             token = resolve_token(parser->labels, tokenRW);
             if(token.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", tokenRW.size, tokenRW.value.as_str);
-                return 1;
+                return INST_ERROR;
             }
             if(token.type == TKN_STATIC_SIZE){
                 token.value.as_uint = parser->static_memory->size;
@@ -568,18 +574,18 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
             token = resolve_token(parser->labels, token);
             if(token.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", tokenRW.size, tokenRW.value.as_str);
-                return 1;
+                return INST_ERROR;
             }
-            if(token.type != TKN_ULIT){
+            if(token.type != TKN_INST_POSITION){
                 REPORT_ERROR(parser, "\n\tInvalid Value For Relative Referencing %c", '\'');
                 fprint_token(stderr, token);
                 fprintf(stderr, "\'\n\n");
-                return 1;
+                return INST_ERROR;
             }
             const int64_t v = token.value.as_uint - (parser->program->size / 4);
             if(v != (int16_t) v){
                 REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
-                return 1;
+                return INST_ERROR;
             }
             const Register dummy = (Register){.as_uint64 = (int16_t)(v) & 0xFFFF};
             token.value.as_uint = dummy.as_uint64;
@@ -594,7 +600,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                     "\n\tArgument %i Of Instruction %.*s Should Be Register, Got '%.*s' Of Type %s Instead\n\n",
                     op_token_pos, inst_sv.size, inst_sv.str, tokenRW.size, tokenRW.value.as_str, get_token_type_str(token.type)
                 );
-                return 1;
+                return INST_ERROR;
             }
             inst |= (reg << (op_pos_in_inst * 8));
             op_pos_in_inst += 1;
@@ -602,9 +608,13 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
         }   break;
         case EXPECT_OP_LIT:{
             if(token.type == TKN_STR){
+                if(!parser->static_memory){
+                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
+                    return INST_ERROR;
+                }
                 if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
-                    return 1;
+                    return INST_ERROR;
                 }
                 token.value.as_uint = parser->static_memory->size;
                 token.type = TKN_ULIT;
@@ -618,7 +628,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                     "\n\tArgument %i Of Instruction %.*s Should Be Literal, Got '%.*s' Of Type %s Instead\n\n",
                     op_token_pos, inst_sv.size, inst_sv.str, tokenRW.size, tokenRW.value.as_str, get_token_type_str(token.type)
                 );
-                return 1;
+                return INST_ERROR;
             }
             if(inst_profile.opcode == INST_LOAD1){
                 if(operand.value.as_uint64 != operand.value.as_uint32){
@@ -627,21 +637,19 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                         "\n\tLOAD1 Literal Argument Has To Be Up To 32 Bits Long %"PRIu64" != %"PRIu32"\n\n",
                         operand.value.as_uint64, operand.value.as_uint32
                     );
-                    return 1;
+                    return INST_ERROR;
                 }
                 inst |= ((operand.value.as_uint32  & 0XFFFF) << 16);
                 mc_stream(parser->program, &inst, sizeof(inst));
                 inst = INST_CONTAINER | (operand.value.as_uint32 & 0xFFFF0000) >> 8;
-                mc_stream(parser->program, &inst, sizeof(inst));
-                return 0;
+                return inst;
             }
             if(inst_profile.opcode == INST_LOAD2){
-		Inst container[3];
+		        Inst container[2];
                 container[0] = inst | (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
                 container[1] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
-                container[2] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));
-		for(int i = 0; i < 3; i+=1) mc_stream(parser->program, &container[i], sizeof(inst));
-                return 0;
+		        for(int i = 0; i < 2; i+=1) mc_stream(parser->program, &container[i], sizeof(inst));
+                return INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));;
             }
             if(operand.value.as_uint64 != operand.value.as_uint16){
                 REPORT_ERROR(
@@ -649,7 +657,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                     "\n\tLiteral Has To Be Up To 16 Bits Long %"PRIu64" != %"PRIu16"\n\n",
                     operand.value.as_uint64, operand.value.as_uint16
                 );
-                return 1;
+                return INST_ERROR;
             }
             inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
             op_pos_in_inst += 2;
@@ -658,9 +666,13 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
         
         case EXPECT_OP_EITHER:{
             if(token.type == TKN_STR){
+                if(!parser->static_memory){
+                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
+                    return INST_ERROR;
+                }
                 if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
-                    return 1;
+                    return INST_ERROR;
                 }
                 const uint64_t op_value = parser->static_memory->size;
                 mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
@@ -680,7 +692,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                         "\n\tArgument %i Of Instruction %.*s Should Be Register Or Literal, Got '%.*s' Of Type %s Instead\n\n",
                         op_token_pos, inst_sv.size, inst_sv.str, tokenRW.size, tokenRW.value.as_str, get_token_type_str(token.type)
                     );
-                    return 1;
+                    return INST_ERROR;
                 }
                 if(operand.value.as_uint16 != operand.value.as_uint64){
                     REPORT_ERROR(
@@ -688,7 +700,7 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
                         "\n\tLiteral Has To Be Up To 16 Bits Long %"PRIu64" != %"PRIu16"\n\n",
                         operand.value.as_uint64, operand.value.as_uint16
                     );
-                    return 1;
+                    return INST_ERROR;
                 }
                 inst |= operand.value.as_uint16 << (8 * op_pos_in_inst);
                 inst |= HINT_LIT << 31;
@@ -711,12 +723,10 @@ int parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_s
         "Instead It's A Problem With The Compiler Implementation\n%c", '\n');
         fprintf(stderr, "[INTERNAL ERROR] "__FILE__":%i:10: Instruction Size Overflow, Instance Of '%.*s' Has Size Of %i Bytes\n",
         __LINE__, inst_sv.size, inst_sv.str, (op_pos_in_inst - 1));
-        return 1;
+        return INST_ERROR;
     }
 
-    mc_stream(parser->program, &inst, sizeof(inst));
-
-    return 0;
+    return inst;
 }
 
 // \return 1 on error or 0 otherwise
@@ -792,7 +802,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(COMP_TKN(next_token, MKTKN(":"))){
-                    if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_ULIT}))
+                    if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
                     {
                         REPORT_ERROR(
                             parser,
@@ -808,9 +818,12 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             return 1;
         }
         
-        if(parse_inst(parser, inst_profile, (StringView){.str = token.value.as_str, .size = token.size})){
+        const Inst inst = parse_inst(parser, inst_profile, (StringView){.str = token.value.as_str, .size = token.size});
+
+        if(inst == INST_ERROR){
             return 1;
         }
+        mc_stream(parser->program, &inst, sizeof(inst));
     }
 
     if(token.type == TKN_ERROR){

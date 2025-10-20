@@ -16,6 +16,7 @@
  * for valid instructions: <instruction_name> refers to INST_<instruction_name> in the enum OpCode
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -27,12 +28,6 @@
 #ifndef VERSION
     #define VERSION "1.5.0"
 #endif
-
-typedef enum ExeFlags{
-
-    EXE_DEFAULT = 0,
-
-} ExeFlags;
 
 
 typedef enum OpCode{
@@ -240,6 +235,8 @@ typedef enum OpCode{
     INST_DISREG,
     // for counting putposes
     INST_TOTAL_COUNT,
+    // for signaling a break point
+    INST_BREAKP = 253,
     // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
     INST_CONTAINER = 254,
     // this instruction is used for parsing purposes to signal an error while parsing a file, IT SHOULD NEVER APPEAR IN YOUR PROGRAM
@@ -266,6 +263,8 @@ typedef enum OpProfile{
     OP_PROFILE_NONE = EXPECT_ANY,
     // instruction takes one register
     OP_PROFILE_R = EXPECT_OP_REG,
+    // instruction takes one literal
+    OP_PROFILE_L = EXPECT_OP_LIT,
     // instruction takes either a literal or a register
     OP_PROFILE_E = EXPECT_OP_EITHER,
     // instruction takes two registers
@@ -285,6 +284,10 @@ enum OpHint{
 
 };
 
+enum ExeFlags{
+    EXEFLAG_NONE = 0,
+    EXEFLAG_LABELS_INCLUDED = 1 << 0
+};
 
 enum RegisterId{
     R0 = 0 ,
@@ -297,6 +300,8 @@ enum RegisterId{
 
     RSP = 56,
     RIP = 64,
+
+    REGISTER_SPACE_SIZE = 72
 };
 
 enum VPUFlags{
@@ -482,7 +487,6 @@ static void* get_exe_specifications(const void* data, uint64_t* meta_data_size, 
 
     return (void*)(_data + 8);
 }
-
 
 
 #endif // =====================  END OF FILE CORE_HEADER ===========================

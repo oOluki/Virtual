@@ -1,51 +1,52 @@
 
 ;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed//Q_rsqrt.out
-	;; executable size = 196
+	;; name = precomputed/Q_rsqrt.out
+	;; executable size = 212
 	;; inst count      = 37
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 16
+	;; meta_data_size  = 32
 	;; static_memory   = { position = 0, size = 16 }
+	;; labels          = { position = 32, size = 0 }
 	;; entry point     = 0
 ;; X====X (SPECIFICATIONS) X====X
 
 
 %start
-MOVV RA 0x190; (u: 400; i: 400; f: 0.000000)
-CASTFU RA RA
-MOV RB RA
-MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
-BSHIFT RB RB RC
-MOVV16 RC6 0x5fe6; (u: 24550; i: 24550; f: 0.000000)
-MOVV16 RC4 0xec85; (u: 60549; i: 60549; f: 0.000000)
-MOVV16 RC2 0xe7de; (u: 59358; i: 59358; f: 0.000000)
-MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
-SUB RC RC RB
-MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-FLOAT RB RB RF
-MULF RB RA RB
-MULF RB RC RB
-MULF RB RC RB
-MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
-MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-FLOAT RA RA RF
-SUBF RA RA RB
-MULF RA RC RA
-DISREG RA
-MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RC 0x14; (u: 20; i: 20; f: 0.000000)
-CASTFU RB RB
-CASTFU RC RC
-DIVF RC RB RC
-SUBF RA RC RA
-MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
-MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
-NEG RB RB R0
-AND RA RA RB
-MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
-FLOAT RC RC RD
-SMLF RA RC RA
-HALT RA
+	MOVV RA 0x190; (u: 400; i: 400; f: 0.000000)
+	CASTFU RA RA
+	MOV RB RA
+	MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
+	BSHIFT RB RB RC
+	MOVV16 RC6 0x5fe6; (u: 24550; i: 24550; f: 0.000000)
+	MOVV16 RC4 0xec85; (u: 60549; i: 60549; f: 0.000000)
+	MOVV16 RC2 0xe7de; (u: 59358; i: 59358; f: 0.000000)
+	MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
+	SUB RC RC RB
+	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+	FLOAT RB RB RF
+	MULF RB RA RB
+	MULF RB RC RB
+	MULF RB RC RB
+	MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
+	MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+	FLOAT RA RA RF
+	SUBF RA RA RB
+	MULF RA RC RA
+	DISREG RA
+	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RC 0x14; (u: 20; i: 20; f: 0.000000)
+	CASTFU RB RB
+	CASTFU RC RC
+	DIVF RC RB RC
+	SUBF RA RC RA
+	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+	MOVV16 RB7 0x80; (u: 128; i: 128; f: 0.000000)
+	NEG RB RB R0
+	AND RA RA RB
+	MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RD 0x3e8; (u: 1000; i: 1000; f: 0.000000)
+	FLOAT RC RC RD
+	SMLF RA RC RA
+	HALT RA

@@ -1,8 +1,15 @@
+#ifndef _VPU_ASSEMBLER
+#define _VPU_ASSEMBLER
+
 #include <stdio.h>
 #include "parser.h"
 #include <inttypes.h>
 
-int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void* meta_data, uint64_t meta_data_size, uint64_t flags){
+
+
+
+int write_exe(const Mc_stream_t* program, const char* path, uint64_t entry_point, const Mc_stream_t static_memory,
+    const Mc_stream_t labels, uint64_t flags){
 
     if(program->size % 4){
         fprintf(stderr, "[INTERNAL ERROR] " __FILE__ ":%i:9 : Program Size (%" PRIu64 ") Is Not Aligned To 4 Bytes\n"
@@ -13,8 +20,12 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
     uint8_t errstatus = 0;
 
+    const uint64_t meta_data_size = static_memory.size + labels.size + sizeof("LABELS:") + sizeof(labels.size);
+
     // padding bytes after the metadata to garantee the 4 byte alignment of the program pointer
     uint32_t padding = ((4 - (meta_data_size % 4)) % 4);
+
+    const uint64_t labels_size = labels.size + sizeof("LABELS:") + sizeof(labels.size);
 
     FILE* file = fopen(path, "wb");
 
@@ -33,7 +44,13 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
     errstatus |= (fwrite(&meta_data_size, 8, 1, file) != 1);
 
-    errstatus |= meta_data_size && (fwrite(meta_data, meta_data_size, 1, file) != 1);
+    errstatus |= static_memory.size && (fwrite(static_memory.data, (size_t) static_memory.size, 1, file) != 1);
+
+    errstatus |= fwrite(&labels_size, sizeof(labels_size), 1, file) != 1;
+
+    errstatus |= fwrite("LABELS:", sizeof("LABELS:"), 1, file) != 1;
+
+    errstatus |= labels.size && (fwrite(labels.data, (size_t) labels.size, 1, file) != 1);
 
     for( ; padding > 0; padding -= 1) errstatus |= (fwrite(&errstatus, 1, 1, file) != 1);
 
@@ -49,8 +66,8 @@ int write_exe(Mc_stream_t* program, const char* path, uint64_t entry_point, void
 
 #ifdef _WIN32
 // assembles program in input_path to output_path
-int assemble(char* input_path, char* output_path){
-    
+int assemble(char* input_path, char* output_path, int export_labels){
+
     // changing file separator to default '/'
     for(size_t i = 0; input_path[i]; i+=1){
         if(input_path[i] == '\\') input_path[i] = '/';
@@ -58,10 +75,11 @@ int assemble(char* input_path, char* output_path){
     for(size_t i = 0; output_path[i]; i+=1){
         if(output_path[i] == '\\') output_path[i] = '/';
     }
+
 #else
 
 // assembles program in input_path to output_path
-int assemble(const char* input_path, const char* output_path){
+int assemble(const char* input_path, const char* output_path, int export_labels){
 
 #endif
 
@@ -96,7 +114,7 @@ int assemble(const char* input_path, const char* output_path){
     parser.program = &program;
     parser.tokenizer = &tokenizer;
     parser.entry_point = 0;
-    parser.flags = FLAG_NONE;
+    parser.flags = export_labels? EXEFLAG_LABELS_INCLUDED : EXEFLAG_NONE;
     parser.macro_if_depth = 0;
     
     int status = parse_file(&parser, &files);
@@ -108,9 +126,9 @@ int assemble(const char* input_path, const char* output_path){
         &program,
         (output_path)? output_path : "output.bin",
         parser.entry_point,
-        static_memory.data,
-        static_memory.size,
-        EXE_DEFAULT
+        static_memory,
+        labels,
+        parser.flags
     );
 
     defer:
@@ -122,3 +140,4 @@ int assemble(const char* input_path, const char* output_path){
     return status;
 }
 
+#endif // END OF FILE ============================================

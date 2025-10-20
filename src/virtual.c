@@ -1,6 +1,7 @@
 #include "execute.c"
 #include "disassembler.c"
 #include "assembler.c"
+#include "debugger.c"
 
 
 int is_file_executable(FILE* file){
@@ -20,16 +21,18 @@ int is_file_executable(FILE* file){
 static inline void help(const char* main_executable){
     printf(
         "Usage: %s [options] <input>\n"
-        "Functionality: either assembles assembly program in <input> to byte code, disassembles byte code in <input> or executes byte code in <input>, if <input> is not provided stdin will be used.\n"
+        "Functionality: either assembles assembly program in <input> to byte code, disassembles byte code in <input> or executes byte code in <input>.\n"
         "Options:\n"
         "   --help:             displays this help message\n"
         "   --version:          displays VPU's current version\n"
         "   -assemble:          assemble mode\n"
         "   -disassemble:       disassemble mode\n"
         "   -execute:           execute mode\n"
+        "   -debug:             debug mode\n"
         "   -o <output>:        place output to <file>\n"
         "   -i <input>:         take <input> as the input\n"
-        "   -args:              marks the beggining of the arguments to pass to executable\n",
+        "   -args:              marks the beggining of the arguments to pass to executable\n"
+        "   -export_labels      assembled executable/library will include all instruction position labels still defined by the end of the code\n",
         main_executable
     );
 }
@@ -49,12 +52,14 @@ int main(int argc, char** argv){
         MODE_NONE = 0,
         MODE_ASSEMBLE    = 1 << 0,
         MODE_DISASSEMBLE = 1 << 1,
-        MODE_EXECUTE     = 1 << 2
+        MODE_EXECUTE     = 1 << 2,
+        MODE_DEBUG       = 1 << 3
     } mode = MODE_NONE;
 
     int vpu_argv_begin  = argc;
     int input_file_arg  = -1;
     int output_file_arg = -1;
+    int export_labels   = 0;
     
     for(int i = 1; i < argc; i++){
         if(mc_compare_str(argv[i], "--help", 0)){
@@ -82,6 +87,10 @@ int main(int argc, char** argv){
             mode |= MODE_EXECUTE;
             continue;
         }
+        if(mc_compare_str(argv[i], "-debug", 0)){
+            mode |= MODE_DEBUG;
+            continue;
+        }
         if(mc_compare_str(argv[i], "-o", 0)){
             if(i + 1 >= argc){
                 fprintf(stderr, "[ERROR] Missing Filename After '-o'\n");
@@ -106,6 +115,10 @@ int main(int argc, char** argv){
             input_file_arg = ++i;
             continue;
         }
+        if(mc_compare_str(argv[i], "-export_labels", 0)){
+            export_labels = 1;
+            continue;
+        }
         if(mc_compare_str(argv[i], "-args", 0)){
             vpu_argv_begin = i;
             break;
@@ -121,6 +134,10 @@ int main(int argc, char** argv){
 
     if(input_file_arg < 0){
         fprintf(stderr, "[ERROR] Missing Input File\n");
+        return 1;
+    }
+    if((mode & MODE_DEBUG) && (mode & MODE_ASSEMBLE)){
+        fprintf(stderr, "[ERROR] Can't Both Debug And Assemble A File\n");
         return 1;
     }
     if((mode & MODE_EXECUTE) && (mode & MODE_ASSEMBLE)){
@@ -139,7 +156,7 @@ int main(int argc, char** argv){
     }
 
     if(mode & MODE_ASSEMBLE){
-        const int status = assemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL);
+        const int status = assemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL, export_labels);
         if(status){
             fprintf(stderr, "[ERROR] Assembler Failed ^^^\n");
             return status;
@@ -152,6 +169,15 @@ int main(int argc, char** argv){
             return status;
         }
     }
+
+    if(mode & MODE_DEBUG){
+        const int status = debug(argv[input_file_arg]);
+        if(status){
+            fprintf(stderr, "[ERROR] Debug Failed ^^^\n");
+            return status;
+        }
+    }
+
     if(mode & MODE_EXECUTE){
         if(vpu_argv_begin > 1) argv[vpu_argv_begin - 2] = argv[0];
         if(vpu_argv_begin > 0) argv[vpu_argv_begin - 1] = argv[input_file_arg];

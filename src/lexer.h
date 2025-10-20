@@ -61,6 +61,8 @@ enum TokenTypes{
     TKN_ADDR_LABEL_REF,
     TKN_STATIC_SIZE,
     TKN_UNRESOLVED_LABEL,
+    TKN_INST_POSITION,
+    TKN_STATIC_REF,
     TKN_ERROR = 255,
 };
 
@@ -348,18 +350,18 @@ Token get_next_token(Tokenizer* tokenizer){
 
         const char c = string[tokenizer->pos];
         if(c == '\"'){
-	    token.value.as_str = string + tokenizer->pos;
-	    const LexizedString ls = lexize_str(token.value.as_str + 1, '\"');
-	    tokenizer->column += ls.read + 2;
-	    tokenizer->pos += ls.read + 2;
-	    if(ls.str == NULL){
-		token.type = TKN_ERROR;
-		token.size = ls.written + 1;
-		return token;
-	    }
+            token.value.as_str = string + tokenizer->pos;
+            const LexizedString ls = lexize_str(token.value.as_str + 1, '\"');
+            tokenizer->column += ls.read + 2;
+            tokenizer->pos += ls.read + 2;
+            if(ls.str == NULL){
+                token.type = TKN_ERROR;
+                token.size = ls.written + 1;
+                return token;
+	        }
             token.value.as_str = ls.str - 1;
-	    token.size = ls.written + 2;
-	    token.value.as_str[token.size - 1] = '\"';
+            token.size = ls.written + 2;
+            token.value.as_str[token.size - 1] = '\"';
             token.type = TKN_STR;
             return token;
         }
@@ -369,13 +371,13 @@ Token get_next_token(Tokenizer* tokenizer){
 	    tokenizer->column += ls.read + 2;
 	    tokenizer->pos += ls.read + 2;
 	    if((ls.str == NULL) || (ls.written != 1)){
-		token.type = TKN_ERROR;
-		token.size = ls.written + 1;
-		return token;
+            token.type = TKN_ERROR;
+            token.size = ls.written + 1;
+            return token;
 	    }
             token.value.as_str = ls.str - 1;
-	    token.size = ls.written + 2;
-	    token.value.as_str[token.size - 1] = '\'';
+            token.size = ls.written + 2;
+            token.value.as_str[token.size - 1] = '\'';
             token.type = TKN_CHAR;
             return token;
         }
@@ -435,7 +437,7 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
     const unsigned int range = (token1.size < token2.size)? token1.size : token2.size;
     
     for(unsigned int i = 0; i < range; i+=1){
-	if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
+	    if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
     }
     return 1;
 }

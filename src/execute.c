@@ -1,3 +1,6 @@
+#ifndef _VPU_EXE
+#define _VPU_EXE
+
 #include "core.h"
 #include "lexer.h"
 #include "system.h"
@@ -27,6 +30,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R2.as_##TYPE OP R3.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R2.as_##TYPE OP R3.as_##TYPE
     
+    vpu->registers[R0 >> 3].as_uint64 = 0;
 
     switch (inst & 0XFF)
     {
@@ -372,6 +376,10 @@ int64_t perform_inst(VPU* vpu, Inst inst){
             printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 8) & 0xFF, buff), R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
         }
         return 1;
+
+    case INST_BREAKP:
+        printf("BREAKP %"PRIu32"\n", (inst & 0xFFFFFF00) >> 8);
+        return 1;
     
     
     default:
@@ -436,7 +444,7 @@ int execute(const char* exe, int argc, char** argv){
     vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
 
     for(size_t i = 0; i + 8 < meta_data_size; ){
-        const uint64_t block_size = *(uint64_t*)((uint8_t*)(stream.data) + i);
+        const uint64_t block_size = *(uint64_t*)((uint8_t*)(meta_data) + i);
         const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
             vpu.static_memory = (uint8_t*)(meta_data) + i;
@@ -458,7 +466,7 @@ int execute(const char* exe, int argc, char** argv){
         vpu.registers[RIP >> 3].as_uint64 < program_size;
         vpu.registers[RIP >> 3].as_int64 += perform_inst(&vpu, vpu.program[vpu.registers[RIP >> 3].as_uint64])
     ) {
-	    vpu.registers[R0].as_uint64 = 0;
+	    //vpu.registers[R0].as_uint64 = 0;
     }
 
     mc_destroy_stream(stream);
@@ -466,3 +474,4 @@ int execute(const char* exe, int argc, char** argv){
     return vpu.status;
 }
 
+#endif // END OF FILE
