@@ -1,8 +1,8 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = precomputed/input.out
-	;; executable size = 752
-	;; inst count      = 117
+	;; executable size = 748
+	;; inst count      = 116
 	;; inst size       = 4
 	;; flags           = 00
 	;; meta_data_size  = 252
@@ -120,20 +120,19 @@ fread_line:
 	MOV RB RC
 	PUSH RSP
 	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
-	MUL RA RA RSP
-	GSP RA RA
+	GSP RA RA R0
 	INC RSP 0x64; u: 100
 	MOV RC RA
-	CALL 0xffe4; i: -28
+	CALL 0xffe5; i: -27
 	DEC RA 0x1; u: 1
 	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
 	SET8 RC RB RA
 	MOV RA RD
 	STATIC 0x20 ;; "You said: '.'.."...
 	POP RB
-	CALL 0xffaf; i: -81
+	CALL 0xffb0; i: -80
 	MOV RB RC
-	CALL 0xffad; i: -83
+	CALL 0xffae; i: -82
 	STATIC 0x2c ;; "'.."...
 	POP RB
-	CALL 0xffaa; i: -86
+	CALL 0xffab; i: -85

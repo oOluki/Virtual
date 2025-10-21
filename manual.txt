@@ -124,7 +124,7 @@ Section 2: Assembly (VASM)
         WRITE:
             STACK[RSP - L2.as_uint16] = R1
         GSP:
-            R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
+            R1 = (uint8_t*) ((uint64_t*)(STACK_POINTER) + R2.as_uint64) + R3.as_uint64
         STATIC:
             STACK[RSP++] = STATIC_POINTER + E.as_uint64
         READ8:

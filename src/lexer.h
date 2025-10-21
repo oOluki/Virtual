@@ -413,9 +413,9 @@ Token get_next_token(Tokenizer* tokenizer){
         case '$':
             token.type = TKN_LABEL_REF;
             break;
-	case '@':
-	    token.type = TKN_ADDR_LABEL_REF;
-	    break;
+	    case '@':
+	        token.type = TKN_ADDR_LABEL_REF;
+	        break;
         
         default:
             token.type = TKN_RAW;

@@ -128,7 +128,7 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_GET   , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RR};
+    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
@@ -211,7 +211,6 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("EXEC")))   return (InstProfile){INST_EXEC  , OP_PROFILE_R};
     if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("BREAKP"))) return (InstProfile){INST_BREAKP, OP_PROFILE_L};
 
     return (InstProfile){INST_ERROR, 0};
 }
@@ -420,7 +419,14 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(arg2.type == TKN_LABEL_REF){
+        if(arg2.type == TKN_RAW){
+            const Operand op = parse_op_literal(arg2);
+            if(op.type != TKN_ERROR){
+                arg2.type = op.type;
+                arg2.value.as_uint = op.value.as_uint64;
+            }
+        }
+        else if(arg2.type == TKN_LABEL_REF){
             arg2 = resolve_token(parser->labels, arg2);
             if(arg2.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", arg2.size, arg2.value.as_str);

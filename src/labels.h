@@ -91,13 +91,15 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
 
     if(get_label(labels, label_tkn)) return 1;
     
+    const int add_def_as_str = (definition.type == TKN_STR) || (definition.type == TKN_RAW);
+
     const Label label = (Label){
-        .size = (definition.type == TKN_STR)? SIZEOF_LABEL + label_tkn.size + definition.size + sizeof(uint32_t) : SIZEOF_LABEL + label_tkn.size,
+        .size = add_def_as_str? SIZEOF_LABEL + label_tkn.size + definition.size + sizeof(uint32_t) : SIZEOF_LABEL + label_tkn.size,
         .str = SIZEOF_LABEL,
         .str_size = label_tkn.size,
         .type = definition.type,
         .flags = LABELFLAG_NONE,
-        .definition.as_uint = (definition.type == TKN_STR)? SIZEOF_LABEL + label_tkn.size : definition.value.as_uint
+        .definition.as_uint = add_def_as_str? SIZEOF_LABEL + label_tkn.size : definition.value.as_uint
     };
 
     const uint64_t ssize = labels->size;
@@ -113,9 +115,9 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
     memcpy((uint8_t*)(data) + label.str, label_tkn.value.as_str, label_tkn.size);
 
     const uint32_t definition_size = (uint32_t) definition.size;
-    // only copy definition.size and definition.value.as_str if definition is a string
-    memcpy((uint8_t*)(data) + label.definition.as_uint    , &definition_size, (definition.type == TKN_STR)? 4 : 0);
-    memcpy((uint8_t*)(data) + label.definition.as_uint + 4, definition.value.as_str, (definition.type == TKN_STR)? definition.size : 0);
+    // only copy definition.size and definition.value.as_str only if add_def_as_str
+    memcpy((uint8_t*)(data) + label.definition.as_uint    , &definition_size, add_def_as_str? 4 : 0);
+    memcpy((uint8_t*)(data) + label.definition.as_uint + 4, definition.value.as_str, add_def_as_str? definition.size : 0);
 
     return 0;
 }

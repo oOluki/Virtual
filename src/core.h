@@ -62,7 +62,7 @@ typedef enum OpCode{
     INST_GET,
     // STACK[RSP - L2.as_uint16] = R1
     INST_WRITE,
-    // R1 = (uint8_t*)(STACK_POINTER) + R2.as_uint64
+    // R1.as_ptr = (uint8_t*) ((uint64_t*)(STACK_POINTER) + R2.as_uint64) + R3.as_uint64
     INST_GSP,
     // STACK[RSP++] = STATIC_POINTER + E.as_uint64
     INST_STATIC,
@@ -235,8 +235,6 @@ typedef enum OpCode{
     INST_DISREG,
     // for counting putposes
     INST_TOTAL_COUNT,
-    // for signaling a break point
-    INST_BREAKP = 253,
     // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
     INST_CONTAINER = 254,
     // this instruction is used for parsing purposes to signal an error while parsing a file, IT SHOULD NEVER APPEAR IN YOUR PROGRAM

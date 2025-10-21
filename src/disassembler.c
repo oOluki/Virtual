@@ -60,12 +60,12 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
     }   return 0;
     case INST_PUSH:
         fprintf(output, "\tPUSH ");
-	if(GET_OP_HINT(inst) == HINT_REG)
-		fprintf(output, "%s\n", get_reg_str(R1, buff[0]));
-	else {
-		const Register op = {.as_uint64 = (uint64_t) L1};
-		fprintf(output, "0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
-	}
+        if(GET_OP_HINT(inst) == HINT_REG)
+            fprintf(output, "%s\n", get_reg_str(R1, buff[0]));
+        else {
+            const Register op = {.as_uint64 = (uint64_t) L1};
+            fprintf(output, "0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        }
         return 0;
     case INST_POP:
         fprintf(output, "\tPOP %s\n", get_reg_str(R1, buff[0]));
@@ -79,7 +79,7 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
         fprintf(output, "\tWRITE %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_GSP:
-        fprintf(output, "\tGSP %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]));
+        fprintf(output, "\tGSP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_STATIC:
         if(GET_OP_HINT(inst) == HINT_REG){
@@ -362,9 +362,6 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
 
         return 0;
 
-    case INST_BREAKP:
-        fprintf(output, "BREAKP %"PRIu32"\n", (inst & 0xFFFFFF00) >> 8);
-        return 0;
     case INST_CONTAINER:
         fprintf(output, ";;CONTAINER 0x%"PRIx32"\n", (inst & 0xFFFFFF00) >> 8);
         return 0;
@@ -408,7 +405,7 @@ int disassemble_handle_label(FILE* output, const void* _label, uint64_t* queried
     case TKN_RAW:
     case TKN_STR:{
         const uint64_t str_len = *(uint64_t*)((uint8_t*)(_label) + label.definition.as_uint);
-        const char* str = (uint8_t*)(_label) + label.definition.as_uint + sizeof(uint32_t);
+        const char* str = (char*) ((uint8_t*)(_label) + label.definition.as_uint + sizeof(uint32_t));
         fprintf(output, "%clabel %.*s %.*s\n", '%', label.str_size, name, (int) str_len, str);
     }   break;
     case TKN_ILIT:

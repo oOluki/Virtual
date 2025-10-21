@@ -1,0 +1,176 @@
+
+;; X====X (SPECIFICATIONS) X====X
+	;; name = precomputed/rule110.out
+	;; executable size = 1012
+	;; inst count      = 151
+	;; inst size       = 4
+	;; flags           = 00
+	;; meta_data_size  = 373
+	;; static_memory   = { position = 0, size = 16 }
+	;; labels          = { position = 32, size = 341 }
+	;; entry point     = 132
+;; X====X (SPECIFICATIONS) X====X
+
+
+%label WIDTH 20
+display_atomaton_return:
+	MOVV RA 0x0a; (u: 10; i: 10; f: 0.000000)
+	PUTC RA RD R0
+	POP RC
+	POP RB
+	POP RA
+	RET
+display_atomaton:
+	PUSH RA
+	PUSH RB
+	PUSH RC
+	MOVV RC 0x30; (u: 48; i: 48; f: 0.000000)
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	SMLI RB RA RF
+	JMPFN RB 0xfff4; i: -12
+	MOVV RB 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RB RB RA
+	READ RB RE RB
+	ADD RB RB RC
+	PUTC RB RD R0
+	INC RA 0x1; u: 1
+	JMP 0xfff8; -8
+	JMP 0xffec; -20
+get_cell_err:
+	POP RD
+	POP RC
+	POP RB
+	POP RA
+	DISREG RA
+	DISREG RB
+	DISREG RC
+	HALT 	0x1; (u: 1)
+get_cell_ret:
+	POP RD
+	POP RC
+	POP RB
+	POP R0
+	RET
+get_cell:
+	PUSH RA
+	PUSH RB
+	PUSH RC
+	PUSH RD
+	MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+	BSHIFT RB RB RD
+	MOVV RD 0x02; (u: 2; i: 2; f: 0.000000)
+	BSHIFT RA RA RD
+	OR RA RA RB
+	OR RA RA RC
+	INC RA 0x1; u: 1
+	MOVV RB 0x09; (u: 9; i: 9; f: 0.000000)
+	SMLU RB RA RB
+	NOT RB RB
+	MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVC RB RA RC
+	MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
+	MUL RA RA RC
+	INC RA 0x1; u: 1
+	JMP RA
+	NOP
+	CALL 0xffde; i: -34
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	JMP 0xffe4; -28
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	JMP 0xffe2; -30
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	JMP 0xffe0; -32
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	JMP 0xffde; -34
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	JMP 0xffdc; -36
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	JMP 0xffda; -38
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	JMP 0xffd8; -40
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	JMP 0xffd6; -42
+update_atomaton_return:
+	POP RB
+	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RA RD RA
+	DEC RA 0x8; u: 8
+	SET RE RB RA
+	POP RB
+	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RA RD RA
+	SET RE RB RA
+	POP RD
+	POP RC
+	POP RB
+	POP RA
+	RET
+update_atomaton:
+	PUSH RA
+	PUSH RB
+	PUSH RC
+	PUSH RD
+	READ RC RE R0
+	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RA RF RA
+	DEC RA 0x8; u: 8
+	READ RB RE RA
+	DEC RA 0x8; u: 8
+	READ RA RE RA
+	CALL 0xffc1; i: -63
+	PUSH RA
+	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RA RF RA
+	DEC RA 0x8; u: 8
+	READ RA RE RA
+	READ RB RE R0
+	MOVV RC 0x08; (u: 8; i: 8; f: 0.000000)
+	READ RC RE RC
+	CALL 0xffb8; i: -72
+	PUSH RA
+	MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RC 0x01; (u: 1; i: 1; f: 0.000000)
+	SUB RC RF RC
+	SMLU RC RD RC
+	JMPFN RC 0xffd8; i: -40
+	MOVV RC 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RC RD RC
+	DEC RC 0x8; u: 8
+	READ RA RE RC
+	INC RC 0x8; u: 8
+	READ RB RE RC
+	INC RC 0x8; u: 8
+	READ RC RE RC
+	CALL 0xffa9; i: -87
+	POP RB
+	PUSH RA
+	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RA RD RA
+	DEC RA 0x8; u: 8
+	SET RE RB RA
+	INC RD 0x1; u: 1
+	JMP 0xffec; -20
+	JMP 0xffc6; -58
+exit:
+	HALT 	0x0; (u: 0)
+%start
+	MOVV RF 0x14; (u: 20; i: 20; f: 0.000000)
+	GSP RE R0 R0
+	IOE R0 RD R0
+	MOV RA RF
+	DEC RA 0x1; u: 1
+	BIGI RC RA R0
+	JMPFN RC 0x4; i: 4
+	PUSH 0x00; (u: 0; i: 0; f: 0.000000)
+	DEC RA 0x1; u: 1
+	JMP 0xfffc; -4
+	PUSH 0x01; (u: 1; i: 1; f: 0.000000)
+	CALL 0xff77; i: -137
+	MOV RA R0
+loop:
+	SMLU RB RA RF
+	JMPFN RB 0xfff1; i: -15
+	CALL 0xffc3; i: -61
+	CALL 0xff72; i: -142
+	INC RA 0x1; u: 1
+	JMP 0xfffb; -5

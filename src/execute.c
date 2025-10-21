@@ -376,10 +376,6 @@ int64_t perform_inst(VPU* vpu, Inst inst){
             printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 8) & 0xFF, buff), R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
         }
         return 1;
-
-    case INST_BREAKP:
-        printf("BREAKP %"PRIu32"\n", (inst & 0xFFFFFF00) >> 8);
-        return 1;
     
     
     default:
