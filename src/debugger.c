@@ -36,6 +36,11 @@ enum DebugUserPromptCode{
     DUPC_ERROR = 255
 };
 
+enum DebbuggerMetaDataMasks{
+    DEBUG_SIGNAL_NONE_MASK = 0,
+    DEBUG_SIGNAL_BREAK_MASK = 1 << 0
+};
+
 typedef struct DebugUserPrompt{
 
     int         code;
@@ -56,7 +61,8 @@ typedef struct Debugger
     VPU*        vpu;
     Parser      parser;
     Mc_stream_t stream;
-    Mc_stream_t break_points;
+    uint8_t*    signals;
+    uint64_t    breakpoint_count;
     Mc_stream_t labels;
 
     Inst*       program;
@@ -65,39 +71,6 @@ typedef struct Debugger
     uint8_t     display_size;
 } Debugger;
 
-// \returns 1 if breakpoint exists or 0 otherwise
-int get_breakpoint_to(const Mc_stream_t break_points, uint64_t x, uint64_t* _i){
-
-    if(break_points.size < sizeof(x)){
-        if(_i) *_i = 0;
-        return 0;
-    }
-
-    uint64_t i = 0;
-    uint64_t f = break_points.size - sizeof(x);
-    uint64_t lower = *(uint64_t*)mc_stream_on(&break_points, i);
-    uint64_t upper = *(uint64_t*)mc_stream_on(&break_points, f);
-    const int maxiter = (break_points.size / 8 < 100)? (int) (break_points.size / 8) : 100;
-
-    for (int i = 0; x != lower && x != upper && lower != upper && i < maxiter; i+=1)
-    {
-        const uint64_t n  = (i + f) / 2;
-        const uint64_t nx = *(uint64_t*)mc_stream_on(&break_points, n);
-        if(x <= nx){
-            f     = n;
-            upper = nx;
-            continue;
-        }
-        i     = n;
-        lower = nx;
-    }
-    if(x == lower) {if(_i) *_i = i; return 1;}
-    if(x == upper) {if(_i) *_i = f; return 1;}
-    
-    if(_i) *_i = i;
-
-    return 0;
-}
 
 int get_prompt_code(const Token first_prompt_token){
     if(mc_compare_token(first_prompt_token, MKTKN("cl")     , 0))  return DUPC_CLEAR_VIEW;
@@ -176,10 +149,10 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     int status = 0;
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H");
     fprintf(debugger->output, "inst: %"PRIu64"\tstack: %"PRIu64"\tbreakpoints: %"PRIu64"\n",
-        vpu->registers[RIP >> 3].as_uint64, vpu->registers[RSP >> 3].as_uint64, (uint64_t)(debugger->break_points.size / 8));
+        vpu->registers[RIP >> 3].as_uint64, vpu->registers[RSP >> 3].as_uint64, debugger->breakpoint_count);
 
     for(; i < finish && i < vpu->registers[RIP >> 3].as_uint64 && !status; i+=1){
-        if(get_breakpoint_to(debugger->break_points, i, NULL)) fprintf(debugger->output, "!");
+        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%3"PRIu64"", i);
         status = print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
     }
@@ -188,12 +161,12 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         if(i >= debugger->program_size){
             fputc('\n', debugger->output);
         } else{
-            if(get_breakpoint_to(debugger->break_points, i, NULL)) fprintf(debugger->output, "!");
+            if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
             status = print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i++, buff);
         }
     }
     for(; i < finish && !status; i+=1){
-        if(get_breakpoint_to(debugger->break_points, i, NULL)) fprintf(debugger->output, "!");
+        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%3"PRIu64"", i);
         status = print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
     }
@@ -227,9 +200,11 @@ int perform_user_prompt(Debugger* debugger, DebugUserPrompt prompt){
         break;
     case DUPC_GO:{
         uint64_t i = 0;
-        for(int break_point = get_breakpoint_to(debugger->break_points, debugger->vpu->registers[RIP >> 3].as_uint64, &i);
-            debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !debugger->vpu->status && !break_point;
-            break_point = get_breakpoint_to(debugger->break_points, debugger->vpu->registers[RIP >> 3].as_uint64, &i)){
+        while(
+            debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size &&
+            !debugger->vpu->status &&
+            !(debugger->signals[debugger->vpu->registers[RIP >> 3].as_uint64] & DEBUG_SIGNAL_BREAK_MASK)
+        ){
 
             debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
                 debugger->vpu,
@@ -278,72 +253,88 @@ int perform_user_prompt(Debugger* debugger, DebugUserPrompt prompt){
         else perform_inst(debugger->vpu, inst);
     }   break;
     case DUPC_ADD_BREAKPOINT:{
-        uint64_t i;
-        // case where breakpoint already exists
-        if(get_breakpoint_to(debugger->break_points, prompt.arg1.as_uint64, &i)){
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
-            return 0;
+        if(prompt.arg1.as_uint64 >= debugger->program_size){
+            fprintf(
+                debugger->err,
+                "[ERROR] Can't add break point to %"PRIu64", program is only %"PRIu64" instructions long\n",
+                prompt.arg1.as_uint64, debugger->program_size
+            );
+            return 1;
         }
-        const uint64_t f = (debugger->break_points.size)? debugger->break_points.size - 1 : 0;
-        const uint64_t lower = *(uint64_t*)mc_stream_on(&debugger->break_points, 0);
-        const uint64_t upper = *(uint64_t*)mc_stream_on(&debugger->break_points, f);
-        const uint64_t x = prompt.arg1.as_uint64;
-        
-        if(x < lower){
-            // reserve size of the breakpoint and allocate it properly
-            mc_stream(&debugger->break_points, &x, sizeof(x));
-            memmove(mc_stream_on(&debugger->break_points, sizeof(x)), debugger->break_points.data, debugger->break_points.size);
-            *(uint64_t*)mc_stream_on(&debugger->break_points, sizeof(x)) = x;
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
-            return 0;
-        }
-        if(x > upper){
-            mc_stream(&debugger->break_points, &x, sizeof(uint64_t));
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
-            return 0;
-        }
-        
-        // reserve size of the breakpoint and allocate it properly
-        mc_stream(&debugger->break_points, &x, sizeof(x));
-        memmove(mc_stream_on(&debugger->break_points, i + sizeof(x)), mc_stream_on(&debugger->break_points, i),
-            (size_t) (debugger->break_points.size - i));
-        *(uint64_t*)mc_stream_on(&debugger->break_points, i) = x;
-
+        if(!(debugger->signals[prompt.arg1.as_uint64] & DEBUG_SIGNAL_BREAK_MASK)) debugger->breakpoint_count+=1;
+        debugger->signals[prompt.arg1.as_uint64] |= DEBUG_SIGNAL_BREAK_MASK;
         debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
     }
         break;
     case DUPC_REMOVE_BREAKPOINT:
-        if(prompt.arg1.as_uint64 * 8 >= debugger->break_points.size){
-            fprintf(debugger->err, "[ERROR] Could Not Find Break Point To Remove\n");
+        if(prompt.arg1.as_uint64 >= debugger->program_size){
+            fprintf(
+                debugger->err,
+                "[ERROR] No Break Point%"PRIu64", Program Is %"PRIu64" Instructions Long\n",
+                prompt.arg1.as_uint64, debugger->program_size
+            );
             return 1;
         }
-        memmove(
-            mc_stream_on(&debugger->break_points, prompt.arg1.as_uint64 * 8),
-            mc_stream_on(&debugger->break_points, prompt.arg1.as_uint64 * 8 + sizeof(uint64_t)),
-            debugger->break_points.size - prompt.arg1.as_uint64 * 8 - sizeof(uint64_t)
-        );
-        debugger->break_points.size -= sizeof(uint64_t);
+        if(!(debugger->signals[prompt.arg1.as_uint64] & DEBUG_SIGNAL_BREAK_MASK)){
+            fprintf(debugger->err, "[ERROR] No Break Point On Instruction At Position %"PRIu64"\n", prompt.arg1.as_uint64);
+            return 1;
+        }
+        debugger->breakpoint_count-=1;
+        debugger->signals[prompt.arg1.as_uint64] &= ~DEBUG_SIGNAL_BREAK_MASK;
         debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
         break;
     case DUPC_BREAKPOINT:
-        if(prompt.arg1.as_uint64 >= debugger->break_points.size / 8){
-            fprintf(debugger->err, "[ERROR] No breakpoint %"PRIu64", out of bounds(%"PRIu64")\n",
-                prompt.arg1.as_uint64, (uint64_t) (debugger->break_points.size / 8));
-        } else{
-            fprintf(debugger->output, "breakpoint %"PRIu64" -> %"PRIu64"\n",
-                prompt.arg1.as_uint64, *(uint64_t*)mc_stream_on(&debugger->break_points, prompt.arg1.as_uint64 * 8));
+        uint64_t breakpoints_found = 0;
+        uint64_t i = 0;
+        if(prompt.arg1.as_uint64 >= debugger->breakpoint_count){
+            fprintf(debugger->output, "No %"PRIu64"th breakpoint, there are only %"PRIu64" breakpoints\n", prompt.arg1.as_uint64, debugger->breakpoint_count);
+            break;
+        }
+        for(; i < debugger->program_size && breakpoints_found < prompt.arg1.as_uint64 + 1; i+=1){
+            breakpoints_found += ((debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) != 0);
+        }
+        if(breakpoints_found < prompt.arg1.as_uint64 + 1){
+            fprintf(
+                debugger->err,
+                "[ERROR] " __FILE__ ":%i:0: Found %"PRIu64" breakpoints, where there should be %"PRIu64"\n",
+                __LINE__, breakpoints_found, debugger->breakpoint_count
+            );
+        }
+        else{
+            fprintf(debugger->output, "%"PRIu64"th breakpoint In %"PRIu64"\n", prompt.arg1.as_uint64, i);
         }
         break;
     case DUPC_BREAKPOINT_TO:{
-        uint64_t i;
-        if(!get_breakpoint_to(debugger->break_points, prompt.arg1.as_uint64, &i)){
-            fprintf(debugger->output, "No breakpoint to %"PRIu64"\n", prompt.arg1.as_uint64);
-            if(debugger->break_points.size)
-                fprintf(debugger->output, "closest breakpoint %"PRIu64" -> %"PRIu64"\n",
-                    i / 8, *(uint64_t*)mc_stream_on(&debugger->break_points, i));
+        if(prompt.arg1.as_uint64 >= debugger->program_size){
+            fprintf(
+                debugger->output,
+                "No breakpoint to %"PRIu64", program is only %"PRIu64" instructions long\n",
+                prompt.arg1.as_uint64, debugger->program_size
+            );
+            if(debugger->breakpoint_count > 0){
+                for(uint64_t i = 1; i < debugger->program_size; i+=1){
+                    if((debugger->signals[debugger->program_size - i] & DEBUG_SIGNAL_BREAK_MASK)){
+                        fprintf(debugger->output, "closest breakpoint at %"PRIu64"\n", debugger->program_size - i);
+                    } 
+                }
+            }
             break;
         }
-        fprintf(debugger->output, "breakpoint %"PRIi64" -> %"PRIu64"\n", i / 8, prompt.arg1.as_uint64);
+        else if(!(debugger->signals[prompt.arg1.as_uint64] & DEBUG_SIGNAL_BREAK_MASK)){
+            fprintf(debugger->output, "No breakpoint to %"PRIu64"\n", prompt.arg1.as_uint64);
+            if(debugger->breakpoint_count > 0){
+                uint64_t i = prompt.arg1.as_uint64;
+                for(; i < debugger->program_size && !(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK); i+=1);
+                uint64_t j = prompt.arg1.as_uint64;
+                for(j = prompt.arg1.as_uint64; j > 0 && !(debugger->signals[j] & DEBUG_SIGNAL_BREAK_MASK); j-=1);
+                if(!(debugger->signals[j] & DEBUG_SIGNAL_BREAK_MASK)) j = 0;
+                if((debugger->signals[j] & DEBUG_SIGNAL_BREAK_MASK) && (prompt.arg1.as_uint64 - j) <= (i - prompt.arg1.as_uint64))
+                    i = j;
+                fprintf(debugger->output, "closest breakpoint at %"PRIu64"\n", i);
+            }
+            break;
+        }
+        fprintf(debugger->output, "breakpoint at %"PRIi64"\n", prompt.arg1.as_uint64);
     }
         break;
     case DUPC_DO:
@@ -734,7 +725,7 @@ int debug(const char* exe){
         .data = (char*)((uint8_t*)(stream.data) + sizeof(uint32_t) + *(uint32_t*)(stream.data) + 1),
         .line = 0, .column = 0, .pos = 0
     };
-    // for stroing temporary data
+    // for storing temporary data
     Mc_stream_t dstream = mc_create_stream(1000);
 
     Parser parser;
@@ -749,7 +740,6 @@ int debug(const char* exe){
     parser.macro_if_depth = 0;
 
     Debugger debugger;
-    debugger.break_points = mc_create_stream(1000);
     debugger.input = stdin;
     debugger.output = stdout;
     debugger.err = stderr;
@@ -758,11 +748,12 @@ int debug(const char* exe){
     debugger.parser = parser;
     debugger.program = vpu.program;
     debugger.program_size = program_size;
+    debugger.signals = malloc((size_t) debugger.program_size);
+    memset(debugger.signals, 0, (size_t) debugger.program_size);
     debugger.stream = dstream;
     debugger.vpu = &vpu;
     debugger.display_size = 5;
 
-    printf("\x1B[2J\x1B[H");
     debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
 
     while(debugger.is_active) {
@@ -785,7 +776,7 @@ int debug(const char* exe){
 
     free(vpu.stack);
     mc_destroy_stream(stream);
-    mc_destroy_stream(debugger.break_points);
+    free(debugger.signals);
     mc_destroy_stream(debugger.stream);
 
     return vpu.status;

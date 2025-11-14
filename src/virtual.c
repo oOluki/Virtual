@@ -6,6 +6,8 @@
 
 int is_file_executable(FILE* file){
 
+    if(!file) return 0;
+
     const long pos = ftell(file);
 
     char buff[5] = {'\0', '\0', '\0', '\0', '\0'};
@@ -151,6 +153,10 @@ int main(int argc, char** argv){
 
     if(mode == MODE_NONE){
         FILE* input = fopen(argv[input_file_arg], "rb");
+        if(!input){
+            fprintf(stderr, "[ERROR] Can't open '%s'\n", argv[input_file_arg]);
+            return 1;
+        }
         mode = is_file_executable(input)? MODE_EXECUTE : MODE_ASSEMBLE;
         fclose(input);
     }
