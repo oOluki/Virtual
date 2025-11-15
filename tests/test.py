@@ -55,12 +55,33 @@ def cmpf(f1, f2, mode):
     file1 = open(f1, mode)
     file2 = open(f2, mode)
 
-    status = file2.read() == file1.read()
+    contents1 = file1.read()
+    contents2 = file2.read()
 
     file1.close()
     file2.close()
+
+    rng = min(len(contents1), len(contents2))
+
+    first_differ = 0
+    line = 0
+    column = 0
+    for i in range(rng):
+        if contents1[i] != contents2[i]:
+            first_differ = i
+            rng = min(rng, i + 20)
+            i = max(i - 20, 0)
+            print(f"files differ at byte {first_differ}, in line {line} column {column}")
+            print(f"view of first file from {i} to {rng}: '{contents1[i:rng]}'")
+            print(f"view of second file from {i} to {rng}: '{contents2[i:rng]}'")
+            return False
+        if contents1[i] == 10:
+            line += 1
+            column = 0
+        else:
+            column += 1
     
-    return status
+    return len(contents1) == len(contents2)
 
 def precompute(example_path: str):
     EXAMPLE_NAME = example_path.removesuffix(".txt").split(PATH_SEP)
@@ -165,7 +186,7 @@ if PRECOMPUTE:
 else:
     print("\n\nstarting debug test...")
 
-dummy = sys.argv[0].split(PATH_SEP)
+dummy = sys.argv[0].replace('/', PATH_SEP).split(PATH_SEP)
 
 test_dir = ""
 
@@ -173,7 +194,7 @@ if len(dummy) > 0:
     for i in range(len(dummy) - 1):
         test_dir += dummy[i] + PATH_SEP
 else:
-    test_dir = "."
+    test_dir = "." + PATH_SEP
 
 DEBUG_EXAMPLE_PATH = test_dir + "debug_example.out"
 
