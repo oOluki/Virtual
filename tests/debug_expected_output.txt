@@ -1,0 +1,162 @@
+0- 'dump_this_prompt'
+1- 'tmp.txt'
+2- 'dudm3my'
+3- 'pr#omp4t'
+4- 'j'
+5- 'u'
+6- 's'
+7- 't'
+8- '7'
+9- 'fo'
+10- 'r'
+11- 'tes'
+12- 'tin'
+13- 'g'
+14- '/ajdnonw<(iniwn eje455)54e'
+15- '" n"'
+display height: 5
+inst: 78   stack: 0   breakpoints: 0    status: 0
+breakpoints:
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 1
+RC.as_uint64 = 0
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 0
+RSP.as_uint64 = 0
+RIP.as_uint64 = 78
+display height: 10
+inst: 78   stack: 0   breakpoints: 0    status: 0
+breakpoints:
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 1
+RC.as_uint64 = 0
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 0
+RSP.as_uint64 = 0
+RIP.as_uint64 = 78
+display height: 10
+inst: 69   stack: 0   breakpoints: 1    status: 0
+breakpoints:
+68
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 2
+RB.as_uint64 = 2
+RC.as_uint64 = 100
+RD.as_uint64 = 1
+RE.as_uint64 = 0
+RF.as_uint64 = 80
+RSP.as_uint64 = 0
+RIP.as_uint64 = 69
+display height: 10
+inst: 52   stack: 5   breakpoints: 5    status: 0
+breakpoints:
+50
+stack:
+0- 2
+1- 70
+2- 3
+3- 100
+4- 1
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 3
+RB.as_uint64 = 3
+RC.as_uint64 = 2
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 80
+RSP.as_uint64 = 5
+RIP.as_uint64 = 52
+display height: 10
+inst: 80   stack: 24   breakpoints: 6    status: 0
+breakpoints:
+stack:
+0- 2
+1- 5
+2- 7
+3- 11
+4- 13
+5- 17
+6- 19
+7- 23
+8- 29
+9- 31
+10- 37
+11- 41
+12- 43
+13- 47
+14- 53
+15- 59
+16- 61
+17- 67
+18- 71
+19- 73
+20- 79
+21- 83
+22- 89
+23- 97
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 100
+RC.as_uint64 = 100
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 80
+RSP.as_uint64 = 24
+RIP.as_uint64 = 80
+display height: 10
+inst: 76   stack: 0   breakpoints: 7    status: 0
+breakpoints:
+76
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 0
+RC.as_uint64 = 2
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 80
+RSP.as_uint64 = 0
+RIP.as_uint64 = 76
+display height: 10
+inst: 77   stack: 0   breakpoints: 7    status: 0
+breakpoints:
+76
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 0
+RC.as_uint64 = 0
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 0
+RSP.as_uint64 = 0
+RIP.as_uint64 = 77
+display height: 10
+inst: 18446744073709551615   stack: 0   breakpoints: 7    status: 0
+breakpoints:
+76
+stack:
+registers:
+R0.as_uint64 = 0
+RA.as_uint64 = 0
+RB.as_uint64 = 0
+RC.as_uint64 = 2
+RD.as_uint64 = 0
+RE.as_uint64 = 0
+RF.as_uint64 = 80
+RSP.as_uint64 = 0
+RIP.as_uint64 = 18446744073709551615

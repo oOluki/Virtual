@@ -1,26 +1,52 @@
-show_this_prompt dudm3my pr#omp4t j u s t 7 fo r tes tin g /ajdnonw<(iniwn\ eje455)54e "\ n"
-cl
+dump_this_prompt tmp.txt dudm3my pr#omp4t j u s t 7 fo r tes tin g /ajdnonw<(iniwn\ eje455)54e "\ n"
 clear --complete
 
-
+dump_state tmp.txt
 resize 10
-step 5
-resize 3
+dump_state tmp.txt
 
-show 10 10
-break 142
-go --to 143 --nobreaks
 stepin
+step 5
+break 68
+go --to 69 --nobreaks
+break 10 53 78
+swbreak
+swbreak --at 10 8 --at 8
+rmbreak 10 53 78 8
+dump_state tmp.txt
+break 10 53 78
+rmbreak
+cl
+stepin
+break 50
+go
+go --upto 52
+go --upto 52 --nobreaks
+execute MOVV R0 @Q_rsqrt
+dump_state tmp.txt
+label Q_rsqrt
+label
+go
+stepin
+
 stepout
-label WIDTH
-stack
-go --upto 147
-do
-do
-execute MOVV R0 $WIDTH
-inspect 0x1111
-help help
-goend
+go
+stepout
+break 45 76
+go
+rmbreak 45
+go --to 80
+rmbreak
+go --to 80
+dump_state tmp.txt
+break 76
+go
+dump_state tmp.txt
+
+
 restart
+go --nobreaks
+restart
+dump_state tmp.txt
 goend
-quit
+dump_state tmp.txt

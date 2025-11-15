@@ -9,6 +9,8 @@
 enum DebugUserPromptCode{
     DUPC_NONE  = 0,
     DUPC_SHOW_THIS_PROMPT,
+    DUPC_DUMP_THIS_PROMPT,
+    DUPC_DUMP_STATE,
     DUPC_CLEAR_VIEW,
     DUPC_RESIZE_DISPLAY,
     DUPC_RESTART,
@@ -134,6 +136,10 @@ static char* get_next_word(const char* str, char* output, int* len, int max_len)
 int get_dupc_code(const char* str){
     if(mc_compare_str(str, "show_this_prompt", 0))
         return DUPC_SHOW_THIS_PROMPT;
+    if(mc_compare_str(str, "dump_this_prompt", 0))
+        return DUPC_DUMP_THIS_PROMPT;
+    if(mc_compare_str(str, "dump_state", 0))
+        return DUPC_DUMP_STATE;
 
     if(mc_compare_str(str, "cl"     , 0))  return DUPC_CLEAR_VIEW;
     if(mc_compare_str(str, "clear"  , 0))  return DUPC_CLEAR_VIEW;
@@ -173,8 +179,22 @@ int debugger_help(Debugger* debugger, int dupc){
     case DUPC_SHOW_THIS_PROMPT:
         fprintf(
             debugger->output,
-            "show_this_prompt:\n"
+            "show_this_prompt <optional: word sequence>:\n"
             "    displays the prompt's arguments, good for internally testing if input system is ok\n"
+        );
+        return 0;
+    case DUPC_DUMP_THIS_PROMPT:
+        fprintf(
+            debugger->output,
+            "dump_this_prompt <output> <optional: word sequence>:\n"
+            "    dumps the prompt's arguments to output, good for internally testing if input system is ok\n"
+        );
+        return 0;
+    case DUPC_DUMP_STATE:
+        fprintf(
+            debugger->output,
+            "dump_state <output_file>:\n"
+            "    dumps a debugger state view to the end of output_file, for testing reasons\n"
         );
         return 0;
     case DUPC_CLEAR_VIEW:
@@ -375,7 +395,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     }
     for(; i < finish; i+=1){
         if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-        else fprintf(debugger->output, "%*"PRIu64"", digit_len_max, i);
+        else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
         print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
     }
     return 0;
@@ -403,8 +423,63 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;
     case DUPC_SHOW_THIS_PROMPT:
         for(int i = 0; i < argc; i+=1){
-            printf("%i- '%s'\n", i, argv[i]);
+            fprintf(debugger->output, "%i- '%s'\n", i, argv[i]);
         }
+        break;
+    case DUPC_DUMP_THIS_PROMPT:{
+        if(argc <= 1){
+            fprintf(debugger->output, "%s expects at least one argument, path to output\n", argv[0]);
+            return 1;
+        }
+        FILE* where = fopen(argv[1], "a");
+        if(!where){
+            fprintf(debugger->output, "could not open '%s'\n", argv[1]);
+            return 1;
+        }
+        for(int i = 0; i < argc; i+=1){
+            fprintf(where, "%i- '%s'\n", i, argv[i]);
+        }
+        fclose(where);
+    }
+        break;
+    case DUPC_DUMP_STATE:{
+        EXPECT_ARGC(1);
+        FILE* where = fopen(argv[1], "a");
+        if(!where){
+            fprintf(debugger->output, "could not open '%s'\n", argv[1]);
+            return 1;
+        }
+        const uint64_t ip = debugger->vpu->registers[RIP >> 3].as_uint64;
+        const uint64_t sp = debugger->vpu->registers[RSP >> 3].as_uint64;
+        fprintf(where, "display height: %"PRIu8"\n", debugger->display_size);
+        fprintf(
+            where,
+            "inst: %"PRIu64"   stack: %"PRIu64"   breakpoints: %"PRIu64 "    status: %i\n",
+            ip, sp, debugger->breakpoint_count, debugger->vpu->status
+        );
+        fprintf(where, "breakpoints:\n");
+        for(uint64_t i = 0; i < debugger->program_size; i+=1){
+            if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK){
+                fprintf(where, "%"PRIu64"\n", i);
+            }
+        }
+        fprintf(where, "stack:\n");
+        for(uint64_t i = 0; i < sp; i+=1){
+            fprintf(where, "%"PRIu64"- %"PRIu64"\n", i, debugger->vpu->stack[i]);
+        }
+        fprintf(where, "registers:\n");
+        for(int i = 0; i < REGISTER_SPACE_SIZE / sizeof(Register); i+=1){
+            char buff[8];
+            fprintf(
+                where,
+                "%s.as_uint64 = %"PRIu64"\n",
+                get_reg_str(i * ((int) sizeof(Register)), buff),
+                debugger->vpu->registers[i].as_uint64
+            );
+        }
+
+        fclose(where);
+    }
         break;
     case DUPC_CLEAR_VIEW:
         if(argc > 1){
@@ -424,7 +499,11 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
     case DUPC_RESIZE_DISPLAY:{
         EXPECT_ARGC(1);
         EXPECT(argv[1], TKN_ULIT, size);
-        debugger->display_size = (size.value.as_uint64 < 100)? size.value.as_uint64 : 100;
+        if(size.value.as_uint64 > 255){
+            fprintf(debugger->output, "max display height is 255 lines\n");
+            return 1;
+        }
+        debugger->display_size = (size.value.as_uint64 < 100)? (uint8_t) size.value.as_uint64 : 100;
         debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
     }
         break;
@@ -557,22 +636,26 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             return 0;
         }
     }   break;
-    case DUPC_ADD_BREAKPOINT:{
-        EXPECT_ARGC(1);
-        EXPECT(argv[1], TKN_ULIT, breakpoint_position);
-        if(breakpoint_position.value.as_uint64 >= debugger->program_size){
-            fprintf(
-                debugger->err,
-                "[ERROR] Can't add break point to %"PRIu64", program is only %"PRIu64" instructions long\n",
-                breakpoint_position.value.as_uint64, debugger->program_size
-            );
+    case DUPC_ADD_BREAKPOINT:
+        if(argc <= 1){
+            fprintf(debugger->output, "command %s expects at least one breakpoint to add\n", argv[0]);
             return 1;
         }
-        if(!(debugger->signals[breakpoint_position.value.as_uint64] & DEBUG_SIGNAL_BREAK_MASK))
-            debugger->breakpoint_count += 1;
-        debugger->signals[breakpoint_position.value.as_uint64] |= DEBUG_SIGNAL_BREAK_MASK;
-        debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
-    }
+        for(int i = 1; i < argc; i+=1){
+            EXPECT(argv[i], TKN_ULIT, breakpoint_position);
+            if(breakpoint_position.value.as_uint64 >= debugger->program_size){
+                fprintf(
+                    debugger->output,
+                    "can't add breakpoint to %"PRIu64", program is only %"PRIu64" instructions long\n",
+                    breakpoint_position.value.as_uint64, debugger->program_size
+                );
+                continue;
+            }
+            if(!(debugger->signals[breakpoint_position.value.as_uint64] & DEBUG_SIGNAL_BREAK_MASK))
+                debugger->breakpoint_count += 1;
+            debugger->signals[breakpoint_position.value.as_uint64] |= DEBUG_SIGNAL_BREAK_MASK;
+            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        }
         break;
     case DUPC_REMOVE_BREAKPOINT:{
         if(argc <= 1){
