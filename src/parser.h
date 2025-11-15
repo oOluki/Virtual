@@ -90,23 +90,26 @@ const char* get_token_type_str(int type){
 
     switch (type)
     {
-    case TKN_NONE:           return "TOKEN_NONE";
-    case TKN_RAW:            return "TOKEN_RAW";
-    case TKN_INST:           return "TOKEN_INST";
-    case TKN_REG:            return "TOKEN_REG";
-    case TKN_NUM:            return "TOKEN_NUM";
-    case TKN_ILIT:           return "TOKEN_ILIT";
-    case TKN_ULIT:           return "TOKEN_ULIT";
-    case TKN_FLIT:           return "TOKEN_FLIT";
-    case TKN_STR:            return "TOKEN_STR";
-    case TKN_CHAR:           return "TOKEN_CHAR";
-    case TKN_SPECIAL_SYM:    return "TOKEN_SPECIAL_SYM";
-    case TKN_MACRO_INST:     return "TOKEN_MACRO_INST";
-    case TKN_LABEL_REF:      return "TOKEN_LABEL_REF";
-    case TKN_EMPTY:          return "TOKEN_EMPTY";
-    case TKN_ADDR_LABEL_REF: return "TOKEN_ADDR_LABEL_REF";
-    case TKN_STATIC_SIZE:    return "TOKEN_STATIC_SIZE";
-    default:                 return "TOKEN_ERROR";
+    case TKN_NONE:              return "TOKEN_NONE";
+    case TKN_RAW:               return "TOKEN_RAW";
+    case TKN_INST:              return "TOKEN_INST";
+    case TKN_REG:               return "TOKEN_REG";
+    case TKN_NUM:               return "TOKEN_NUM";
+    case TKN_ILIT:              return "TOKEN_ILIT";
+    case TKN_ULIT:              return "TOKEN_ULIT";
+    case TKN_FLIT:              return "TOKEN_FLIT";
+    case TKN_STR:               return "TOKEN_STR";
+    case TKN_CHAR:              return "TOKEN_CHAR";
+    case TKN_SPECIAL_SYM:       return "TOKEN_SPECIAL_SYM";
+    case TKN_MACRO_INST:        return "TOKEN_MACRO_INST";
+    case TKN_LABEL_REF:         return "TOKEN_LABEL_REF";
+    case TKN_EMPTY:             return "TOKEN_EMPTY";
+    case TKN_ADDR_LABEL_REF:    return "TOKEN_ADDR_LABEL_REF";
+    case TKN_STATIC_SIZE:       return "TOKEN_STATIC_SIZE";
+    case TKN_UNRESOLVED_LABEL:  return "TKN_UNRESOLVED_LABEL";
+    case TKN_INST_POSITION:     return "TKN_INST_POSITION";
+    case TKN_STATIC_REF:        return "TKN_STATIC_REF";
+    default:                    return "TOKEN_ERROR";
     }
 
 }
@@ -275,6 +278,9 @@ Operand parse_op_literal(Token token){
     default: // unsupported type for operand literal
         return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
     }
+
+    if(token.value.as_str == NULL) return (Operand){.value.as_uint64 = 0, .type = TKN_ERROR};
+
 
     if(token.value.as_str[0] == '0' && token.size > 1){
         if(token.value.as_str[1] == 'x' || token.value.as_str[1] == 'X'){
