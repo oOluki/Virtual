@@ -1,0 +1,26 @@
+show_this_prompt dudm3my pr#omp4t j u s t 7 fo r tes tin g /ajdnonw<(iniwn\ eje455)54e "\ n"
+cl
+clear --complete
+
+
+resize 10
+step 5
+resize 3
+
+show 10 10
+break 142
+go --to 143 --nobreaks
+stepin
+stepout
+label WIDTH
+stack
+go --upto 147
+do
+do
+execute MOVV R0 $WIDTH
+inspect 0x1111
+help help
+goend
+restart
+goend
+quit

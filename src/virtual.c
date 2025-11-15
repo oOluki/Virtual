@@ -25,22 +25,19 @@ static inline void help(const char* main_executable){
         "Usage: %s [options] <input>\n"
         "Functionality: either assembles assembly program in <input> to byte code, disassembles byte code in <input> or executes byte code in <input>.\n"
         "Options:\n"
-        "   --help:             displays this help message\n"
-        "   --version:          displays VPU's current version\n"
-        "   -assemble:          assemble mode\n"
-        "   -disassemble:       disassemble mode\n"
-        "   -execute:           execute mode\n"
-        "   -debug:             debug mode\n"
-        "   -o <output>:        place output to <file>\n"
-        "   -i <input>:         take <input> as the input\n"
-        "   -args:              marks the beggining of the arguments to pass to executable\n"
-        "   -export_labels      assembled executable/library will include all instruction position labels still defined by the end of the code\n",
+        "   --help:         displays this help message\n"
+        "   --version:      displays VPU's current version\n"
+        "   -assemble:      assemble mode\n"
+        "   -disassemble:   disassemble mode\n"
+        "   -execute:       execute mode\n"
+        "   -debug:         debug mode\n"
+        "   -o <output>:    choose <output> as output file\n"
+        "   -i <input>:     choose <input> as input file\n"
+        "   -args:          marks the beggining of the arguments to pass to executable\n"
+        "   -export_labels: assembled executable/library will include all instruction position labels still defined by the end of the code\n",
         main_executable
     );
 }
-
-
-
 
 
 int main(int argc, char** argv){
@@ -110,7 +107,7 @@ int main(int argc, char** argv){
                 fprintf(stderr, "[ERROR] Missing Filename After '-i'\n");
                 return 1;
             }
-            if(output_file_arg > 0){
+            if(input_file_arg > 0){
                 fprintf(stderr, "[ERROR] Multiple Input Files, Input Files In Arguments %i And %i\n", input_file_arg, i + 1);
                 return 1;
             }

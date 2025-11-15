@@ -14,26 +14,24 @@ enum DebugUserPromptCode{
     DUPC_RESTART,
     DUPC_EXIT,
     DUPC_GO,
-    DUPC_GO_TILL,
-    DUPC_GO_UP_TO,
     DUPC_GO_TILL_END,
     DUPC_PERFORM_INST,
     DUPC_ADD_BREAKPOINT,
     DUPC_REMOVE_BREAKPOINT,
     DUPC_BREAKPOINT,
-    DUPC_BREAKPOINT_TO,
     DUPC_DO,
-    DUPC_SMOOTH_STEP,
     DUPC_STEP,
     DUPC_STEP_IN,
     DUPC_STEP_OUT,
     DUPC_DISREG,
     DUPC_DISPLAY_INST,
+    DUPC_INSPECT,
     DUPC_SHOW_LABEL,
-    DUPC_SHOW_LABEL_AT,
     DUPC_STACK_DISPLAY,
-    DUPC_STATUS,
+    DUPC_HELP,
 
+    //for counting purposes
+    DUPC_DUPC_COUNT,
 
     DUPC_ERROR = 255
 };
@@ -142,56 +140,199 @@ int get_dupc_code(const char* str){
     if(mc_compare_str(str, "resize" , 0))  return DUPC_RESIZE_DISPLAY;
     if(mc_compare_str(str, "restart", 0))  return DUPC_RESTART;
     if(mc_compare_str(str, "exit"   , 0))  return DUPC_EXIT;
+    if(mc_compare_str(str, "e"      , 0))  return DUPC_EXIT;
+    if(mc_compare_str(str, "quit"   , 0))  return DUPC_EXIT;
+    if(mc_compare_str(str, "q"      , 0))  return DUPC_EXIT;
     if(mc_compare_str(str, "go"     , 0))  return DUPC_GO;
     if(mc_compare_str(str, "goend"  , 0))  return DUPC_GO_TILL_END;
+    if(mc_compare_str(str, "execute", 0))  return DUPC_PERFORM_INST;
+    if(mc_compare_str(str, "exe"    , 0))  return DUPC_PERFORM_INST;
     if(mc_compare_str(str, "break"  , 0))  return DUPC_ADD_BREAKPOINT;
     if(mc_compare_str(str, "rmbreak", 0))  return DUPC_REMOVE_BREAKPOINT;
     if(mc_compare_str(str, "swbreak", 0))  return DUPC_BREAKPOINT;
     if(mc_compare_str(str, "do"     , 0))  return DUPC_DO;
-    if(mc_compare_str(str, ""       , 0))  return DUPC_SMOOTH_STEP;
     if(mc_compare_str(str, "step"   , 0))  return DUPC_STEP;
     if(mc_compare_str(str, "stepin" , 0))  return DUPC_STEP_IN;
     if(mc_compare_str(str, "stepout", 0))  return DUPC_STEP_OUT;
     if(mc_compare_str(str, "disreg" , 0))  return DUPC_DISREG;
-    if(mc_compare_str(str, "inst"   , 0))  return DUPC_DISPLAY_INST;
+    if(mc_compare_str(str, "show"   , 0))  return DUPC_DISPLAY_INST;
+    if(mc_compare_str(str, "inspect", 0))  return DUPC_INSPECT;
+    if(mc_compare_str(str, "inst"   , 0))  return DUPC_INSPECT;
     if(mc_compare_str(str, "label"  , 0))  return DUPC_SHOW_LABEL;
     if(mc_compare_str(str, "stack"  , 0))  return DUPC_STACK_DISPLAY;
-    if(mc_compare_str(str, "status" , 0))  return DUPC_STATUS;
+    if(mc_compare_str(str, "help"  , 0))   return DUPC_HELP;
 
     return DUPC_ERROR;
 }
 
-int get_prompt_expected_argc(int code){
-    switch (code)
+int debugger_help(Debugger* debugger, int dupc){
+    switch (dupc)
     {
     case DUPC_NONE:
+        return 0;
+    case DUPC_SHOW_THIS_PROMPT:
+        fprintf(
+            debugger->output,
+            "show_this_prompt:\n"
+            "    displays the prompt's arguments, good for internally testing if input system is ok\n"
+        );
+        return 0;
     case DUPC_CLEAR_VIEW:
-    case DUPC_EXIT:
-    case DUPC_GO:
-    case DUPC_GO_TILL_END:
-    case DUPC_RESTART:
-    case DUPC_SMOOTH_STEP:
-    case DUPC_STEP_IN:
-    case DUPC_STEP_OUT:
-    case DUPC_DO:
+        fprintf(
+            debugger->output,
+            "clear <optional: --complete>:\n"
+            "    clears the display, if --complete is passed no instructions are displayed\n"
+            "    cl is equivalent to this\n"
+        );
         return 0;
     case DUPC_RESIZE_DISPLAY:
+        fprintf(
+            debugger->output,
+            "resize <display heigth>:\n"
+            "    sets the instruction display height (number of lines)\n"
+        );
+        return 0;
+    case DUPC_RESTART:
+        fprintf(
+            debugger->output,
+            "restart:\n"
+            "    restarts vpu\n"
+        );
+        return 0;
+    case DUPC_EXIT:
+        fprintf(
+            debugger->output,
+            "exit:\n"
+            "    exits aplication, quit, q and e are equivalent to this\n"
+        );
+        return 0;
+    case DUPC_GO:
+        fprintf(
+            debugger->output,
+            "go --<optional: kwarg>...:\n"
+            "    executes the program up untill a breakpoint is encountered\n"
+            "    you can use kwag:\n"
+            "        upto <position>: to stop once the program is past the given position\n"
+            "        to <position>: to stop once the program hits <position>\n"
+            "        nobreaks: to ignore breakpoints\n"
+        );
+        return 0;
+    case DUPC_GO_TILL_END:
+        fprintf(
+            debugger->output,
+            "goend:\n"
+            "    executes the program untill vpu halts\n"
+        );
+        return 0;
     case DUPC_PERFORM_INST:
+        fprintf(
+            debugger->output,
+            "execute <assembly instruction>: \n"
+            "    executes the <assembly instruction> with the vpu\n"
+            "    exe is equivalent to this\n"
+        );
+        return 0;
     case DUPC_ADD_BREAKPOINT:
+        fprintf(
+            debugger->output,
+            "break <position>...: \n"
+            "    adds a breakpoint to each given position\n"
+        );
+        return 0;
     case DUPC_REMOVE_BREAKPOINT:
+        fprintf(
+            debugger->output,
+            "rmbreak <position>...: \n"
+            "    removes breakpoint from each given position\n"
+        );
+        return 0;
     case DUPC_BREAKPOINT:
-    case DUPC_BREAKPOINT_TO:
+        fprintf(
+            debugger->output,
+            "swbreak <breakpoint_number>... --<optional: at>...:\n"
+            "    shows breakpoints with given breakpoint number\n"
+            "    a breakpoint number represents how many breakpoints are behind it on the program, basically an order\n"
+            "    you can also use --at <position> to show if there's a breakpoint at that position\n"
+        );
+        return 0;
+    case DUPC_DO:
+        fprintf(
+            debugger->output,
+            "do \n"
+            "    performs current instruction without displaying anything on top\n"
+            "    convinient in case you want to checkout the programs output to stdout\n"
+        );
+        return 0;
     case DUPC_STEP:
-    case DUPC_SHOW_LABEL:
-    case DUPC_SHOW_LABEL_AT:
-    case DUPC_STACK_DISPLAY:
-    case DUPC_GO_TILL:
-    case DUPC_GO_UP_TO:
-        return 1;
+        fprintf(
+            debugger->output,
+            "step <optional: count>:\n"
+            "    steps count times, or only once if count is not provided\n"
+        );
+        return 0;
+    case DUPC_STEP_IN:
+        fprintf(
+            debugger->output,
+            "stepin:\n"
+            "    steps in to a function call\n"
+            "    if current instruction is not a function call it will step untill it finds one and then step in\n"
+        );
+        return 0;
+    case DUPC_STEP_OUT:
+        fprintf(
+            debugger->output,
+            "stepout:\n"
+            "    steps out of function, by stepping untill it returns from it\n"
+        );
+        return 0;
+    case DUPC_DISREG:
+        fprintf(
+            debugger->output,
+            "disreg <optional: registers>...:\n"
+            "    displays provided registers, or all vpu registers if none are provided\n"
+        );
+        return 0;
     case DUPC_DISPLAY_INST:
-        return 2;
+        fprintf(
+            debugger->output,
+            "show <center> <height>:\n"
+            "    displays instructions in program from position (center - height / 2) to (center + height / 2)\n"
+        );
+        return 0;
+    case DUPC_INSPECT:
+        fprintf(
+            debugger->output,
+            "inspect <machine code>...:\n"
+            "    displays instructions in assembly text that corresponds to the respective provided machine code\n"
+            "    if no machine code is provided then all cases will be displayed\n"
+            "    inst is equivalent to this\n"
+        );
+        return 0;
+    case DUPC_SHOW_LABEL:
+        fprintf(
+            debugger->output,
+            "label <optional: labels>... --<optional: kwag>...:\n"
+            "    displays provided labels, if they exist\n"
+            "    use --at <label_memposition> to display a label at that memory offset position from label stream beginning\n"
+        );
+        return 0;
+    case DUPC_STACK_DISPLAY:
+        fprintf(
+            debugger->output,
+            "stack <optional: stack_position>...:\n"
+            "    displays elements in stack in the given positions, or the whole stack if none are provided\n"
+        );
+        return 0;
+    case DUPC_HELP:
+        fprintf(
+            debugger->output,
+            "help <optional: what>...:\n"
+            "    displays a help message about \"what\", or a general help message if nothing is provided\n"
+        );
+        return 0;
+    
     default:
-        return -1;
+        return 1;
     }
 }
 
@@ -214,8 +355,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H\n");
     fprintf(
         debugger->output,
-        "inst: %"PRIu64"  stack: %"PRIu64"  breakpoints: %"PRIu64"\n",
-        vpu->registers[RIP >> 3].as_uint64, vpu->registers[RSP >> 3].as_uint64, debugger->breakpoint_count
+        "inst: %"PRIu64"  stack: %"PRIu64"  breakpoints: %"PRIu64"  status: %i\n",
+        vpu->registers[RIP >> 3].as_uint64, vpu->registers[RSP >> 3].as_uint64, debugger->breakpoint_count, debugger->vpu->status
     );
 
     for(; i < finish && i < vpu->registers[RIP >> 3].as_uint64; i+=1){
@@ -365,7 +506,56 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         fprintf(debugger->output, "Vpu Returned Status %u\n", debugger->vpu->status);
         break;
     case DUPC_PERFORM_INST:{
-        printf("TODO: DUPC_PERFORM_INST\n");
+        if(argc <= 1){
+            fprintf(debugger->output, "command %s expects a valid assembly instruction and, therefore, at least one argument\n", argv[0]);
+            return 1;
+        }
+
+        for(int i = 1; i < argc - 1; i+=1){
+            int str_len = 0;
+            for(; argv[i][str_len]; str_len+=1);
+            argv[i][str_len] = ' ';
+        }
+        debugger->parser.tokenizer->pos = 0;
+        debugger->parser.tokenizer->data = argv[1];
+        debugger->parser.tokenizer->column = 0;
+        debugger->parser.tokenizer->line = 0;
+        const Token inst_tkn = get_next_token(debugger->parser.tokenizer);
+        const InstProfile inst_profile = get_inst_profile(inst_tkn);
+
+        if(inst_profile.opcode == INST_ERROR){
+            fprintf(
+                debugger->output,
+                "no valid assembly instruction starts with '%.*s\n'",
+                inst_tkn.size, inst_tkn.value.as_str
+            );
+            return 1;
+        }
+
+        const Inst inst = parse_inst(
+            &debugger->parser, inst_profile,
+            (StringView){.str = inst_tkn.value.as_str, .size = inst_tkn.size}
+        );
+        switch (inst & 0xFF)
+        {
+        case INST_ERROR:
+            fprintf(debugger->output, "failed to parse '%s'\n", argv[1]);
+            return 1;
+        case INST_LOAD1:
+        case INST_LOAD2:
+            fprintf(debugger->output, "'%s' instruction not supported in debug's %s command\n", argv[1], argv[0]);
+            return 1;
+        case INST_JMP:
+        case INST_JMPF:
+        case INST_JMPFN:
+        case INST_CALL:
+        case INST_RET:
+            debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(debugger->vpu, inst);
+            return 0;
+        default:
+            perform_inst(debugger->vpu, inst);
+            return 0;
+        }
     }   break;
     case DUPC_ADD_BREAKPOINT:{
         EXPECT_ARGC(1);
@@ -601,6 +791,45 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         debug_display_inst(debugger, center.value.as_uint64, width.value.as_uint64);
     }
         break;;
+    case DUPC_INSPECT:{
+        int digit_len_max = 1;
+        for(int i = INST_TOTAL_COUNT; i / 10; i /= 10) digit_len_max += 1;
+        if(argc <= 1){
+            fprintf(debugger->output, "all instructions will have immediate values (literals or registers) zeroed\n");
+            fprintf(debugger->output, "instructions of kind LOAD will have containers zeroed\n");
+            for(int i = 0; i < INST_TOTAL_COUNT; i+=1){
+                char _buff[24];
+                char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
+                const Inst little_program[4] = {i, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
+                const uint64_t dummy_static[2] = {0, 0};
+                fprintf(debugger->output, "%*i-> ", digit_len_max, i);
+                print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+            }
+            break;
+        }
+        for(int i = 1; i < argc; i+=1){
+            EXPECT(argv[i], TKN_ULIT, _inst);
+            const Inst inst = (Inst) _inst.value.as_uint64;
+            if(inst != _inst.value.as_uint64){
+                fprintf(
+                    debugger->output,
+                    "%"PRIu64" is not 4 bytes long and as such can not represent machine code instruction\n",
+                    _inst.value.as_uint64
+                );
+                continue;
+            }
+            if((inst & 0xFF) == INST_LOAD1 && (inst & 0xFF) == INST_LOAD2){
+                fprintf(debugger->output, "instruction of kind LOAD, containers will be zeroed as they can't be infered\n");
+            }
+            char _buff[24];
+            char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
+            const Inst little_program[4] = {inst, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
+            const uint64_t dummy_static[2] = {0, 0};
+            fprintf(debugger->output, "op code: %*i    machine code: %8"PRIx32"\n", digit_len_max, (int) (inst & 0xFF), inst);
+            print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+        }
+    }
+        break;;
     case DUPC_SHOW_LABEL:{
         if(argc <= 1){
             for(uint64_t i = 0; i < debugger->labels.size; ){
@@ -702,13 +931,33 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         }
     }
         break;
-    case DUPC_STATUS:
-        fprintf(debugger->output, "vpu status: %i\n", debugger->vpu->status);
+    case DUPC_HELP:
+        if(argc <= 1){
+            fprintf(debugger->output, "help message...\n");
+            fprintf(debugger->output, "press enter to step through the program\n");
+            for(int i = 0; i < DUPC_DUPC_COUNT; i+=1){
+                if(debugger_help(debugger, i)){
+                    fprintf(debugger->err, "[ERROR] missing help message for dupc code %i\n", i);
+                }
+            }
+        }
+        else{
+            for(int i = 1; i < argc; i+=1){
+                const int dupc = get_dupc_code(argv[i]);
+                if(dupc == DUPC_ERROR){
+                    fprintf(debugger->output, "*** no command for %s\n", argv[i]);
+                }
+                else if(debugger_help(debugger, dupc)){
+                    fprintf(debugger->err, "[ERROR] missing help message for dupc code %i\n", dupc);
+                }
+            }
+        }
         break;
     default:
         fprintf(debugger->err, "[ERROR] Can't Perform User Prompt: Unknown UserPrompt Code (%i)\n", code);
         return 1;
     }
+
     return 0;
 }
 
@@ -753,6 +1002,9 @@ int get_user_prompt(Debugger* debugger, int* _argc, char*** _argv){
 }
 
 // debugs raw program and passes argc and argv to the executing program
+// takes input from file at _input or stdin if input == NULL
+// writes output to provided _output or stdout if output == NULL
+// writes errors to _err or stderr if err == NULL
 int debug(const char* exe){
 
     if(!exe){
