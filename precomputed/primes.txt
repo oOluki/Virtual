@@ -1,187 +1,198 @@
 
 ;; X====X (SPECIFICATIONS) X====X
 	;; name = precomputed/primes.out
-	;; executable size = 740
+	;; executable size = 1060
 	;; inst count      = 173
 	;; inst size       = 4
 	;; flags           = 00
-	;; meta_data_size  = 16
+	;; meta_data_size  = 333
 	;; static_memory   = { position = 0, size = 16 }
+	;; labels          = { position = 32, size = 301 }
 	;; entry point     = 167
 ;; X====X (SPECIFICATIONS) X====X
 
 
-JMPF RB 0x2; i: 2
-RET
-PUSH RD
-PUSH RE
-PUSH RF
-XOR RD RD RD
-XOR RE RE RE
-XOR RF RF RF
-GETC RD RC R0
-SET8 RA RD RE
-INC RE 0x1; u: 1
-MOV32 RD4 RD
-BIGI RD RD R0
-MOVV RF 0xff; (u: 255; i: 255; f: 0.000000)
-AND RD RD RF
-SMLU RF RE RB
-NEQ RF RF R0
-NEQ RD RD R0
-AND RF RF RD
-JMPF RF 0xfff5; i: -11
-POP RF
-POP RE
-POP RD
-RET
-PUTC RC RA R0
-INC RB 0x1; u: 1
-READ8 RC RB R0
-JMPF RC 0xfffd; i: -3
-POP RC
-RET
-PUSH RC
-READ8 RC RB R0
-JMPF RC 0xfff8; i: -8
-POP RC
-RET
-DIVU RE RB RC
-MUL RE RE RC
-SUB RF RB RE
-DIVU RC RC RD
-DIVU RE RF RC
-MOVV RF 0x30; (u: 48; i: 48; f: 0.000000)
-ADD RF RF RE
-PUTC RF RA R0
-MOVV RF 0x01; (u: 1; i: 1; f: 0.000000)
-BIGU RF RC RF
-JMPF RF 0xfff6; i: -10
-POP RF
-POP RE
-POP RD
-POP RC
-RET
-PUSH RC
-PUSH RD
-PUSH RE
-PUSH RF
-MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
-MOVV RD 0x0a; (u: 10; i: 10; f: 0.000000)
-DIVI RE RB RC
-NOT RE RE
-JMPF RE 0xffe8; i: -24
-MUL RC RC RD
-JMP 0xfffc; -4
-MOVV RC 0x2d; (u: 45; i: 45; f: 0.000000)
-PUTC RC RA R0
-PUSH RB
-ABS RB RB R0
-CALL 0xfff1; i: -15
-POP RB
-POP RC
-RET
-PUSH RC
-SMLI RC RB R0
-JMPF RC 0xfff6; i: -10
-CALL 0xffea; i: -22
-POP RC
-RET
-PUSH RB
-PUSH RC
-PUSH RF
-MOV RB RA
-MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
-BSHIFT RB RB RC
-MOVV16 RC6 0x5fe6; (u: 24550; i: 24550; f: 0.000000)
-MOVV16 RC4 0xec85; (u: 60549; i: 60549; f: 0.000000)
-MOVV16 RC2 0xe7de; (u: 59358; i: 59358; f: 0.000000)
-MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
-SUB RC RC RB
-MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-FLOAT RB RB RF
-MULF RB RA RB
-MULF RB RC RB
-MULF RB RC RB
-MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
-MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
-FLOAT RA RA RF
-SUBF RA RA RB
-MULF RA RC RA
-POP RF
-POP RC
-POP RB
-RET
-PUSH RB
-CALL 0xffe5; i: -27
-MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-CASTFU RB RB
-DIVF RA RB RA
-POP RB
-RET
-POP RD
-POP RC
-POP RB
-MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
-RET
-POP RD
-POP RC
-POP RB
-MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
-RET
-PUSH RB
-PUSH RC
-PUSH RD
-MOV RB RA
-MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
-EQ RD RB RC
-JMPF RD 0xfff5; i: -11
-SMLU RD RB RC
-JMPF RD 0xffee; i: -18
-CASTFU RA RA
-CALL 0xffe5; i: -27
-CASTUF RA RA
-DIVU RD RB RA
-MUL RD RD RA
-EQ RD RD RB
-JMPF RD 0xffe7; i: -25
-DEC RA 0x1; u: 1
-SMLU RD RA RC
-JMPFN RD 0xfffa; i: -6
-JMP 0xffe8; -24
-MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
-PUTC RB RA R0
-POP RE
-POP RD
-POP RC
-POP RB
-RET
-PUSH RB
-PUSH RC
-PUSH RD
-PUSH RE
-SMLU RD RB RC
-JMPFN RD 0xfff4; i: -12
-MOV RE RA
-MOV RA RB
-CALL 0xffdd; i: -35
-JMPFN RA 0x7; i: 7
-MOV RA RE
-CALL 0xff96; i: -106
-MOVV RD 0x2c; (u: 44; i: 44; f: 0.000000)
-PUTC RD RA R0
-MOVV RD 0x20; (u: 32; i: 32; f: 0.000000)
-PUTC RD RA R0
-INC RB 0x1; u: 1
-SMLU RD RB RC
-JMPF RD 0xfff5; i: -11
-MOV RA RE
-JMP 0xffe5; -27
+%labelv _VSTDIO_IN
+fread:
+	JMPF RB 0x2; i: 2
+	RET
+	PUSH RD
+	PUSH RE
+	PUSH RF
+	XOR RD RD RD
+	XOR RE RE RE
+	XOR RF RF RF
+	GETC RD RC R0
+	SET8 RA RD RE
+	INC RE 0x1; u: 1
+	MOV32 RD4 RD
+	BIGI RD RD R0
+	MOVV RF 0xff; (u: 255; i: 255; f: 0.000000)
+	AND RD RD RF
+	SMLU RF RE RB
+	NEQ RF RF R0
+	NEQ RD RD R0
+	AND RF RF RD
+	JMPF RF 0xfff5; i: -11
+	POP RF
+	POP RE
+	POP RD
+	RET
+	PUTC RC RA R0
+	INC RB 0x1; u: 1
+	READ8 RC RB R0
+	JMPF RC 0xfffd; i: -3
+	POP RC
+	RET
+fprintf_str:
+	PUSH RC
+	READ8 RC RB R0
+	JMPF RC 0xfff8; i: -8
+	POP RC
+	RET
+	DIVU RE RB RC
+	MUL RE RE RC
+	SUB RF RB RE
+	DIVU RC RC RD
+	DIVU RE RF RC
+	MOVV RF 0x30; (u: 48; i: 48; f: 0.000000)
+	ADD RF RF RE
+	PUTC RF RA R0
+	MOVV RF 0x01; (u: 1; i: 1; f: 0.000000)
+	BIGU RF RC RF
+	JMPF RF 0xfff6; i: -10
+	POP RF
+	POP RE
+	POP RD
+	POP RC
+	RET
+fprint_uint:
+	PUSH RC
+	PUSH RD
+	PUSH RE
+	PUSH RF
+	MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
+	MOVV RD 0x0a; (u: 10; i: 10; f: 0.000000)
+	DIVI RE RB RC
+	NOT RE RE
+	JMPF RE 0xffe8; i: -24
+	MUL RC RC RD
+	JMP 0xfffc; -4
+	MOVV RC 0x2d; (u: 45; i: 45; f: 0.000000)
+	PUTC RC RA R0
+	PUSH RB
+	ABS RB RB R0
+	CALL 0xfff1; i: -15
+	POP RB
+	POP RC
+	RET
+fprint_int:
+%labelv _VMATH_IN
+	PUSH RC
+	SMLI RC RB R0
+	JMPF RC 0xfff6; i: -10
+	CALL 0xffea; i: -22
+	POP RC
+	RET
+Q_rsqrt:
+	PUSH RB
+	PUSH RC
+	PUSH RF
+	MOV RB RA
+	MOVN RC 0x00; (u: 0; i: 0; f: 0.000000)
+	BSHIFT RB RB RC
+	MOVV16 RC6 0x5fe6; (u: 24550; i: 24550; f: 0.000000)
+	MOVV16 RC4 0xec85; (u: 60549; i: 60549; f: 0.000000)
+	MOVV16 RC2 0xe7de; (u: 59358; i: 59358; f: 0.000000)
+	MOVV16 RC 0x30da; (u: 12506; i: 12506; f: 0.000000)
+	SUB RC RC RB
+	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+	FLOAT RB RB RF
+	MULF RB RA RB
+	MULF RB RC RB
+	MULF RB RC RB
+	MOVV RA 0x03; (u: 3; i: 3; f: 0.000000)
+	MOVV RF 0x02; (u: 2; i: 2; f: 0.000000)
+	FLOAT RA RA RF
+	SUBF RA RA RB
+	MULF RA RC RA
+	POP RF
+	POP RC
+	POP RB
+	RET
+sqrt:
+	PUSH RB
+	CALL 0xffe5; i: -27
+	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+	CASTFU RB RB
+	DIVF RA RB RA
+	POP RB
+	RET
+	POP RD
+	POP RC
+	POP RB
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	RET
+	POP RD
+	POP RC
+	POP RB
+	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
+	RET
+is_prime:
+	PUSH RB
+	PUSH RC
+	PUSH RD
+	MOV RB RA
+	MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
+	EQ RD RB RC
+	JMPF RD 0xfff5; i: -11
+	SMLU RD RB RC
+	JMPF RD 0xffee; i: -18
+	CASTFU RA RA
+	CALL 0xffe5; i: -27
+	CASTUF RA RA
+	DIVU RD RB RA
+	MUL RD RD RA
+	EQ RD RD RB
+	JMPF RD 0xffe7; i: -25
+	DEC RA 0x1; u: 1
+	SMLU RD RA RC
+	JMPFN RD 0xfffa; i: -6
+	JMP 0xffe8; -24
+	MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
+	PUTC RB RA R0
+	POP RE
+	POP RD
+	POP RC
+	POP RB
+	RET
+primes:
+	PUSH RB
+	PUSH RC
+	PUSH RD
+	PUSH RE
+	SMLU RD RB RC
+	JMPFN RD 0xfff4; i: -12
+	MOV RE RA
+	MOV RA RB
+	CALL 0xffdd; i: -35
+	JMPFN RA 0x7; i: 7
+	MOV RA RE
+	CALL 0xff96; i: -106
+	MOVV RD 0x2c; (u: 44; i: 44; f: 0.000000)
+	PUTC RD RA R0
+	MOVV RD 0x20; (u: 32; i: 32; f: 0.000000)
+	PUTC RD RA R0
+	INC RB 0x1; u: 1
+	SMLU RD RB RC
+	JMPF RD 0xfff5; i: -11
+	MOV RA RE
+	JMP 0xffe5; -27
 %start
-IOE R0 RA R0
-MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
-MOVV RC 0x64; (u: 100; i: 100; f: 0.000000)
-CALL 0xffe8; i: -24
-MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
-PUTC RB RA R0
+	IOE R0 RA R0
+	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RC 0x64; (u: 100; i: 100; f: 0.000000)
+	CALL 0xffe8; i: -24
+	MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
+	PUTC RB RA R0

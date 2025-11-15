@@ -1,0 +1,217 @@
+%label WIDTH 20
+
+;; atomaton width in RF, pointer to atomomaton in RE and output file in RD
+display_atomaton_return:
+
+    MOVV RA '\n'
+    PUTC RA RD R0
+
+    POP RC
+    POP RB
+    POP RA
+    RET
+display_atomaton:
+    PUSH RA
+    PUSH RB
+    PUSH RC
+
+    MOVV RC '0'
+
+    MOVV RA 0
+
+    loop:
+        SMLI RB RA RF
+        JMPFN RB @display_atomaton_return
+        MOVV RB 8
+        MUL  RB RB RA
+        READ RB RE RB
+        ADD  RB RB RC
+        PUTC RB RD R0
+        INC RA 1
+        JMP @loop
+
+
+    JMP @display_atomaton_return
+%unlabel loop
+
+;; get cell combination through RA, RB and RC and returns cell combination output through RA
+get_cell_err:
+    POP RD
+    POP RC
+    POP RB
+    POP RA
+    DISREG RA
+    DISREG RB
+    DISREG RC
+    HALT 1
+get_cell_ret:
+    POP RD
+    POP RC
+    POP RB
+    POP R0
+    RET
+get_cell:
+
+    PUSH RA
+    PUSH RB
+    PUSH RC
+    PUSH RD
+
+    MOVV RD 1
+    BSHIFT RB RB RD
+    MOVV RD 2
+    BSHIFT RA RA RD
+    OR RA RA RB
+    OR RA RA RC
+
+    INC RA 1
+
+    MOVV RB 9
+    SMLU RB RA RB
+    NOT  RB RB
+    MOVV RC 1
+    MOVC RB RA RC
+    MOVV RC 2
+    MUL  RA RA RC
+    INC  RA 1
+    
+    JMP RA
+    NOP
+    CALL @get_cell_err
+    MOVV RA 0 ;; 000 -> 0
+    JMP  @get_cell_ret
+    MOVV RA 1 ;; 001 -> 1
+    JMP  @get_cell_ret
+    MOVV RA 1 ;; 010 -> 1
+    JMP  @get_cell_ret
+    MOVV RA 1 ;; 011 -> 1
+    JMP  @get_cell_ret
+    MOVV RA 0 ;; 100 -> 0
+    JMP  @get_cell_ret
+    MOVV RA 1 ;; 101 -> 1
+    JMP  @get_cell_ret
+    MOVV RA 1 ;; 110 -> 1
+    JMP  @get_cell_ret
+    MOVV RA 0 ;; 111 -> 0
+    JMP  @get_cell_ret
+
+
+
+;; atomaton width in RF and pointer to atomomaton in RE
+update_atomaton_return:
+
+    POP   RB
+    MOVV  RA 8
+    MUL   RA RD RA
+    DEC   RA 8
+    SET   RE RB RA
+    POP   RB
+    MOVV  RA 8
+    MUL   RA RD RA
+    SET   RE RB RA
+
+    POP RD
+    POP RC
+    POP RB
+    POP RA
+    RET
+update_atomaton:
+    PUSH RA
+    PUSH RB
+    PUSH RC
+    PUSH RD
+
+    READ RC RE R0
+    MOVV RA 8
+    MUL  RA RF RA
+    DEC  RA 8
+    READ RB RE RA
+    DEC  RA 8
+    READ RA RE RA
+
+    CALL @get_cell
+    PUSH RA
+
+    MOVV RA 8
+    MUL  RA RF RA
+    DEC  RA 8
+    READ RA RE RA
+    READ RB RE R0
+    MOVV RC 8
+    READ RC RE RC
+
+    CALL @get_cell
+    PUSH RA
+
+    MOVV RD 1
+
+    loop:
+        MOVV  RC 1
+        SUB   RC RF RC
+        SMLU  RC RD RC
+        JMPFN RC @update_atomaton_return
+        MOVV  RC 8
+        MUL   RC RD RC
+        DEC   RC 8
+        READ  RA RE RC
+        INC   RC 8
+        READ  RB RE RC
+        INC   RC 8
+        READ  RC RE RC
+        CALL  @get_cell
+        POP   RB
+        PUSH  RA
+        MOVV  RA 8
+        MUL   RA RD RA
+        DEC   RA 8
+        SET   RE RB RA
+        INC   RD 1
+        JMP   @loop
+
+
+    JMP @update_atomaton_return
+%unlabel loop
+
+exit:
+    HALT 0
+
+
+%start
+
+MOVV RF $WIDTH
+GSP  RE R0 R0
+IOE  R0 RD R0
+
+;; fill first atomaton's row
+
+MOV RA RF
+DEC RA 1
+
+loop:
+    BIGI RC RA R0
+    JMPFN RC 4
+    PUSH 0
+    DEC RA 1
+    JMP @loop
+%unlabel loop
+
+PUSH 1
+
+CALL @display_atomaton
+
+MOV RA R0
+
+loop:
+
+    SMLU RB RA RF
+
+    JMPFN RB @exit
+
+    CALL @update_atomaton
+
+    CALL @display_atomaton
+    
+    INC RA 1
+
+    JMP @loop
+

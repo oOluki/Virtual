@@ -1,3 +1,6 @@
+#ifndef _VPU_EXE
+#define _VPU_EXE
+
 #include "core.h"
 #include "lexer.h"
 #include "system.h"
@@ -5,16 +8,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#define as_uint8(ptr)   *(uint8_t*) (ptr)
-#define as_uint16(ptr)  *(uint16_t*)(ptr)
-#define as_uint32(ptr)  *(uint32_t*)(ptr)
-#define as_uint64(ptr)  *(uint64_t*)(ptr)
-#define as_int8(ptr)    *(int8_t*)  (ptr)
-#define as_int16(ptr)   *(int16_t*) (ptr)
-#define as_int32(ptr)   *(int32_t*) (ptr)
-#define as_int64(ptr)   *(int64_t*) (ptr)
-#define as_float32(ptr) *(float*)   (ptr)
-#define as_float64(ptr) *(double*)  (ptr)
 
 // returns the number of instruction to sum to RIP
 int64_t perform_inst(VPU* vpu, Inst inst){
@@ -22,9 +15,9 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     // the first register operand
     #define R1 (*(Register*)(vpu->register_space + (uint8_t) ((inst & 0XFF00)      >> 8)))
     // the second register operand
-    #define R2 (*(Register*)(vpu->register_space +(uint8_t) ((inst & 0XFF0000)    >> 16)))
+    #define R2 (*(Register*)(vpu->register_space + (uint8_t) ((inst & 0XFF0000)    >> 16)))
     // the third register operand
-    #define R3 (*(Register*)(vpu->register_space +(uint8_t) ((inst & 0XFF000000)  >> 24)))
+    #define R3 (*(Register*)(vpu->register_space + (uint8_t) ((inst & 0XFF000000)  >> 24)))
     // the first literal operand
     #define L1 (uint16_t) ((inst & 0X00FFFF00) >> 8)
     // the second literal operand
@@ -37,6 +30,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R2.as_##TYPE OP R3.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R2.as_##TYPE OP R3.as_##TYPE
     
+    vpu->registers[R0 >> 3].as_uint64 = 0;
 
     switch (inst & 0XFF)
     {
@@ -50,7 +44,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_NOP:
         return 1;
     case INST_HALT:
-        vpu->return_status = (GET_OP_HINT(inst) == HINT_REG)? (int) R1.as_int8 : (int) L1;
+        vpu->status = (GET_OP_HINT(inst) == HINT_REG)? (int) R1.as_int8 : (int) L1;
         return 0XFFFFFFFFFFFFFFFF - IP;
     case INST_MOV8:
         R1.as_uint8 = R2.as_uint8;
@@ -213,6 +207,26 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_DIVF:
         OPERATION(/, float64);
         return 1;
+    case INST_INC:
+        R1.as_uint64 += L2;
+        return 1;
+    case INST_DEC:
+        R1.as_int64 -= L2;
+        return 1;
+    case INST_INCF:
+        R1.as_float64 += (double)L2;
+        return 1;
+    case INST_DECF:
+        R1.as_float64 -= (double)L2;
+        return 1;
+    case INST_ABS:{
+        const int64_t v = R2.as_int64 - R3.as_int64;
+        R1.as_uint64 = (v < 0)? -v : v;
+    }   return 1;
+    case INST_ABSF:{
+        const double v = R2.as_float64 - R3.as_float64;
+        R1.as_float64 = (v < 0)? -v : v;
+    }   return 1;
 
 /*--------------------------------------------------------------------------------------------------------------/
 /                                                                                                               /
@@ -318,36 +332,21 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         R1.as_uint64 = fclose((FILE*)(R2.as_ptr + R3.as_int64));
         return 1;
     case INST_PUTC:
-        R1.as_int32 = fputc(R1.as_int32, (FILE*)(R2.as_ptr + R3.as_int64));
+        R1.as_int32 = fputc((int) R1.as_int32, (FILE*)(R2.as_ptr + R3.as_int64));
         return 1;
     case INST_GETC:
         R1.as_int32 = fgetc((FILE*)(R2.as_ptr + R3.as_int64));
         return 1;
+    case INST_FPOS:
+        R1.as_uint64 = (uint64_t) ftell((FILE*)(R2.as_ptr + R3.as_int64));
+        return 1;
+    case INST_FGOTO:
+        R1.as_int32 = fseek((FILE*)(R1.as_ptr), (long) R3.as_uint64, (int) R2.as_int32);
+        return 1;
 
-    case INST_ABS:{
-        const int64_t v = R2.as_uint64 - R3.as_uint64;
-        R1.as_uint64 = (v < 0)? -v : v;
-    }   return 1;
-    case INST_ABSF:{
-        const double v = R2.as_float64 - R3.as_float64;
-        R1.as_float64 = (v < 0)? -v : v;
-    }   return 1;
-    case INST_INC:
-        R1.as_uint64 += L2;
-        return 1;
-    case INST_DEC:
-        R1.as_int64 -= L2;
-        return 1;
-    case INST_INCF:
-        R1.as_float64 += (double)L2;
-        return 1;
-    case INST_DECF:
-        R1.as_float64 -= (double)L2;
-        return 1;
     case INST_FLOAT:
         R1.as_float64 = (double) R2.as_int64 / (double) R3.as_uint64;
         return 1;
-
     case INST_LOAD1:
         R1.as_uint64 = ((vpu->program[IP + 1] & 0XFFFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
         return 2;
@@ -363,41 +362,52 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         R2.as_ptr = (uint8_t*) stdout;
         R3.as_ptr = (uint8_t*) stderr;
         return 1;
-    
-
+    case INST_EXEC:
+        return perform_inst(vpu, R1.as_uint32);
     case INST_SYS:
         if(sys_call(vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
             fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
-            vpu->return_status = 1;
+            vpu->status = 1;
             return 0xFFFFFFFFFFFFFFFF - IP;
 	    }
         return 1;
-    case INST_DISREG:
-        printf("(%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+    case INST_DISREG:{
+            char buff[8];
+            printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 8) & 0xFF, buff), R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+        }
         return 1;
     
     
     default:
         fprintf(stderr, "[ERROR] Unknwon Instruction '%u' At Instuction Position %"PRIu64"\n", (unsigned int)inst, IP);
-	    vpu->return_status = 1;
+	    vpu->status = 1;
         return 0xFFFFFFFFFFFFFFFF - IP;
     }
 
+    #undef R1
+    #undef R2
+    #undef R3
+    #undef L1
+    #undef L2
+    #undef SP
+    #undef IP
+    #undef OPERATION
+    #undef COMPARE
+
 }
 
+// executes raw program and passes argc and argv to the executing program
+int execute(const char* exe, int argc, char** argv){
 
-
-int main(int argc, char** argv){
-
-    if(argc != 2){
-        fprintf(stderr, "[ERROR] Expected 1 Argument, Got %i Instead\n", argc - 1);
+    if(!exe){
+        fprintf(stderr, "[ERROR] Expected Input Program Path\n");
         return 1;
     }
 
     Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
 
-    if(!read_file(&stream, argv[1], 1, 0)){
-        fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", argv[1]);
+    if(!read_file(&stream, exe, 1, 0)){
+        fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", exe);
         return 2;
     }
 
@@ -410,17 +420,33 @@ int main(int argc, char** argv){
 
     void* meta_data = get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags, &padding);
 
-    if(!meta_data) return 1;
+    if(!meta_data){
+        fprintf(stderr, "[ERROR] No MetaData In Program '%s'\n", exe);
+        mc_destroy_stream(stream);
+        return 1;
+    }
 
     static uint64_t stack[1000];
+    Register registers[9];
+    memset(stack, 0, sizeof(stack));
+    memset(registers, 0, sizeof(registers));
 
     VPU vpu;
+    vpu.stack = &(stack[0]);
+    vpu.registers = &(registers[0]);
 
-    vpu.stack = &stack[0];
+    // sets argc and argv of the program to RA.as_int32 and RB.as_ptr, respectively
+    vpu.registers[RA >> 3].as_int32 = argc;
+    vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
 
     for(size_t i = 0; i + 8 < meta_data_size; ){
-        const uint64_t block_size = *(uint64_t*)((uint8_t*)(stream.data) + i);
+        const uint64_t block_size = *(uint64_t*)((uint8_t*)(meta_data) + i);
         const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
+        if(block_size == 0){
+            fprintf(stderr, "[ERROR] Corrupted File: Metadata With Block Of Size 0 (%"PRIu64")\n", id);
+            mc_destroy_stream(stream);
+            return 1;
+        }
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
             vpu.static_memory = (uint8_t*)(meta_data) + i;
             break;
@@ -434,18 +460,19 @@ int main(int argc, char** argv){
 
     vpu.register_space = (uint8_t*)vpu.registers;
 
-    vpu.return_status = 0;
+    vpu.status = 0;
 
     for(
-        vpu.registers[RIP / 8].as_uint64 = entry_point;
-        vpu.registers[RIP / 8].as_uint64 < program_size;
-        vpu.registers[RIP / 8].as_int64 += perform_inst(&vpu, vpu.program[vpu.registers[RIP / 8].as_uint64])
+        vpu.registers[RIP >> 3].as_uint64 = entry_point;
+        vpu.registers[RIP >> 3].as_uint64 < program_size;
+        vpu.registers[RIP >> 3].as_int64 += perform_inst(&vpu, vpu.program[vpu.registers[RIP >> 3].as_uint64])
     ) {
-	    vpu.registers[R0].as_uint64 = 0;
+	    //vpu.registers[R0].as_uint64 = 0;
     }
 
     mc_destroy_stream(stream);
 
-    return vpu.return_status;
+    return vpu.status;
 }
 
+#endif // END OF FILE

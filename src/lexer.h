@@ -61,6 +61,8 @@ enum TokenTypes{
     TKN_ADDR_LABEL_REF,
     TKN_STATIC_SIZE,
     TKN_UNRESOLVED_LABEL,
+    TKN_INST_POSITION,
+    TKN_STATIC_REF,
     TKN_ERROR = 255,
 };
 
@@ -213,7 +215,9 @@ static inline uint64_t mc_swap64(uint64_t x) {
 }
 
 // streams size bytes of data to stream
-void mc_stream(Mc_stream_t* stream, const void* data, size_t size){
+// \param data the data to stream, pass NULL to allocate the memory but not stream it
+// \returns pointer to beggining of streamed data in stream
+void* mc_stream(Mc_stream_t* stream, const void* data, size_t size){
     if(size + stream->size > stream->capacity){
         void* old_data = stream->data;
         stream->capacity *= 1 + (size_t)((size + stream->size) / stream->capacity);
@@ -221,8 +225,38 @@ void mc_stream(Mc_stream_t* stream, const void* data, size_t size){
         memcpy(stream->data, old_data, stream->size);
         vpu_free_aligned(old_data);
     }
-    memcpy((uint8_t*)(stream->data) + stream->size, data, size);
+    const uint64_t ssize = stream->size;
+    if(data) memcpy((uint8_t*)(stream->data) + stream->size, data, size);
     stream->size += size;
+    return (void*) (((uintptr_t) stream->size) + ssize);
+}
+
+// streams size bytes of data to stream properly aligned
+// \param data the data to stream, pass NULL to allocate the memory but not stream it
+// \returns pointer to beggining of streamed data in stream
+void* mc_stream_aligned(Mc_stream_t* stream, const void* data, size_t size, size_t alignment){
+
+    if(alignment == 0){
+        return mc_stream(stream, data, size);
+    }
+
+    size_t pad = (alignment - (((uintptr_t) stream->data) % alignment)) % alignment;
+
+    if(size + stream->size + pad > stream->capacity){
+        void* old_data = stream->data;
+        stream->capacity *= 1 + (size_t)((size + stream->size + alignment) / stream->capacity);
+        stream->data = vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
+        memcpy(stream->data, old_data, stream->size);
+        vpu_free_aligned(old_data);
+    }
+
+    pad = (alignment - (((uintptr_t) stream->data) % alignment)) % alignment;
+    stream->size += pad;
+    const uint64_t ssize = stream->size;
+
+    if(data) memcpy((uint8_t*)(stream->data) + stream->size, data, size);
+    stream->size += size;
+    return (void*) (((uintptr_t) stream->data) + ssize);
 }
 
 // works like mc_stream but streams a null treminated string
@@ -246,6 +280,12 @@ void mc_destroy_stream(Mc_stream_t stream){
     vpu_free_aligned(stream.data);
 }
 
+Token get_token_from_cstr(const char* str){
+    if(!str) return (Token){.value.as_str = NULL, .size = 0, .type = TKN_ERROR};
+    Token token = (Token){.value.as_str = (char*) str, .size = 0, .type = TKN_RAW};
+    for(token.size = 0; str[token.size]; token.size+=1);
+    return token;
+}
 
 void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
 
@@ -348,18 +388,18 @@ Token get_next_token(Tokenizer* tokenizer){
 
         const char c = string[tokenizer->pos];
         if(c == '\"'){
-	    token.value.as_str = string + tokenizer->pos;
-	    const LexizedString ls = lexize_str(token.value.as_str + 1, '\"');
-	    tokenizer->column += ls.read + 2;
-	    tokenizer->pos += ls.read + 2;
-	    if(ls.str == NULL){
-		token.type = TKN_ERROR;
-		token.size = ls.written + 1;
-		return token;
-	    }
+            token.value.as_str = string + tokenizer->pos;
+            const LexizedString ls = lexize_str(token.value.as_str + 1, '\"');
+            tokenizer->column += ls.read + 2;
+            tokenizer->pos += ls.read + 2;
+            if(ls.str == NULL){
+                token.type = TKN_ERROR;
+                token.size = ls.written + 1;
+                return token;
+	        }
             token.value.as_str = ls.str - 1;
-	    token.size = ls.written + 2;
-	    token.value.as_str[token.size - 1] = '\"';
+            token.size = ls.written + 2;
+            token.value.as_str[token.size - 1] = '\"';
             token.type = TKN_STR;
             return token;
         }
@@ -369,13 +409,13 @@ Token get_next_token(Tokenizer* tokenizer){
 	    tokenizer->column += ls.read + 2;
 	    tokenizer->pos += ls.read + 2;
 	    if((ls.str == NULL) || (ls.written != 1)){
-		token.type = TKN_ERROR;
-		token.size = ls.written + 1;
-		return token;
+            token.type = TKN_ERROR;
+            token.size = ls.written + 1;
+            return token;
 	    }
             token.value.as_str = ls.str - 1;
-	    token.size = ls.written + 2;
-	    token.value.as_str[token.size - 1] = '\'';
+            token.size = ls.written + 2;
+            token.value.as_str[token.size - 1] = '\'';
             token.type = TKN_CHAR;
             return token;
         }
@@ -411,9 +451,9 @@ Token get_next_token(Tokenizer* tokenizer){
         case '$':
             token.type = TKN_LABEL_REF;
             break;
-	case '@':
-	    token.type = TKN_ADDR_LABEL_REF;
-	    break;
+	    case '@':
+	        token.type = TKN_ADDR_LABEL_REF;
+	        break;
         
         default:
             token.type = TKN_RAW;
@@ -435,7 +475,7 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
     const unsigned int range = (token1.size < token2.size)? token1.size : token2.size;
     
     for(unsigned int i = 0; i < range; i+=1){
-	if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
+	    if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
     }
     return 1;
 }
