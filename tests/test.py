@@ -54,10 +54,34 @@ def run_process(*command, text=True, shell=False, _input=None):
 def cmpf(f1, f2, mode):
     file1 = open(f1, mode)
     file2 = open(f2, mode)
-    status = file1.read() == file2.read()
+
+    contents1 = file1.read()
+    contents2 = file2.read()
+
     file1.close()
     file2.close()
-    return status
+
+    rng = min(len(contents1), len(contents2))
+
+    first_differ = 0
+    line = 0
+    column = 0
+    for i in range(rng):
+        if contents1[i] != contents2[i]:
+            first_differ = i
+            rng = min(rng, i + 20)
+            i = max(i - 20, 0)
+            print(f"files differ at byte {first_differ}, in line {line} column {column}")
+            print(f"view of first file from {i} to {rng}: '{contents1[i:rng]}'")
+            print(f"view of second file from {i} to {rng}: '{contents2[i:rng]}'")
+            return False
+        if contents1[i] == 10:
+            line += 1
+            column = 0
+        else:
+            column += 1
+    
+    return len(contents1) == len(contents2)
 
 def precompute(example_path: str):
     EXAMPLE_NAME = example_path.removesuffix(".txt").split(PATH_SEP)
