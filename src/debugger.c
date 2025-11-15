@@ -1104,6 +1104,7 @@ int debug(const char* exe){
     debugger.program_size = program_size;
     debugger.signals = malloc((size_t) debugger.program_size);
     memset(debugger.signals, 0, (size_t) debugger.program_size);
+    debugger.breakpoint_count = 0;
     debugger.stream = dstream;
     debugger.vpu = &vpu;
     debugger.display_size = 5;
