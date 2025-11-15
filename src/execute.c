@@ -442,6 +442,11 @@ int execute(const char* exe, int argc, char** argv){
     for(size_t i = 0; i + 8 < meta_data_size; ){
         const uint64_t block_size = *(uint64_t*)((uint8_t*)(meta_data) + i);
         const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
+        if(block_size == 0){
+            fprintf(stderr, "[ERROR] Corrupted File: Metadata With Block Of Size 0 (%"PRIu64")\n", id);
+            mc_destroy_stream(stream);
+            return 1;
+        }
         if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
             vpu.static_memory = (uint8_t*)(meta_data) + i;
             break;
