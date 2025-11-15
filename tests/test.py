@@ -232,6 +232,14 @@ DEBUG_OUTPUT_DUMP_NAME = "tmp.txt"
 DEBUG_EXPECTED_OUTPUT_PATH = test_dir + "debug_expected_output.txt"
 
 if PRECOMPUTE:
+    try: #clean dump file, if it exists
+        dummy = open(DEBUG_OUTPUT_DUMP_NAME, "r")
+        dummy.close()
+        dummy = open(DEBUG_OUTPUT_DUMP_NAME, "w")
+        dummy.close()
+    except:
+        dummy = 0
+
     process = run_process(DEBUG, DEBUG_EXAMPLE_PATH, "<", DEBUG_INPUT_PATH)
     if process.returncode:
         print("*Precompute Debug Failed For " + DEBUG_EXAMPLE_PATH + " ***")

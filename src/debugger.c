@@ -662,6 +662,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             for(uint64_t i = 0; i < debugger->program_size; i+=1){
                 debugger->signals[i] &= ~DEBUG_SIGNAL_BREAK_MASK;
             }
+            debugger->breakpoint_count = 0;
+            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
             break;
         }
         uint64_t remove_breakpoints_errors = 0;
@@ -681,7 +683,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 remove_breakpoints_errors += 1;
                 continue;
             }
-            if(debugger->breakpoint_count) debugger->breakpoint_count -= 1;
+            if(debugger->breakpoint_count > 0) debugger->breakpoint_count -= 1;
             debugger->signals[breakpoint.value.as_uint64] &= ~DEBUG_SIGNAL_BREAK_MASK;
         }
         if(!remove_breakpoints_errors)

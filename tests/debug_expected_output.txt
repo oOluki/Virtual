@@ -58,7 +58,7 @@ RF.as_uint64 = 80
 RSP.as_uint64 = 0
 RIP.as_uint64 = 69
 display height: 10
-inst: 52   stack: 5   breakpoints: 5    status: 0
+inst: 52   stack: 5   breakpoints: 1    status: 0
 breakpoints:
 50
 stack:
@@ -78,7 +78,7 @@ RF.as_uint64 = 80
 RSP.as_uint64 = 5
 RIP.as_uint64 = 52
 display height: 10
-inst: 80   stack: 24   breakpoints: 6    status: 0
+inst: 80   stack: 24   breakpoints: 0    status: 0
 breakpoints:
 stack:
 0- 2
@@ -116,7 +116,7 @@ RF.as_uint64 = 80
 RSP.as_uint64 = 24
 RIP.as_uint64 = 80
 display height: 10
-inst: 76   stack: 0   breakpoints: 7    status: 0
+inst: 76   stack: 0   breakpoints: 1    status: 0
 breakpoints:
 76
 stack:
@@ -131,7 +131,7 @@ RF.as_uint64 = 80
 RSP.as_uint64 = 0
 RIP.as_uint64 = 76
 display height: 10
-inst: 77   stack: 0   breakpoints: 7    status: 0
+inst: 77   stack: 0   breakpoints: 1    status: 0
 breakpoints:
 76
 stack:
@@ -146,7 +146,7 @@ RF.as_uint64 = 0
 RSP.as_uint64 = 0
 RIP.as_uint64 = 77
 display height: 10
-inst: 18446744073709551615   stack: 0   breakpoints: 7    status: 0
+inst: 18446744073709551615   stack: 0   breakpoints: 1    status: 0
 breakpoints:
 76
 stack:
