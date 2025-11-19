@@ -1,18 +1,5 @@
-
-;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/input.out
-	;; executable size = 748
-	;; inst count      = 116
-	;; inst size       = 4
-	;; flags           = 00
-	;; meta_data_size  = 252
-	;; static_memory   = { position = 0, size = 47 }
-	;; labels          = { position = 63, size = 189 }
-	;; entry point     = 92
-;; X====X (SPECIFICATIONS) X====X
-
-
 %static 0x456e746572206d6573736167653a0a00596f7520736169643a202700270a00
+
 %labelv _VSTDIO_IN
 fread:
 	JMPF RB 0x2; i: 2
@@ -114,7 +101,7 @@ fread_line:
 %start
 	IOE RC RD R0
 	MOV RA RD
-	STATIC 0x10 ;; "Enter message:."...
+	STATIC 0x0 ;; "Enter message:."...
 	POP RB
 	CALL 0xffbe; i: -66
 	MOV RB RC
@@ -128,11 +115,11 @@ fread_line:
 	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
 	SET8 RC RB RA
 	MOV RA RD
-	STATIC 0x20 ;; "You said: '.'.."...
+	STATIC 0x10 ;; "You said: '.'.."...
 	POP RB
 	CALL 0xffb0; i: -80
 	MOV RB RC
 	CALL 0xffae; i: -82
-	STATIC 0x2c ;; "'.."...
+	STATIC 0x1c ;; "'............la"...
 	POP RB
 	CALL 0xffab; i: -85

@@ -129,18 +129,18 @@ InstProfile get_inst_profile(const Token inst_token){
     if(COMP_TKN(inst_token, MKTKN("MOVV16"))) return (InstProfile){INST_MOVV16, OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_GET   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_STACK_GET   , OP_PROFILE_RL};
+    if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_STACK_PUT , OP_PROFILE_RL};
     if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
     if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("READ")))   return (InstProfile){INST_READ  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_SET8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_SET16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_SET32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_SET   , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_WRITE8  , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_WRITE16 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_WRITE32 , OP_PROFILE_RRR};
+    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_WRITE   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("NOT")))    return (InstProfile){INST_NOT   , OP_PROFILE_RR};
     if(COMP_TKN(inst_token, MKTKN("NEG")))    return (InstProfile){INST_NEG   , OP_PROFILE_RRR};
     if(COMP_TKN(inst_token, MKTKN("AND")))    return (InstProfile){INST_AND   , OP_PROFILE_RRR};
@@ -355,7 +355,7 @@ int push_to_static(Mc_stream_t* static_memory, const Token token){
         if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
             return 2;
         }
-	mc_stream(static_memory, token.value.as_str + 1, token.size);
+	    mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
         mc_stream_str(static_memory, "");
         return 0;
     }
@@ -453,6 +453,20 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
                 return 1;
             }
             arg2.value.as_int -= (parser->program->size / 4);
+        }
+        else if(arg2.type == TKN_STR){
+            if(!parser->static_memory){
+                REPORT_ERROR(
+                    parser,
+                    "\n\tCan not add '%.*s' label definition string, no static memory available for string allocation\n",
+                    arg1.size, arg1.value.as_str
+                );
+                return 1;
+            }
+            const uint64_t spos = parser->static_memory->size;
+            push_to_static(parser->static_memory, arg2);
+            arg2.value.as_uint = spos;
+            arg2.type = TKN_ULIT;
         }
         else if(arg2.type == TKN_NONE){
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
@@ -628,10 +642,10 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return INST_ERROR;
                 }
-                token.value.as_uint = parser->static_memory->size;
+                const uint64_t spos = parser->static_memory->size;
+                push_to_static(parser->static_memory, token);
+                token.value.as_uint = spos;
                 token.type = TKN_ULIT;
-                mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
-                mc_stream_str(parser->static_memory, "");
             }
             const Operand operand = parse_op_literal(token);
             if(operand.type == TKN_ERROR){
@@ -678,17 +692,16 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
         
         case EXPECT_OP_EITHER:{
             if(token.type == TKN_STR){
-                if(!parser->static_memory){
-                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
-                    return INST_ERROR;
-                }
                 if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return INST_ERROR;
                 }
+                if(!parser->static_memory){
+                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
+                    return INST_ERROR;
+                }
                 const uint64_t op_value = parser->static_memory->size;
-                mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
-                mc_stream_str(parser->static_memory, "");
+                push_to_static(parser->static_memory, token);
                 inst |= (op_value & 0XFFFF) << 8;
                 inst |= HINT_LIT << 31;
                 op_token_pos += 1;
@@ -743,6 +756,8 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
 
 // \return 1 on error or 0 otherwise
 int parse_file(Parser* parser, Mc_stream_t* files_stream){
+
+    VIRTUAL_DEBUG_LOG("parsing file '%s'\n", (char*) parser->file_path);
 
     InstProfile inst_profile = (InstProfile){.opcode = INST_ERROR, .op_profile = OP_PROFILE_NONE};
 

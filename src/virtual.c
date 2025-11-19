@@ -1,7 +1,8 @@
+#include "assembler.c"
 #include "execute.c"
 #include "disassembler.c"
-#include "assembler.c"
 #include "debugger.c"
+#include "virtual_files.h"
 
 
 int is_file_executable(FILE* file){
@@ -16,7 +17,7 @@ int is_file_executable(FILE* file){
 
     fseek(file, pos, 0);
 
-    return mc_compare_str(buff, "VPU:", 1);
+    return mc_compare_str(buff, VIRTUAL_FILE_MAGIC_NUMBER, 1);
 }
 
 
@@ -59,6 +60,8 @@ int main(int argc, char** argv){
     int input_file_arg  = -1;
     int output_file_arg = -1;
     int export_labels   = 0;
+
+    VIRTUAL_DEBUG_LOG("parsing cmd arguments\n");
     
     for(int i = 1; i < argc; i++){
         if(mc_compare_str(argv[i], "--help", 0)){
@@ -149,16 +152,19 @@ int main(int argc, char** argv){
     }
 
     if(mode == MODE_NONE){
+        VIRTUAL_DEBUG_LOG("no mode provided, deducing best mode\n");
         FILE* input = fopen(argv[input_file_arg], "rb");
         if(!input){
             fprintf(stderr, "[ERROR] Can't open '%s'\n", argv[input_file_arg]);
             return 1;
         }
         mode = is_file_executable(input)? MODE_EXECUTE : MODE_ASSEMBLE;
+        VIRTUAL_DEBUG_LOG("choose %s\n", (mode == MODE_EXECUTE)? "execute" : "assemble");
         fclose(input);
     }
 
     if(mode & MODE_ASSEMBLE){
+        VIRTUAL_DEBUG_LOG("assembling %s to %s\n", argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : "output.out");
         const int status = assemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL, export_labels);
         if(status){
             fprintf(stderr, "[ERROR] Assembler Failed ^^^\n");
@@ -166,7 +172,8 @@ int main(int argc, char** argv){
         }
     }
     if(mode & MODE_DISASSEMBLE){
-        const int status = disassemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL);
+        VIRTUAL_DEBUG_LOG("disassembling %s to %s\n", argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : "stdout");
+        const int status = disassemble_file(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL);
         if(status){
             fprintf(stderr, "[ERROR] Disassembler Failed ^^^\n");
             return status;

@@ -6,16 +6,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "core.h"
+#include "virtual.h"
 
 
-typedef struct Mc_stream_t{
-    // data buffer
-    void*  data;
-    // size of the stream in bytes
-    uint64_t   size;
-    // capacity of the stream in bytes
-    uint64_t   capacity;
-} Mc_stream_t;
 
 typedef struct Tokenizer
 {
@@ -81,91 +74,6 @@ typedef struct LexizedString{
 
 #define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .type = TKN_RAW})
 
-#define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
-
-
-int get_digit(char c){
-    switch (c)
-    {
-    case '0': return 0;
-    case '1': return 1;
-    case '2': return 2;
-    case '3': return 3;
-    case '4': return 4;
-    case '5': return 5;
-    case '6': return 6;
-    case '7': return 7;
-    case '8': return 8;
-    case '9': return 9;
-
-    default: return -1;
-    }
-}
-
-char get_char_digit(int d){
-    switch (d)
-    {
-    case 0: return '0';
-    case 1: return '1';
-    case 2: return '2';
-    case 3: return '3';
-    case 4: return '4';
-    case 5: return '5';
-    case 6: return '6';
-    case 7: return '7';
-    case 8: return '8';
-    case 9: return '9';
-
-    default: return '\0';
-    }
-}
-
-uint8_t get_hex_digit(char c){
-    switch (c)
-    {
-    case '0': return 0;
-    case '1': return 1;
-    case '2': return 2;
-    case '3': return 3;
-    case '4': return 4;
-    case '5': return 5;
-    case '6': return 6;
-    case '7': return 7;
-    case '8': return 8;
-    case '9': return 9;
-    case 'a':
-    case 'A': return 10;
-    case 'b':
-    case 'B': return 11;
-    case 'c':
-    case 'C': return 12;
-    case 'd':
-    case 'D': return 13;
-    case 'e':
-    case 'E': return 14;
-    case 'f':
-    case 'F': return 15;
-
-    default: return 255;
-    }
-}
-
-// if you only wish to compare the strings up to where the first one terminates, pass _only_compare_till_first_null=1
-// otherwise pass _only_compare_till_first_null=0
-static inline int mc_compare_str(const char* str1, const char* str2, int _only_compare_till_first_null){
-    if(_only_compare_till_first_null){
-        for(unsigned int i = 0; str1[i] && str2[i]; i+=1){
-            if(str1[i] != str2[i]) return 0;
-        }
-        return 1;
-    }
-    
-    unsigned int i = 0;
-    for( ; str1[i]; i+=1){
-        if(str1[i] != str2[i]) return 0;
-    }
-    return !str2[i];
-}
 
 // returns the first found character position relative to the offset, or -1 if none are found
 static inline int mc_find_char(const char* str, char c, int offset){
@@ -186,98 +94,6 @@ static inline int mc_find_chars(const char* str, const char* charbuff, int offse
     }
     
     return -1;
-}
-
-
-
-
-
-static inline uint32_t mc_swap32(uint32_t x){
-    return (
-        ((x & 0X000000FF) << 24) |
-        ((x & 0X0000FF00) << 8) |
-        ((x & 0X00FF0000) >> 8) |
-        ((x & 0XFF000000) >> 24)
-    );
-}
-
-
-
-static inline uint64_t mc_swap64(uint64_t x) {
-    return ((x & 0x00000000000000FFULL) << 56) |
-        ((x & 0x000000000000FF00ULL) << 40) |
-        ((x & 0x0000000000FF0000ULL) << 24) |
-        ((x & 0x00000000FF000000ULL) << 8)  |
-        ((x & 0x000000FF00000000ULL) >> 8)  |
-        ((x & 0x0000FF0000000000ULL) >> 24) |
-        ((x & 0x00FF000000000000ULL) >> 40) |
-        ((x & 0xFF00000000000000ULL) >> 56);
-}
-
-// streams size bytes of data to stream
-// \param data the data to stream, pass NULL to allocate the memory but not stream it
-// \returns pointer to beggining of streamed data in stream
-void* mc_stream(Mc_stream_t* stream, const void* data, size_t size){
-    if(size + stream->size > stream->capacity){
-        void* old_data = stream->data;
-        stream->capacity *= 1 + (size_t)((size + stream->size) / stream->capacity);
-        stream->data = vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
-        memcpy(stream->data, old_data, stream->size);
-        vpu_free_aligned(old_data);
-    }
-    const uint64_t ssize = stream->size;
-    if(data) memcpy((uint8_t*)(stream->data) + stream->size, data, size);
-    stream->size += size;
-    return (void*) (((uintptr_t) stream->size) + ssize);
-}
-
-// streams size bytes of data to stream properly aligned
-// \param data the data to stream, pass NULL to allocate the memory but not stream it
-// \returns pointer to beggining of streamed data in stream
-void* mc_stream_aligned(Mc_stream_t* stream, const void* data, size_t size, size_t alignment){
-
-    if(alignment == 0){
-        return mc_stream(stream, data, size);
-    }
-
-    size_t pad = (alignment - (((uintptr_t) stream->data) % alignment)) % alignment;
-
-    if(size + stream->size + pad > stream->capacity){
-        void* old_data = stream->data;
-        stream->capacity *= 1 + (size_t)((size + stream->size + alignment) / stream->capacity);
-        stream->data = vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
-        memcpy(stream->data, old_data, stream->size);
-        vpu_free_aligned(old_data);
-    }
-
-    pad = (alignment - (((uintptr_t) stream->data) % alignment)) % alignment;
-    stream->size += pad;
-    const uint64_t ssize = stream->size;
-
-    if(data) memcpy((uint8_t*)(stream->data) + stream->size, data, size);
-    stream->size += size;
-    return (void*) (((uintptr_t) stream->data) + ssize);
-}
-
-// works like mc_stream but streams a null treminated string
-void mc_stream_str(Mc_stream_t* stream, const char* data){
-    size_t size = 0;
-
-    while (data[size++]);
-
-    mc_stream(stream, data, size * sizeof(char));
-}
-
-static inline void* mc_stream_on(const Mc_stream_t* stream, uint64_t index){ return (void*)((uint8_t*)(stream->data) + index);}
-
-// \returns (Mc_stream_t){.data = vpu_alloc_aligned(capacity, VPU_MEMALIGN_TO), .size = 0, .capacity = capacity};
-Mc_stream_t mc_create_stream(uint64_t capacity){
-    return (Mc_stream_t){.data = vpu_alloc_aligned(capacity, VPU_MEMALIGN_TO), .size = 0, .capacity = capacity};
-}
-
-// this simply passes stream.data to vpu_free_aligned. free(stream.data)
-void mc_destroy_stream(Mc_stream_t stream){
-    vpu_free_aligned(stream.data);
 }
 
 Token get_token_from_cstr(const char* str){
@@ -484,6 +300,8 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
 // (first size (uint32) then cstr (null terminated)) before the file contents
 char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_file_path){
 
+    VIRTUAL_DEBUG_LOG("reading file %s\n", path);
+
     FILE* file = fopen(path, binary? "rb" : "r");
     if(!file) return NULL;
 
@@ -492,7 +310,7 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
         return NULL;
     }
 
-    const unsigned long size = (unsigned long) ftell(file);
+    const long size = ftell(file);
 
     if(fseek(file, 0, 0)){
         fclose(file);
@@ -513,15 +331,9 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
         mc_stream(stream, path, path_str_size + 1);
     }
 
-    if(stream->size + size + 1 > stream->capacity){
-        stream->capacity = (size_t)(size + stream->size + 1);
-        void* odata = stream->data;
-        stream->data = (char*)vpu_alloc_aligned(stream->capacity, VPU_MEMALIGN_TO);
-        memcpy(stream->data, odata, stream->size);
-        vpu_free_aligned(odata);
-    }
+    void* data = mc_stream(stream, NULL, size);
 
-    stream->size += fread((uint8_t*)(stream->data) + stream->size, 1, size, file);
+    fread(data, 1, size, file);
 
     if(!binary) ((char*)stream->data)[stream->size++] = '\0';
 
@@ -539,7 +351,7 @@ char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView 
 
     // storing the position of the strings on the stream before any eventual
     // realocation of the stream which would invalidade the pointers
-    // this way we can restore the pointers afterwars
+    // this way we can restore the pointers afterwards
     const size_t mother_dir_str_pos = mother_dir.str - (char*)((uint8_t*)(stream->data));
     const size_t relative_path_str_pos = relative_path.str - (char*)((uint8_t*)(stream->data));
 
@@ -561,7 +373,6 @@ char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView 
     char* const status = read_file(stream, (char*) mc_stream_on(stream, ssize + sizeof(path_str_size)), 0, 0);
 
     if(status == NULL){
-        printf("oi\n");
         stream->size = ssize;
         return NULL;
     }

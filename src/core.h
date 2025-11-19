@@ -20,13 +20,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include "virtual.h"
 
 #ifndef VPU_MEMALIGN_TO
     #define VPU_MEMALIGN_TO 8
 #endif
 
 #ifndef VERSION
-    #define VERSION "1.5.0"
+    #define VERSION "0.0.1"
 #endif
 
 
@@ -59,9 +60,9 @@ typedef enum OpCode{
     // pop the top of the stack into R1
     INST_POP,
     // R1 = STACK[RSP - L2.as_uint16]
-    INST_GET,
+    INST_STACK_GET,
     // STACK[RSP - L2.as_uint16] = R1
-    INST_WRITE,
+    INST_STACK_PUT,
     // R1.as_ptr = (uint8_t*) ((uint64_t*)(STACK_POINTER) + R2.as_uint64) + R3.as_uint64
     INST_GSP,
     // STACK[RSP++] = STATIC_POINTER + E.as_uint64
@@ -75,13 +76,13 @@ typedef enum OpCode{
     // R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ,
     // *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
-    INST_SET8,
+    INST_WRITE8,
     // *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
-    INST_SET16,
+    INST_WRITE16,
     // *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.32
-    INST_SET32,
+    INST_WRITE32,
     // *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
-    INST_SET,
+    INST_WRITE,
     // R1 = !R2
     INST_NOT,
     // R1 = ~R2 | R3
@@ -287,24 +288,51 @@ enum ExeFlags{
     EXEFLAG_LABELS_INCLUDED = 1 << 0
 };
 
-enum RegisterId{
-    R0 = 0 ,
-    RA = 8 , RA1, RA2, RA3, RA4,
-    RB = 16, RB1, RB2, RB3, RB4,
-    RC = 24, RC1, RC2, RC3, RC4,
-    RD = 32, RD1, RD2, RD3, RD4,
-    RE = 40, RE1, RE2, RE3, RE4,
-    RF = 48,
+enum MajorRegisterId{
+    MR0 = 0,
 
-    RSP = 56,
-    RIP = 64,
+    MRA, MRB, MRC, MRD, MRE, MRF,
+    MRG, MRH, MRI, MRJ, MRK, MRL,
+    MRM, MRN, MRO, MRP, MRQ, MRR,
+    MRS, MRT, MRU, MRV, MRW, MRX,
+    MRY, MRZ,
 
-    REGISTER_SPACE_SIZE = 72
+    MRSP,
+    MRIP,
+
+    MRST = 31,
+
+    // for counting purposes
+    MR_COUNT
 };
 
-enum VPUFlags{
-    VPUFLAG_NONE = 0,
-    VPUFLAG_EXEPTION_
+// valid registers id go from 0 to 255
+enum RegisterId{
+    // R0 = 0
+    R0 = 0 ,
+
+    // registers used inside the code
+
+    RA = MRA * 8, RA1, RA2, RA3, RA4,
+    RB = MRB * 8, RB1, RB2, RB3, RB4,
+    RC = MRC * 8, RC1, RC2, RC3, RC4,
+    RD = MRD * 8, RD1, RD2, RD3, RD4,
+    RE = MRE * 8, RE1, RE2, RE3, RE4,
+    RF = MRF * 8,
+
+    // special registers
+
+    // RSP holds the stack position
+    RSP = MRSP * 8,
+    // RIP hols the instruction position
+    RIP = MRIP * 8,
+    // holds the vpu status
+    RST = MRST * 8,
+    // holds error status
+    RERROR = 255,
+
+    // for counting purposes, not an actual register
+    REGISTER_SPACE_SIZE
 };
 
 typedef union Register{
@@ -321,26 +349,26 @@ typedef union Register{
     
     double   as_float64;
     float    as_float32;
-    uint8_t*    as_ptr;
+    uint8_t* as_ptr;
 } Register;
 
 // Virtual Processing Unit
 typedef struct VPU
 {
 
-    int      status;
+    int         status;
 
-    uint8_t* static_memory;
+    uint8_t*    static_memory;
 
-    uint8_t* internal_data;
+    void*       system;
 
-    Register* registers;
+    Register*   registers;
 
-    uint8_t* register_space;
+    uint8_t*    register_space;
 
-    Inst*    program;
+    Inst*       program;
 
-    uint64_t* stack;
+    uint64_t*   stack;
     
 } VPU;
 
@@ -366,61 +394,42 @@ char get_digit_char(int i){
 
 char* get_reg_str(int reg, char* output){
 
-    switch (8 * (int)(reg / 8))
+    const int major_identifier = reg / 8;
+
+    if(major_identifier >= MRA && major_identifier <= MRZ){
+        output[0] = 'R';
+        output[1] = 'A' + (major_identifier - MRA);
+        output[2] = get_digit_char(reg - major_identifier * 8);
+        output[3] = '\0';
+        return output;
+    }
+
+    switch (major_identifier)
     {
-    case R0:
+    case MR0:
 	output[0] = 'R';
 	output[1] = '0';
 	output[2] = get_digit_char(reg - R0);
 	output[3] = '\0';
 	return output;
-    case RA:
-        output[0] = 'R';
-        output[1] = 'A';
-        output[2] = get_digit_char(reg - RA);
-        output[3] = '\0';
-        return output;
-    case RB:
-        output[0] = 'R';
-        output[1] = 'B';
-        output[2] = get_digit_char(reg - RB);
-        output[3] = '\0';
-        return output;
-    case RC:
-        output[0] = 'R';
-        output[1] = 'C';
-        output[2] = get_digit_char(reg - RC);
-        output[3] = '\0';
-        return output;
-    case RD:
-        output[0] = 'R';
-        output[1] = 'D';
-        output[2] = get_digit_char(reg - RD);
-        output[3] = '\0';
-        return output;
-    case RE:
-        output[0] = 'R';
-        output[1] = 'E';
-        output[2] = get_digit_char(reg - RE);
-        output[3] = '\0';
-        return output;
-    case RF:
-        output[0] = 'R';
-        output[1] = 'F';
-        output[2] = get_digit_char(reg - RF);
-        output[3] = '\0';
-        return output;
-    case RSP:
+    case MRSP:
         output[0] = 'R';
         output[1] = 'S';
         output[2] = 'P';
         output[3] = get_digit_char(reg - RSP);
         output[4] = '\0';
         return output;
-    case RIP:
+    case MRIP:
         output[0] = 'R';
         output[1] = 'I';
         output[2] = 'P';
+        output[3] = get_digit_char(reg - RIP);
+        output[4] = '\0';
+        return output;
+    case MRST:
+        output[0] = 'R';
+        output[1] = 'S';
+        output[2] = 'T';
         output[3] = get_digit_char(reg - RIP);
         output[4] = '\0';
         return output;
@@ -429,62 +438,6 @@ char* get_reg_str(int reg, char* output){
     }
 }
 
-static inline int is_little_endian(){ return (*(unsigned short *)"\x01\x00" == 0x01); }
-
-static inline uint32_t swap32(uint32_t x){
-    return (
-        ((x & 0X000000FF) << 24) |
-        ((x & 0X0000FF00) << 8) |
-        ((x & 0X00FF0000) >> 8) |
-        ((x & 0XFF000000) >> 24)
-    );
-}
-
-static inline void* vpu_alloc_aligned(size_t n, size_t alignment){
-
-    // it may be a good idea to only allow alignment to powers of 2
-    //if(alignment & (alignment - 1)) return NULL;
-
-    const uintptr_t alloc_addr = (uintptr_t)malloc(n + sizeof(void*) + alignment) + sizeof(void*);
-
-    if(alloc_addr == sizeof(void*)) return NULL;
-
-    const uintptr_t addr = alloc_addr + (alignment - (alloc_addr % alignment)) % alignment;
-    *(void**)(addr - sizeof(void*)) = (void*)(alloc_addr - sizeof(void*));
-
-    return (void *)(addr);
-}
-
-static inline void vpu_free_aligned(void* ptr){
-
-    if(ptr) free(*(void**) ((uintptr_t)(ptr) - sizeof(void*)));
-
-}
-
-static void* get_exe_specifications(const void* data, uint64_t* meta_data_size, uint64_t* entry_point, uint64_t* flags, uint32_t* padding){
-
-    const char* _data = data;
-
-    uint32_t magic_number = is_little_endian()? swap32(*(uint32_t*)_data) : *(uint32_t*)_data;
-    _data += 4;
-
-    //                     VPU:
-    if(magic_number != 0x5650553a)
-        return NULL;
-
-    *padding = *(uint32_t*)(_data);
-    _data += 4;
-    
-    *flags = *(uint64_t*)_data;
-    _data += 8;
-
-    *entry_point = *(uint64_t*)_data;
-    _data += 8;
-
-    *meta_data_size = *(uint64_t*)_data;
-
-    return (void*)(_data + 8);
-}
 
 
 #endif // =====================  END OF FILE CORE_HEADER ===========================

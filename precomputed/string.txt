@@ -1,18 +1,5 @@
-
-;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/string.out
-	;; executable size = 728
-	;; inst count      = 105
-	;; inst size       = 4
-	;; flags           = 00
-	;; meta_data_size  = 275
-	;; static_memory   = { position = 0, size = 102 }
-	;; labels          = { position = 118, size = 157 }
-	;; entry point     = 76
-;; X====X (SPECIFICATIONS) X====X
-
-
 %static 0x0954686973202069732061207465737420666f722074657374696e672074686520737472696e6720616e64206368617261637465722070617273696e670a0909693d3d690a0909393d3d390a0909533d3d535c0a0000
+
 %labelv _VSTDIO_IN
 fread:
 	JMPF RB 0x2; i: 2
@@ -95,7 +82,7 @@ fprint_int:
 	POP RC
 	RET
 %start
-	STATIC 0x10 ;; ".This  is a tes"...
+	STATIC 0x0 ;; ".This  is a tes"...
 	IOE R0 RA R0
 	POP RB
 	CALL 0xffcf; i: -49

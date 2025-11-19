@@ -1,18 +1,5 @@
-
-;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/include_test.out
-	;; executable size = 796
-	;; inst count      = 114
-	;; inst size       = 4
-	;; flags           = 00
-	;; meta_data_size  = 305
-	;; static_memory   = { position = 0, size = 46 }
-	;; labels          = { position = 62, size = 243 }
-	;; entry point     = 109
-;; X====X (SPECIFICATIONS) X====X
-
-
 %static 0x494e434c554445205445535420574153205355434345535346554c4c0a00
+
 %labelv _VSTDIO_IN
 fread:
 	JMPF RB 0x2; i: 2
@@ -122,7 +109,7 @@ Q_rsqrt:
 	POP RC
 	POP RB
 	RET
-sqrt:
+sqà:
 	PUSH RB
 	CALL 0xffe5; i: -27
 	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
@@ -131,7 +118,7 @@ sqrt:
 	POP RB
 	RET
 %start
-	STATIC 0x10 ;; "INCLUDE TEST WA"...
+	STATIC 0x0 ;; "INCLUDE TEST WA"...
 	POP RB
 	IOE R0 RA R0
 	CALL 0xffae; i: -82

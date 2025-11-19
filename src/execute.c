@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include "virtual_files.h"
 
 
 // returns the number of instruction to sum to RIP
@@ -76,10 +77,10 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_POP:
         R1.as_uint64 = vpu->stack[--SP];
         return 1;
-    case INST_GET:
+    case INST_STACK_GET:
         R1.as_uint64 = vpu->stack[SP - L2];
         return 1;
-    case INST_WRITE:
+    case INST_STACK_PUT:
         vpu->stack[SP - L2] = R1.as_uint64;
         return 1;
     case INST_GSP:
@@ -100,16 +101,16 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_READ:
         R1.as_uint64 = *(uint64_t*)(R2.as_ptr + R3.as_int64);
         return 1;
-    case INST_SET8:
+    case INST_WRITE8:
         *(uint8_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int8;
         return 1;
-    case INST_SET16:
+    case INST_WRITE16:
         *(uint16_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int16;
         return 1;
-    case INST_SET32:
+    case INST_WRITE32:
         *(uint32_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int32;
         return 1;
-    case INST_SET:
+    case INST_WRITE:
         *(uint64_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int64;
         return 1;
     case INST_NOT:
@@ -397,66 +398,56 @@ int64_t perform_inst(VPU* vpu, Inst inst){
 }
 
 // executes raw program and passes argc and argv to the executing program
-int execute(const char* exe, int argc, char** argv){
+int execute(const char* input_file, int argc, char** argv){
 
-    if(!exe){
+    if(!input_file){
         fprintf(stderr, "[ERROR] Expected Input Program Path\n");
         return 1;
     }
 
-    Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
-
-    if(!read_file(&stream, exe, 1, 0)){
-        fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", exe);
-        return 2;
+    VirtualFile vfile;
+    const char* required_fields[] = {
+        VIRTUAL_FILE_PROGRAM_FIELD_NAME,
+        NULL
+    };
+    const char* optional_fields[] = {
+        VIRTUAL_FILE_STATIC_FIELD_NAME,
+        NULL
+    };
+    if(vfopen(&vfile, input_file, required_fields, optional_fields)){
+        fprintf(stderr, "[ERROR] failed trying to open virtual file '%s'\n", input_file);
+        return 1;
     }
 
-    uint64_t flags;
-    uint64_t meta_data_size;
+    const void* const program_field = get_virtual_file_field(vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME);
+    
+    VPU vpu;
+
     uint64_t entry_point;
-    uint32_t padding;
-
-    const uint64_t skip = sizeof(uint32_t) + sizeof(padding) + sizeof(flags) + sizeof(entry_point) + sizeof(meta_data_size);
-
-    void* meta_data = get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags, &padding);
-
-    if(!meta_data){
-        fprintf(stderr, "[ERROR] No MetaData In Program '%s'\n", exe);
-        mc_destroy_stream(stream);
+    uint64_t program_size;
+    vpu.program = get_program_from_vfield(program_field, &program_size, &entry_point);
+    if(program_field == NULL){
+        fprintf(stderr, "[ERROR] virtual file in '%s' has corrupt program\n", input_file);
+        vfclose(vfile);
         return 1;
     }
 
     static uint64_t stack[1000];
-    Register registers[9];
+    Register registers[REGISTER_SPACE_SIZE / sizeof(Register)];
     memset(stack, 0, sizeof(stack));
     memset(registers, 0, sizeof(registers));
 
-    VPU vpu;
+    vpu.static_memory = (uint8_t*) get_virtual_file_field(vfile, VIRTUAL_FILE_STATIC_FIELD_NAME);
+    if(vpu.static_memory){
+        vpu.static_memory = (uint8_t*) (((uintptr_t) vpu.static_memory) + sizeof(uint64_t) + sizeof(VIRTUAL_FILE_STATIC_FIELD_NAME));
+    }
+    
     vpu.stack = &(stack[0]);
     vpu.registers = &(registers[0]);
 
     // sets argc and argv of the program to RA.as_int32 and RB.as_ptr, respectively
-    vpu.registers[RA >> 3].as_int32 = argc;
+    vpu.registers[RA >> 3].as_int64 = argc;
     vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
-
-    for(size_t i = 0; i + 8 < meta_data_size; ){
-        const uint64_t block_size = *(uint64_t*)((uint8_t*)(meta_data) + i);
-        const uint64_t id = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(block_size));
-        if(block_size == 0){
-            fprintf(stderr, "[ERROR] Corrupted File: Metadata With Block Of Size 0 (%"PRIu64")\n", id);
-            mc_destroy_stream(stream);
-            return 1;
-        }
-        if(id == is_little_endian()? mc_swap64(0x5354415449433a) : 0x5354415449433a){
-            vpu.static_memory = (uint8_t*)(meta_data) + i;
-            break;
-        }
-        i += block_size;
-    }
-
-    const uint64_t program_size = (stream.size - meta_data_size - skip - padding) / 4;
-
-    vpu.program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
 
     vpu.register_space = (uint8_t*)vpu.registers;
 
@@ -470,7 +461,7 @@ int execute(const char* exe, int argc, char** argv){
 	    //vpu.registers[R0].as_uint64 = 0;
     }
 
-    mc_destroy_stream(stream);
+    vfclose(vfile);
 
     return vpu.status;
 }
