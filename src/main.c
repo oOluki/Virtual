@@ -2,7 +2,6 @@
 #include "execute.c"
 #include "disassembler.c"
 #include "debugger.c"
-#include "virtual_files.h"
 
 
 int is_file_executable(FILE* file){
@@ -27,7 +26,8 @@ static inline void help(const char* main_executable){
         "Functionality: either assembles assembly program in <input> to byte code, disassembles byte code in <input> or executes byte code in <input>.\n"
         "Options:\n"
         "   --help:         displays this help message\n"
-        "   --version:      displays VPU's current version\n"
+        "   --version:      displays current version\n"
+        "   --inst:         displays instructions examples\n"
         "   -assemble:      assemble mode\n"
         "   -disassemble:   disassemble mode\n"
         "   -execute:       execute mode\n"
@@ -66,7 +66,7 @@ int main(int argc, char** argv){
     for(int i = 1; i < argc; i++){
         if(mc_compare_str(argv[i], "--help", 0)){
             help(argv[0]);
-            continue;
+            return 0;
         }
         if(mc_compare_str(argv[i], "--version", 0)){
             printf(
@@ -75,7 +75,18 @@ int main(int argc, char** argv){
                 "Copyright (c) 2024 oOluki\n"
                 "WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY.\n"
             );
-            continue;
+            return 0;
+        }
+        if(mc_compare_str(argv[i], "--inst", 0)){
+            char _buff[24];
+            char* buff[] = {&_buff[0], &_buff[8], &_buff[16]};
+            for(Inst i = 0; i < INST_TOTAL_COUNT; i+=1){
+                if(print_inst(stdout, i, buff)){
+                    fprintf(stderr, "[ERROR] print_inst missing %"PRIu32"th instruction\n", i);
+                    return 1;
+                }
+            }
+            return 0;
         }
         if(mc_compare_str(argv[i], "-assemble", 0)){
             mode |= MODE_ASSEMBLE;

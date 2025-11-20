@@ -75,6 +75,9 @@ typedef enum OpCode{
     INST_READ32,
     // R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ,
+    // reads R3.as_uint64 bytes from R2.as_ptr to R1.as_ptr
+    // memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
+    INST_MREADS,
     // *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
     INST_WRITE8,
     // *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
@@ -83,6 +86,15 @@ typedef enum OpCode{
     INST_WRITE32,
     // *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
     INST_WRITE,
+    // sets R3.as_uint64 bytes of R1.as_ptr to R2.8
+    // R1.as_ptr = memset(R1.as_ptr, R2.as_int8, R3.as_uint64) basically
+    INST_MWRITES,
+    // reads R3.as_uint64 bytes from R2.as_ptr to R1.as_ptr, accounting for overlaps
+    // R1.as_ptr = memmove(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
+    INST_MMOVS,
+    // compares R3.as_uint64 bytes of R2.as_ptr to R1.as_ptr and sets the truth value to R1.as_uint8
+    // R1.as_uint8 = memmove(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
+    INST_MEMCMP,
     // R1 = !R2
     INST_NOT,
     // R1 = ~R2 | R3
@@ -193,50 +205,23 @@ typedef enum OpCode{
     INST_CF3264,
     // R1.as_float64 = (double) R2.as_float32
     INST_CF6432,
-    // sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
-    INST_MEMSET,
-    // copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
-    INST_MEMCPY,
-    // copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
-    INST_MEMMOV,
-    // compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
-    INST_MEMCMP,
-    // allocates R2.as_uint64 bytes aligned to R3.as_uint8 + 1 and stores it to R1.as_ptr
-    INST_MALLOC,
-    // frees a block of memory allocated with MALLOC in R1.as_ptr + R2.as_int64 aligned to R3.as_uint8 + 1
-    INST_FREE,
-    // opens a file given by the string in R2.as_ptr in mode R3.as_uint8 and stores it to R1.as_ptr
-    INST_FOPEN,
-    // closes a file in R2.as_ptr + R3.as_int64, sets R1.as_int64 to an error value on failure
-    INST_FCLOSE,
-    // puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
-    INST_PUTC,
-    // gets a byte from the file at R2.as_ptr + R3.as_int64 to R1.as_int32, sets R1.as_int32 to an error value on failure
-    INST_GETC,
-    // gets the current read/overwrite position in the file at R2.as_ptr + R3.as_int64 to R1.as_uint64
-    INST_FPOS,
-    // sets the current read/overwrite position in the file at R1.as_ptr to R2.as_int32 + R3.as_uint64
-    // sets R1.as_int32 to 0 on success or 1 on failure
-    INST_FGOTO,
     // R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
     INST_FLOAT,
-    // loads up to a 32 bit long value to a register
-    // R1 = L2.32
-    INST_LOAD1,
-    // loads up to a 64 bit long value to a register
-    // R1 = L2.64
-    INST_LOAD2,
-    // sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
-    INST_IOE,
+    // dumps R1.as_int8 character to stdout if R2.as_uint8 != 0 or stderr otherwise
+    // and flushes the output stream if R3.as_uint8 != 0
+    INST_DUMPCHAR,
+    // reads a single character from stdin, or -1 if stdin is closed, to R1.as_int32
+    // closes stdin if R2.as_uint8 != 0
+    INST_GETCHAR,
     // executes the instruction given by R1.as_uint32
     INST_EXEC,
     // perfomrs a syscall identified by the value in E
     INST_SYS,
-    // displays a register's value, for debugging purposes
+    // displays the R1, R2 and R3 register's values (ignores R0), for debugging purposes
     INST_DISREG,
     // for counting putposes
     INST_TOTAL_COUNT,
-    // a dummy instruction that serves to hold immediate values for the LOAD1 and LOAD2 instructions
+    // a dummy instruction that serves to hold immediate values, no use yet...
     INST_CONTAINER = 254,
     // this instruction is used for parsing purposes to signal an error while parsing a file, IT SHOULD NEVER APPEAR IN YOUR PROGRAM
     INST_ERROR = 255
@@ -324,7 +309,7 @@ enum RegisterId{
 
     // RSP holds the stack position
     RSP = MRSP * 8,
-    // RIP hols the instruction position
+    // RIP holds the instruction position
     RIP = MRIP * 8,
     // holds the vpu status
     RST = MRST * 8,

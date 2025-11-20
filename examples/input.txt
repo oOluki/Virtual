@@ -1,27 +1,33 @@
 %include "vstd/vstdio.in"
 
 
-;; reads bytes from the stream in RB.as_ptr to RA.as_ptr up to the next new line, returns the number of characters read
-fread_line:
+;; reads up to RB.as_u64 bytes from stdin to RA.as_ptr up to the next new line, returns the number of characters read through RA.u64
+read_line:
     ;; read byte
     PUSH RD
     ;; position
     PUSH RE
     PUSH RF
+    PUSH RX
+    PUSH RY
     
     XOR RD RD RD
     XOR RE RE RE
     MOVV RF '\n'
 
     loop:
-        GETC RD RB R0
-        SET8 RA RD RE
+        GETCHAR RD R0
+        WRITE8 RA RD RE
         INC  RE 1
-        NEQ  RD RD RF
-    JMPF RD @loop
+        SMLI RX RD R0
+        EQ   RY RD RF
+        OR   RX RX RY
+    JMPFN RX @loop
 
     MOV RA RE
 
+    POP RY
+    POP RX
     POP RF
     POP RE
     POP RD
@@ -31,36 +37,29 @@ fread_line:
 
 %start
 
-IOE RC RD R0
-
-MOV RA RD
-
 STATIC "Enter message:\n"
 POP RB
-CALL @fprintf_str
+CALL @dump_str
 
 
-MOV RB RC
-PUSH RSP
 MOVV RA 8
 GSP RA RA R0
-INC RSP 100
+INC RSP 108
 
-MOV RC RA
-CALL @fread_line
+MOV RX RA
+
+CALL @read_line
 DEC RA 1
 MOVV RB '\0'
-SET8 RC RB RA
-
-MOV RA RD
+WRITE8 RX RB RA
 
 STATIC "You said: \'"
 POP RB
-CALL @fprintf_str
+CALL @dump_str
 
-MOV RB RC
-CALL @fprintf_str
+MOV RB RX
+CALL @dump_str
 
 STATIC "\'\n"
 POP RB
-CALL @fprintf_str
+CALL @dump_str

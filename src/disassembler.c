@@ -13,14 +13,13 @@
 
 // \param buff should be an array of 3 buffers of size 8 bytes each
 // \returns 0 on success or 1 otherwise
-int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, uint64_t ip, char** buff){
+int print_inst(FILE* output, Inst inst, char** buff){
     #define R1 (uint8_t) ((inst & 0XFF00) >> 8)
     #define R2 (uint8_t) ((inst & 0XFF0000) >> 16)
     #define R3 (uint8_t) (inst >> 24)
     #define L2 (uint16_t) (inst >> 16)
     #define L1 (uint16_t) ((inst & 0X00FFFF00) >> 8)
 
-    const Inst inst = program[ip];
 
     switch (inst & 0XFF)
     {
@@ -75,29 +74,21 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
         return 0;
     case INST_STACK_GET:{
         Register op = {.as_uint64 = L2};
-        fprintf(output, "\tGET %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "\tSTACK_GET %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_STACK_PUT:{
         Register op = {.as_uint64 = L2};
-        fprintf(output, "\tWRITE %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
+        fprintf(output, "\tSTACK_PUT %s 0x%02"PRIx64"; (u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), op.as_uint64, op.as_uint64, op.as_int64, op.as_float64);
     }   return 0;
     case INST_GSP:
         fprintf(output, "\tGSP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_STATIC:
-        if(GET_OP_HINT(inst) == HINT_REG){
+        if(GET_OP_HINT(inst) == HINT_REG)
 	        fprintf(output, "\tSTATIC %s\n", get_reg_str(R1, buff[0]));
-        }
-        else {
-                const char* string = (char*)(static_memory + L1);
-                const uint64_t max_size = *(uint64_t*)(static_memory) - L1;
-                fprintf(output, "\tSTATIC 0x%"PRIx16" ;; \"", L1);
-                for(int i = 0; i < ((15 < max_size)? (int)15 : (int)max_size); i+=1){
-                    if(isprint(string[i])) fputc(string[i], output);
-                    else                   fputc('.', output);
-                }
-                fprintf(output, "\"...\n");
-        }   return 0;
+        else
+            fprintf(output, "\tSTATIC 0x%"PRIx16"\n", L1);
+        return 0;
     case INST_READ8:
         fprintf(output, "\tREAD8 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
@@ -110,17 +101,29 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
     case INST_READ:
         fprintf(output, "\tREAD %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
+    case INST_MREADS:
+        fprintf(output, "\tMREADS %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
     case INST_WRITE8:
-        fprintf(output, "\tSET8 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        fprintf(output, "\tWRITE8 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_WRITE16:
-        fprintf(output, "\tSET16 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        fprintf(output, "\tWRITE16 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_WRITE32:
-        fprintf(output, "\tSET32 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        fprintf(output, "\tWRITE32 %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_WRITE:
-        fprintf(output, "\tSET %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        fprintf(output, "\tWRITE %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
+    case INST_MWRITES:
+        fprintf(output, "\tMWRITES %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
+    case INST_MMOVS:
+        fprintf(output, "\tMMOVS %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
+    case INST_MEMCMP:
+        fprintf(output, "\tMEMCMP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
     case INST_NOT:
         fprintf(output, "\tNOT %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]));
@@ -290,71 +293,17 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
         fprintf(output, "\tCF6432 %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]));
         return 0;
 
-    case INST_MEMSET:
-        fprintf(output, "\tMEMSET %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_MEMCPY:
-        fprintf(output, "\tMEMCPY %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_MEMMOV:
-        fprintf(output, "\tMEMMOV %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_MEMCMP:
-        fprintf(output, "\tMEMCMP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_MALLOC:
-        fprintf(output, "\tMALLOC %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_FREE:
-        fprintf(output, "\tFREE %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    
-    case INST_FOPEN:
-        fprintf(output, "\tFOPEN %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_FCLOSE:
-        fprintf(output, "\tFCLOSE %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_PUTC:
-        fprintf(output, "\tPUTC %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_GETC:
-        fprintf(output, "\tGETC %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_FPOS:
-        fprintf(output, "\tFPOS %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-    case INST_FGOTO:
-        fprintf(output, "\tFGOTO %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
-        return 0;
-
     case INST_FLOAT:
         fprintf(output, "\tFLOAT %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
-    case INST_LOAD1:{
-            const Register v = (Register){
-                .as_uint32 = ((uint64_t) (program[ip + 1] & 0XFFFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16)
-            };
-            fprintf(output, "\tLOAD1 %s 0x%"PRIx32"; (u: %"PRIu32"; %"PRIi32"; f: %f)\n", get_reg_str(R1, buff[0]), v.as_uint32, v.as_uint32, v.as_int32, v.as_float32);
-        }
+    case INST_DUMPCHAR:
+        fprintf(output, "\tDUMPCHAR %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
-    case INST_LOAD2:{
-            const Register v = (Register){
-                .as_uint64 = (uint64_t) ((uint64_t) (program[ip + 2] & 0XFFFFFF00) << 32) |
-                ((uint64_t) (program[ip + 1] & 0XFFFFFF00) << 8) | ((uint64_t) (inst & 0XFFFF0000) >> 16)
-            };
-            fprintf(output, "\tLOAD2 %s 0x%"PRIx64"; (u: %"PRIu64"; %"PRIi64"; f: %f)\n", get_reg_str(R1, buff[0]), v.as_uint64, v.as_uint64, v.as_int64, v.as_float64);
-        }
-        return 0;
-
-    case INST_IOE:
-        fprintf(output, "\tIOE %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+    case INST_GETCHAR:
+        fprintf(output, "\tGETCHAR %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]));
         return 0;
     case INST_EXEC:
         fprintf(output, "\tEXEC %s\n", get_reg_str(R1, buff[0]));
-        return 0;
-    case INST_DISREG:
-        fprintf(output, "\tDISREG %s\n", get_reg_str(R1, buff[0]));
         return 0;
     case INST_SYS:
         fprintf(output, "\tSYS ");
@@ -364,9 +313,12 @@ int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, 
             fprintf(output, "%"PRIx16"\n", L1);
 
         return 0;
+    case INST_DISREG:
+        fprintf(output, "\tDISREG %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
 
     case INST_CONTAINER:
-        fprintf(output, ";;CONTAINER 0x%"PRIx32"\n", (inst & 0xFFFFFF00) >> 8);
+        fprintf(output, "\tCONTAINER 0x%"PRIx32"\n", (inst & 0xFFFFFF00) >> 8);
         return 0;
     default:
         fprintf(stderr, "[ERROR] Unkonwn Instruction OpCode %u\n", inst & 0xFF);
@@ -489,12 +441,12 @@ int disassemble(
         current_label += label.size;
     }
 
-    char charbuff[30];
+    char charbuff[24];
 
     char* buff[3] = {
         &charbuff[0],
-        &charbuff[10],
-        &charbuff[20]
+        &charbuff[8],
+        &charbuff[16]
     };
 
     int status = 0;
@@ -503,7 +455,7 @@ int disassemble(
     while (queried_stop < entry_point && i < entry_point && last_label < labels_byte_size)
     {
         for(; i < queried_stop && i < inst_count && !status; i+=1){
-            status = print_inst(output, program, static_memory, i, buff);
+            status = print_inst(output, program[i], buff);
         }
         if(status || i == inst_count) break;
         const Label l = get_label_from_raw_data(labels + last_label);
@@ -521,13 +473,13 @@ int disassemble(
     }
     
     for( ; (i < entry_point) && !status; i += 1)
-        status = print_inst(output, program, static_memory, i, buff);
+        status = print_inst(output, program[i], buff);
     if(!status) fprintf(output, "%s\n", "%start");
 
     while (i < inst_count && last_label < labels_byte_size && i < queried_stop)
     {
         for(; i < queried_stop && i < inst_count && !status; i+=1){
-            status = print_inst(output, program, static_memory, i, buff);
+            status = print_inst(output, program[i], buff);
         }
         if(status || i == inst_count) break;
         const Label label = get_label_from_raw_data(labels + last_label);
@@ -553,7 +505,7 @@ int disassemble(
     }
 
     for( ; (i < inst_count) && !status; i += 1)
-        status = print_inst(output, program, static_memory, i, buff);
+        status = print_inst(output, program[i], buff);
     
 
     if(status) fprintf(stderr, "[ERROR] At Instruction Position %" PRIu64 " ^^^\n", i);

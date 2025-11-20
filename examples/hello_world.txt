@@ -1,21 +1,18 @@
 
 STATIC  "hello world"
 POP  RB
-IOE  R0 RA R0
-
 MOVV RC 0
+
 loop:
+    ;; (RB -> char*)
+    READ8 RC RB R0
 
-;; (RB -> char*)
-READ8 RC RB R0
+    DUMPCHAR RC R0 R0
 
-PUTC RC RA R0
-
-INC RB 1
-
+    INC RB 1
 JMPF RC @loop
 
 MOVV RC 10
-PUTC RC RA R0
+DUMPCHAR RC R0 R0
 
 HALT 0

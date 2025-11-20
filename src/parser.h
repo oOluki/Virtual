@@ -115,119 +115,121 @@ const char* get_token_type_str(int type){
 }
 
 InstProfile get_inst_profile(const Token inst_token){
+    #define __VIRTUAL_RETURN_INST_PROFILE(INST_NAME, OP_PROFILE, ...)\
+        if(COMP_TKN(inst_token, MKTKN(#INST_NAME))) return (InstProfile){INST_ ## INST_NAME, OP_PROFILE}
+
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 
-    if(COMP_TKN(inst_token, MKTKN("NOP")))    return (InstProfile){INST_NOP   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("HALT")))   return (InstProfile){INST_HALT  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("MOV8")))   return (InstProfile){INST_MOV8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV16")))  return (InstProfile){INST_MOV16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV32")))  return (InstProfile){INST_MOV32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV")))    return (InstProfile){INST_MOV   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOVC")))   return (InstProfile){INST_MOVC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MOVV")))   return (InstProfile){INST_MOVV  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("MOVN")))   return (InstProfile){INST_MOVN  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("MOVV16"))) return (InstProfile){INST_MOVV16, OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_STACK_GET   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_STACK_PUT , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ")))   return (InstProfile){INST_READ  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_WRITE8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_WRITE16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_WRITE32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_WRITE   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NOT")))    return (InstProfile){INST_NOT   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("NEG")))    return (InstProfile){INST_NEG   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("AND")))    return (InstProfile){INST_AND   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NAND")))   return (InstProfile){INST_NAND  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("OR")))     return (InstProfile){INST_OR    , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPFN , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("RET")))    return (InstProfile){INST_RET   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB8")))   return (InstProfile){INST_SUB8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL8")))   return (InstProfile){INST_MUL8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD16")))  return (InstProfile){INST_ADD16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB16")))  return (InstProfile){INST_SUB16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL16")))  return (InstProfile){INST_MUL16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD32")))  return (InstProfile){INST_ADD32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB32")))  return (InstProfile){INST_SUB32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL32")))  return (InstProfile){INST_MUL32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD")))    return (InstProfile){INST_ADD   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB")))    return (InstProfile){INST_SUB   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL")))    return (InstProfile){INST_MUL   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVI")))   return (InstProfile){INST_DIVI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVU")))   return (InstProfile){INST_DIVU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADDF")))   return (InstProfile){INST_ADDF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUBF")))   return (InstProfile){INST_SUBF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MULF")))   return (InstProfile){INST_MULF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVF")))   return (InstProfile){INST_DIVF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("INC")))    return (InstProfile){INST_INC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DEC")))    return (InstProfile){INST_DEC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("INCF")))   return (InstProfile){INST_INCF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DECF")))   return (InstProfile){INST_DECF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NEQ")))    return (InstProfile){INST_NEQ   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("EQ")))    return (InstProfile){INST_EQ     , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGI")))   return (InstProfile){INST_BIGI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGU")))   return (InstProfile){INST_BIGU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGF")))   return (InstProfile){INST_BIGF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLI")))   return (InstProfile){INST_SMLI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLU")))   return (InstProfile){INST_SMLU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLF")))   return (InstProfile){INST_SMLF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("CASTIU"))) return (InstProfile){INST_CASTIU, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTIF"))) return (InstProfile){INST_CASTIF, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTUI"))) return (InstProfile){INST_CASTUI, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTUF"))) return (InstProfile){INST_CASTUF, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTFI"))) return (InstProfile){INST_CASTFI, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTFU"))) return (InstProfile){INST_CASTFU, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CF3264"))) return (InstProfile){INST_CF3264, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CF6432"))) return (InstProfile){INST_CF6432, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MEMSET"))) return (InstProfile){INST_MEMSET, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMCPY"))) return (InstProfile){INST_MEMCPY, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMMOV"))) return (InstProfile){INST_MEMMOV, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMCMP"))) return (InstProfile){INST_MEMCMP, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MALLOC"))) return (InstProfile){INST_MALLOC, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FREE")))   return (InstProfile){INST_FREE  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FOPEN")))  return (InstProfile){INST_FOPEN , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FPOS")))   return (InstProfile){INST_FPOS  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FGOTO")))  return (InstProfile){INST_FGOTO , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FLOAT")))  return (InstProfile){INST_FLOAT , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("LOAD1")))  return (InstProfile){INST_LOAD1 , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("LOAD2")))  return (InstProfile){INST_LOAD2 , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("IOE")))    return (InstProfile){INST_IOE   , OP_PROFILE_RRR};
+    __VIRTUAL_RETURN_INST_PROFILE(NOP,       OP_PROFILE_NONE, INST_NOP  );
+    __VIRTUAL_RETURN_INST_PROFILE(HALT,      OP_PROFILE_E  , INST_HALT  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV8,      OP_PROFILE_RR , INST_MOV8  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV16,     OP_PROFILE_RR , INST_MOV16 );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV32,     OP_PROFILE_RR , INST_MOV32 );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV,       OP_PROFILE_RR , INST_MOV   );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVC,      OP_PROFILE_RRR, INST_MOVC  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVV,      OP_PROFILE_RL , INST_MOVV  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVN,      OP_PROFILE_RL , INST_MOVN  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVV16,    OP_PROFILE_RL , INST_MOVV16);
+    __VIRTUAL_RETURN_INST_PROFILE(PUSH,      OP_PROFILE_E  , INST_PUSH  );
+    __VIRTUAL_RETURN_INST_PROFILE(POP,       OP_PROFILE_R  , INST_POP   );
+    __VIRTUAL_RETURN_INST_PROFILE(STACK_GET, OP_PROFILE_RL , INST_STACK_GET);
+    __VIRTUAL_RETURN_INST_PROFILE(STACK_PUT, OP_PROFILE_RL , INST_STACK_PUT);
+    __VIRTUAL_RETURN_INST_PROFILE(GSP,       OP_PROFILE_RRR, INST_GSP   );
+    __VIRTUAL_RETURN_INST_PROFILE(STATIC,    OP_PROFILE_E  , INST_STATIC);
+    __VIRTUAL_RETURN_INST_PROFILE(READ8,     OP_PROFILE_RRR, INST_READ8 );
+    __VIRTUAL_RETURN_INST_PROFILE(READ16,    OP_PROFILE_RRR, INST_READ16);
+    __VIRTUAL_RETURN_INST_PROFILE(READ32,    OP_PROFILE_RRR, INST_READ32);
+    __VIRTUAL_RETURN_INST_PROFILE(READ,      OP_PROFILE_RRR, INST_READ  );
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE8,    OP_PROFILE_RRR, INST_WRITE8 );
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE16,   OP_PROFILE_RRR, INST_WRITE16);
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE32,   OP_PROFILE_RRR, INST_WRITE32);
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE,     OP_PROFILE_RRR, INST_WRITE  );
+    __VIRTUAL_RETURN_INST_PROFILE(MWRITES,   OP_PROFILE_RRR, INST_MWRITES);
+    __VIRTUAL_RETURN_INST_PROFILE(MMOVS,     OP_PROFILE_RRR, INST_MMOVS );
+    __VIRTUAL_RETURN_INST_PROFILE(MEMCMP,    OP_PROFILE_RRR, INST_MEMCMP);
+    __VIRTUAL_RETURN_INST_PROFILE(NOT,       OP_PROFILE_RR , INST_NOT   );
+    __VIRTUAL_RETURN_INST_PROFILE(NEG,       OP_PROFILE_RRR, INST_NEG   );
+    __VIRTUAL_RETURN_INST_PROFILE(AND,       OP_PROFILE_RRR, INST_AND   );
+    __VIRTUAL_RETURN_INST_PROFILE(NAND,      OP_PROFILE_RRR, INST_NAND  );
+    __VIRTUAL_RETURN_INST_PROFILE(OR,        OP_PROFILE_RRR, INST_OR    );
+    __VIRTUAL_RETURN_INST_PROFILE(XOR,       OP_PROFILE_RRR, INST_XOR   );
+    __VIRTUAL_RETURN_INST_PROFILE(BSHIFT,    OP_PROFILE_RRR, INST_BSHIFT);
+    __VIRTUAL_RETURN_INST_PROFILE(JMP,       OP_PROFILE_E  , INST_JMP   );
+    __VIRTUAL_RETURN_INST_PROFILE(JMPF,      OP_PROFILE_RL , INST_JMPF  );
+    __VIRTUAL_RETURN_INST_PROFILE(JMPFN,     OP_PROFILE_RL , INST_JMPFN );
+    __VIRTUAL_RETURN_INST_PROFILE(CALL,      OP_PROFILE_E  , INST_CALL  );
+    __VIRTUAL_RETURN_INST_PROFILE(RET,       OP_PROFILE_NONE, INST_RET  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD8,      OP_PROFILE_RRR, INST_ADD8  );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB8,      OP_PROFILE_RRR, INST_SUB8  );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL8,      OP_PROFILE_RRR, INST_MUL8  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD16,     OP_PROFILE_RRR, INST_ADD16 );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB16,     OP_PROFILE_RRR, INST_SUB16 );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL16,     OP_PROFILE_RRR, INST_MUL16 );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD32,     OP_PROFILE_RRR, INST_ADD32 );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB32,     OP_PROFILE_RRR, INST_SUB32 );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL32,     OP_PROFILE_RRR, INST_MUL32 );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD,       OP_PROFILE_RRR, INST_ADD   );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB,       OP_PROFILE_RRR, INST_SUB   );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL,       OP_PROFILE_RRR, INST_MUL   );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVI,      OP_PROFILE_RRR, INST_DIVI  );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVU,      OP_PROFILE_RRR, INST_DIVU  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADDF,      OP_PROFILE_RRR, INST_ADDF  );
+    __VIRTUAL_RETURN_INST_PROFILE(SUBF,      OP_PROFILE_RRR, INST_SUBF  );
+    __VIRTUAL_RETURN_INST_PROFILE(MULF,      OP_PROFILE_RRR, INST_MULF  );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVF,      OP_PROFILE_RRR, INST_DIVF  );
+    __VIRTUAL_RETURN_INST_PROFILE(INC,       OP_PROFILE_RL , INST_INC   );
+    __VIRTUAL_RETURN_INST_PROFILE(DEC,       OP_PROFILE_RL , INST_DEC   );
+    __VIRTUAL_RETURN_INST_PROFILE(INCF,      OP_PROFILE_RL , INST_INCF  );
+    __VIRTUAL_RETURN_INST_PROFILE(DECF,      OP_PROFILE_RL , INST_DECF  );
+    __VIRTUAL_RETURN_INST_PROFILE(ABS,       OP_PROFILE_RRR, INST_ABS   );
+    __VIRTUAL_RETURN_INST_PROFILE(ABSF,      OP_PROFILE_RRR, INST_ABSF  );
+    __VIRTUAL_RETURN_INST_PROFILE(NEQ,       OP_PROFILE_RRR, INST_NEQ   );
+    __VIRTUAL_RETURN_INST_PROFILE(EQ,        OP_PROFILE_RRR, INST_EQ    );
+    __VIRTUAL_RETURN_INST_PROFILE(EQF,       OP_PROFILE_RRR, INST_EQF   );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGI,      OP_PROFILE_RRR, INST_BIGI  );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGU,      OP_PROFILE_RRR, INST_BIGU  );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGF,      OP_PROFILE_RRR, INST_BIGF  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLI,      OP_PROFILE_RRR, INST_SMLI  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLU,      OP_PROFILE_RRR, INST_SMLU  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLF,      OP_PROFILE_RRR, INST_SMLF  );
+    __VIRTUAL_RETURN_INST_PROFILE(CASTIU,    OP_PROFILE_RR , INST_CASTIU);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTIF,    OP_PROFILE_RR , INST_CASTIF);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTUI,    OP_PROFILE_RR , INST_CASTUI);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTUF,    OP_PROFILE_RR , INST_CASTUF);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTFI,    OP_PROFILE_RR , INST_CASTFI);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTFU,    OP_PROFILE_RR , INST_CASTFU);
+    __VIRTUAL_RETURN_INST_PROFILE(CF3264,    OP_PROFILE_RR , INST_CF3264);
+    __VIRTUAL_RETURN_INST_PROFILE(CF6432,    OP_PROFILE_RR , INST_CF6432);
+    __VIRTUAL_RETURN_INST_PROFILE(FLOAT,     OP_PROFILE_RRR, INST_FLOAT );
+    __VIRTUAL_RETURN_INST_PROFILE(DUMPCHAR,  OP_PROFILE_RRR, INST_DUMPCHAR);
+    __VIRTUAL_RETURN_INST_PROFILE(GETCHAR,   OP_PROFILE_RR , INST_GETCHAR);
+    __VIRTUAL_RETURN_INST_PROFILE(EXEC,      OP_PROFILE_R  , INST_EXEC  );
+    __VIRTUAL_RETURN_INST_PROFILE(SYS,       OP_PROFILE_E  , INST_SYS   );
+    __VIRTUAL_RETURN_INST_PROFILE(DISREG,    OP_PROFILE_RRR, INST_DISREG);
 
-    if(COMP_TKN(inst_token, MKTKN("EXEC")))   return (InstProfile){INST_EXEC  , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
-
-    return (InstProfile){INST_ERROR, 0};
+    return (InstProfile){INST_ERROR, OP_PROFILE_NONE};
+    #undef __VIRTUAL_RETURN_INST_PROFILE
 }
 
 static inline int get_major_reg_identifier(const Token token){
-    if(mc_compare_token(token, MKTKN("R0"), 1))  return R0;
-    if(mc_compare_token(token, MKTKN("RA"), 1))  return RA;
-    if(mc_compare_token(token, MKTKN("RB"), 1))  return RB;
-    if(mc_compare_token(token, MKTKN("RC"), 1))  return RC;
-    if(mc_compare_token(token, MKTKN("RD"), 1))  return RD;
-    if(mc_compare_token(token, MKTKN("RE"), 1))  return RE;
-    if(mc_compare_token(token, MKTKN("RF"), 1))  return RF;
-    if(mc_compare_token(token, MKTKN("RSP"), 1)) return RSP;
-    if(mc_compare_token(token, MKTKN("RIP"), 1)) return RIP;
+    if(token.size < 2) return -1;
+    if(token.value.as_str[0] != 'r' && token.value.as_str[0] != 'R')
+        return -1;
+    
+    if(mc_compare_token(token, MKTKN("r0"), 1))  return MR0;
+    if(mc_compare_token(token, MKTKN("R0"), 1))  return MR0;
+    if(mc_compare_token(token, MKTKN("rsp"), 1)) return MRSP;
+    if(mc_compare_token(token, MKTKN("RSP"), 1)) return MRSP;
+    if(mc_compare_token(token, MKTKN("rip"), 1)) return MRIP;
+    if(mc_compare_token(token, MKTKN("RIP"), 1)) return MRIP;
+
+    if(token.size > 3) return -1;
+
+    if(token.value.as_str[1] >= 'a' && token.value.as_str[1] <= 'z')
+        return MRA + (token.value.as_str[1] - 'a');
+
+    if(token.value.as_str[1] >= 'A' && token.value.as_str[1] <= 'Z')
+        return MRA + (token.value.as_str[1] - 'A');
 
     return -1;
 }
@@ -235,30 +237,30 @@ static inline int get_major_reg_identifier(const Token token){
 int get_reg(const Token token){
     if(token.type == TKN_REG) return (int)token.value.as_uint;
     if(token.type != TKN_RAW) return -1;
+	if(token.size > 4 || token.size < 2) return -1;
+
     const int reg = get_major_reg_identifier(token);
-    if(reg >= 0){
-        if(token.size == 2){
-            return reg;
-        }
-        if(reg == RSP || reg == RIP){
-	    if(token.size > 4) return -1;
-	    if(token.size == 4){
-                const int i = get_digit(token.value.as_str[3]);
-                if((i < 0) || (i > 7)){
-                    return -1;
-                }
-                return reg + i;
-	    }
-	    return reg;
-        }
-	if(token.size == 3){
-            const int i = get_digit(token.value.as_str[2]);
-            if((i < 0) || (i > 7)){
-                return -1;
-            }
-            return reg + i;
-        }
+    if(reg < 0) return -1;
+    if(token.size == 2){
+        return reg * 8;
     }
+	if(token.size == 4){
+        const int i = get_digit(token.value.as_str[3]);
+        if((i < 0) || (i > 7)){
+            return -1;
+        }
+        return reg * 8 + i;
+	}
+    if(reg == MRSP || reg == MRIP || reg == MRST)
+        return reg * 8;
+	if(token.size == 3){
+        const int i = get_digit(token.value.as_str[2]);
+        if((i < 0) || (i > 7)){
+            return -1;
+        }
+        return reg * 8 + i;
+    }
+
     return -1;
 }
 
@@ -655,27 +657,6 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
                     op_token_pos, inst_sv.size, inst_sv.str, tokenRW.size, tokenRW.value.as_str, get_token_type_str(token.type)
                 );
                 return INST_ERROR;
-            }
-            if(inst_profile.opcode == INST_LOAD1){
-                if(operand.value.as_uint64 != operand.value.as_uint32){
-                    REPORT_ERROR(
-                        parser,
-                        "\n\tLOAD1 Literal Argument Has To Be Up To 32 Bits Long %"PRIu64" != %"PRIu32"\n\n",
-                        operand.value.as_uint64, operand.value.as_uint32
-                    );
-                    return INST_ERROR;
-                }
-                inst |= ((operand.value.as_uint32  & 0XFFFF) << 16);
-                mc_stream(parser->program, &inst, sizeof(inst));
-                inst = INST_CONTAINER | (operand.value.as_uint32 & 0xFFFF0000) >> 8;
-                return inst;
-            }
-            if(inst_profile.opcode == INST_LOAD2){
-		        Inst container[2];
-                container[0] = inst | (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
-                container[1] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
-		        for(int i = 0; i < 2; i+=1) mc_stream(parser->program, &container[i], sizeof(inst));
-                return INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));;
             }
             if(operand.value.as_uint64 != operand.value.as_uint16){
                 REPORT_ERROR(

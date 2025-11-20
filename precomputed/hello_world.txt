@@ -1,15 +1,14 @@
 %static 0x68656c6c6f20776f726c6400
 
 %start
-	STATIC 0x0 ;; "hello world...."...
+	STATIC 0x0
 	POP RB
-	IOE R0 RA R0
 	MOVV RC 0x00; (u: 0; i: 0; f: 0.000000)
-looD:
+loo@:
 	READ8 RC RB R0
-	PUTC RC RA R0
+	DUMPCHAR RC R0 R0
 	INC RB 0x1; u: 1
 	JMPF RC 0xfffd; i: -3
 	MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
-	PUTC RC RA R0
+	DUMPCHAR RC R0 R0
 	HALT 	0x0; (u: 0)

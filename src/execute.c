@@ -84,7 +84,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         vpu->stack[SP - L2] = R1.as_uint64;
         return 1;
     case INST_GSP:
-        R1.as_ptr = (uint8_t*)vpu->stack + R2.as_uint64;
+        R1.as_ptr = (uint8_t*)((uint64_t*) vpu->stack + R2.as_uint64) + R3.as_uint64;
         return 1;
     case INST_STATIC:
         vpu->stack[SP++] = (uint64_t)(uintptr_t)(vpu->static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
@@ -102,16 +102,25 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         R1.as_uint64 = *(uint64_t*)(R2.as_ptr + R3.as_int64);
         return 1;
     case INST_WRITE8:
-        *(uint8_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int8;
+        *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint8;
         return 1;
     case INST_WRITE16:
-        *(uint16_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int16;
+        *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint16;
         return 1;
     case INST_WRITE32:
-        *(uint32_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int32;
+        *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint32;
         return 1;
     case INST_WRITE:
-        *(uint64_t*)(R1.as_ptr + R3.as_uint64) = R2.as_int64;
+        *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint64;
+        return 1;
+    case INST_MWRITES:
+        R1.as_ptr = memset(R1.as_ptr, (int) R2.as_int8, (size_t) R3.as_uint64);
+        return 1;
+    case INST_MMOVS:
+        R1.as_ptr = memmove(R1.as_ptr,  R2.as_ptr, (size_t) R3.as_uint64);
+        return 1;
+    case INST_MEMCMP:
+        R1.as_uint8 = (uint8_t) memcmp(R1.as_ptr, R2.as_ptr, (size_t) R3.as_uint64);
         return 1;
     case INST_NOT:
         R1.as_uint64 = !R2.as_uint64;
@@ -288,83 +297,26 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_CF6432:
         R1.as_float64 = (double)R2.as_float32;
         return 1;
-
-    
-    case INST_MEMSET:
-        R1.as_ptr = memset(R1.as_ptr, R2.as_uint8, R3.as_uint64);
-        return 1;
-    case INST_MEMCPY:
-        R1.as_ptr = memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64);
-        return 1;
-    case INST_MEMMOV:
-        R1.as_ptr = memmove(R1.as_ptr, R2.as_ptr, R3.as_uint64);
-        return 1;
-    case INST_MEMCMP:
-        R1.as_uint8 = (uint8_t)memcmp(R1.as_ptr, R2.as_ptr, R3.as_uint64);
-        return 1;
-    case INST_MALLOC:
-        R1.as_ptr = malloc(R2.as_uint64 + R3.as_uint8);
-	    R1.as_uint64 += (R1.as_uint64 % (R3.as_uint8 + 1)) % (R3.as_uint8 + 1);
-        return 1;
-    case INST_FREE:
-        free(R1.as_ptr + R2.as_int64 - ((((R1.as_uint64 + R2.as_uint64)) % (R3.as_uint8 + 1)) % (R3.as_uint8 + 1)));
-        return 1;
-    
-
-    case INST_FOPEN:
-        switch (R3.as_uint8)
-        {
-        default:
-        case 0: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "r"); break;
-        case 1: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "w"); break;
-        case 2: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "rb"); break;
-        case 3: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "wb"); break;
-        case 4: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "a"); break;
-        case 5: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "ab"); break;
-        case 6: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "r+"); break;
-        case 7: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "w+"); break;
-        case 8: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "rb+"); break;
-        case 9: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "wb+"); break;
-        case 10: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "a+"); break;
-        case 11: R1.as_ptr = (uint8_t*)fopen((char*)R2.as_ptr, "ab+"); break;
-        }
-        return 1;
-    case INST_FCLOSE:
-        R1.as_uint64 = fclose((FILE*)(R2.as_ptr + R3.as_int64));
-        return 1;
-    case INST_PUTC:
-        R1.as_int32 = fputc((int) R1.as_int32, (FILE*)(R2.as_ptr + R3.as_int64));
-        return 1;
-    case INST_GETC:
-        R1.as_int32 = fgetc((FILE*)(R2.as_ptr + R3.as_int64));
-        return 1;
-    case INST_FPOS:
-        R1.as_uint64 = (uint64_t) ftell((FILE*)(R2.as_ptr + R3.as_int64));
-        return 1;
-    case INST_FGOTO:
-        R1.as_int32 = fseek((FILE*)(R1.as_ptr), (long) R3.as_uint64, (int) R2.as_int32);
-        return 1;
-
     case INST_FLOAT:
         R1.as_float64 = (double) R2.as_int64 / (double) R3.as_uint64;
         return 1;
-    case INST_LOAD1:
-        R1.as_uint64 = ((vpu->program[IP + 1] & 0XFFFFFF00) << 8) | ((inst & 0XFFFF0000) >> 16);
-        return 2;
-    case INST_LOAD2:
-        R1.as_uint64 = 
-            (uint64_t) ((uint64_t) (vpu->program[IP + 2] & 0XFFFFFF00) << 32) |
-            ((uint64_t) (vpu->program[IP + 1] & 0XFFFFFF00) << 8) |
-            ((uint64_t) (inst & 0XFFFF0000) >> 16);
-        return 3;
-    
-    case INST_IOE:
-        R1.as_ptr = (uint8_t*) stdin;
-        R2.as_ptr = (uint8_t*) stdout;
-        R3.as_ptr = (uint8_t*) stderr;
+
+    case INST_DUMPCHAR:
+        if(R2.as_int8 == 0){
+            putchar((int) R1.as_int32);
+            if(R3.as_uint8) fflush(stdout);
+        }
+        else{
+            fputc((int) R1.as_int32, stderr);
+            if(R3.as_uint8) fflush(stdout);
+        }
+        return 1;
+    case INST_GETCHAR:
+        R1.as_int32 = fgetc(stdin);
+        if(R2.as_uint8) fclose(stdin);
         return 1;
     case INST_EXEC:
-        return perform_inst(vpu, R1.as_uint32);
+        return perform_inst(vpu, R3.as_uint32);
     case INST_SYS:
         if(sys_call(vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
             fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
@@ -374,7 +326,12 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         return 1;
     case INST_DISREG:{
             char buff[8];
-            printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 8) & 0xFF, buff), R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+            if((inst >> 8 ) & 0xFF)
+                printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 8 ) & 0xFF, buff), R1.as_uint64, R1.as_uint64, R1.as_int64, R1.as_float64);
+            if((inst >> 16) & 0xFF)
+                printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 16) & 0xFF, buff), R2.as_uint64, R2.as_uint64, R2.as_int64, R2.as_float64);
+            if((inst >> 24) & 0xFF)
+                printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 24) & 0xFF, buff), R3.as_uint64, R3.as_uint64, R3.as_int64, R3.as_float64);
         }
         return 1;
     

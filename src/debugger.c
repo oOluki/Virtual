@@ -416,7 +416,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         if(i >= finish) break;
         if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
+        print_inst(debugger->output, debugger->program[i], buff);
     }
     for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
         fprintf(debugger->output, "%s:\n", label_ip_str);
@@ -430,7 +430,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
             fputc('\n', debugger->output);
         } else{
             if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-            print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i++, buff);
+            print_inst(debugger->output, debugger->program[i++], buff);
         }
     }
     for(; i < finish; i+=1){
@@ -443,7 +443,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         if(i >= finish) break;
         if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
+        print_inst(debugger->output, debugger->program[i], buff);
     }
     return 0;
 }
@@ -666,10 +666,6 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         {
         case INST_ERROR:
             fprintf(debugger->output, "failed to parse '%s'\n", argv[1]);
-            return 1;
-        case INST_LOAD1:
-        case INST_LOAD2:
-            fprintf(debugger->output, "'%s' instruction not supported in debug's %s command\n", argv[1], argv[0]);
             return 1;
         case INST_JMP:
         case INST_JMPF:
@@ -946,10 +942,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             for(int i = 0; i < INST_TOTAL_COUNT; i+=1){
                 char _buff[24];
                 char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
-                const Inst little_program[4] = {i, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
-                const uint64_t dummy_static[2] = {0, 0};
                 fprintf(debugger->output, "%*i-> ", digit_len_max, i);
-                print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+                print_inst(debugger->output, i, buff);
             }
             break;
         }
@@ -964,15 +958,12 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 );
                 continue;
             }
-            if((inst & 0xFF) == INST_LOAD1 && (inst & 0xFF) == INST_LOAD2){
-                fprintf(debugger->output, "instruction of kind LOAD, containers will be zeroed as they can't be infered\n");
-            }
             char _buff[24];
             char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
             const Inst little_program[4] = {inst, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
             const uint64_t dummy_static[2] = {0, 0};
             fprintf(debugger->output, "op code: %*i    machine code: %8"PRIx32"\n", digit_len_max, (int) (inst & 0xFF), inst);
-            print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+            print_inst(debugger->output, inst, buff);
         }
     }
         break;;

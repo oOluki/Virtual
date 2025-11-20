@@ -1,5 +1,9 @@
 %label SUCCESS "LABELS TEST WAS SUCCESSFULL"
 
+%label STDOUT 0
+
+%label STDERR 1
+
 %labelv X
 
 %label FAIL "[ERROR] TEST FAILED"
@@ -11,12 +15,14 @@ dummy:
 %iflabel X      ;; testing the if macros
 
 %label HELLO $FAIL
+%label OUTPUT $STDERR
 
 %endif
 
 %ifnlabel X
 
 %label HELLO $SUCCESS
+%label OUTPUT $STDOUT
 
 %endif
 
@@ -25,21 +31,21 @@ dummy:
 say_hello:
     STATIC $HELLO
     POP RB
-    IOE  R0 RA R0
     MOVV RE 1
+    MOVV RD $OUTPUT
     
     say_hello_loop:
-        READ8 RC RB R0
-        PUTC RC RA R0
-        ADD RB RE RB
+        READ8    RC RB R0
+        DUMPCHAR RC RD R0
+        ADD      RB RE RB
     JMPF RC @say_hello_loop
 
     MOVV RC 10
-    PUTC RC RA R0
+    DUMPCHAR RC RD R0
     RET
 
 %unlabel say_hello_loop
 
 %start
     CALL @say_hello
-    HALT 0
+    HALT $OUTPUT

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#define VIRTUAL_DEBUG_MODE 1
+//#define VIRTUAL_DEBUG_MODE 1
 
 #ifdef VIRTUAL_DEBUG_MODE
 
@@ -236,9 +236,8 @@ void mc_destroy_stream(Mc_stream_t stream){
     virtual_free_aligned(stream.data);
 }
 
-
-int mc_dump_memory(const void* src, size_t size, const char* output){
-    DEBUG_CODE(
+DEBUG_CODE(
+    int mc_dump_memory(const void* src, size_t size, const char* output){
         if(!src){
             VIRTUAL_DEBUG_ERR("could not dump memory to '%s': stream == NULL\n", output);
             return 1;
@@ -259,8 +258,8 @@ int mc_dump_memory(const void* src, size_t size, const char* output){
         }
         VIRTUAL_DEBUG_LOG("dumped %zu bytes from %p to '%s'\n", size, src, output);
         fclose(f);
-    )
-    return 0;
-}
+        return 0;
+    }
+)
 
 #endif // END OF BASIC ========================================================================
