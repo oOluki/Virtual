@@ -94,11 +94,12 @@ read_line:
 	DEC RA 0x1; u: 1
 	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
 	WRITE8 RX RB RA
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
 	STATIC 0x10
 	POP RB
-	CALL 0xffad; i: -83
+	CALL 0xffac; i: -84
 	MOV RB RX
-	CALL 0xffab; i: -85
+	CALL 0xffaa; i: -86
 	STATIC 0x1c
 	POP RB
-	CALL 0xffa8; i: -88
+	CALL 0xffa7; i: -89

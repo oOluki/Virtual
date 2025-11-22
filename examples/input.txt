@@ -53,6 +53,8 @@ DEC RA 1
 MOVV RB '\0'
 WRITE8 RX RB RA
 
+MOVV RA 0
+
 STATIC "You said: \'"
 POP RB
 CALL @dump_str
