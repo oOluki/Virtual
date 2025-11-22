@@ -62,8 +62,8 @@ static char get_ascii_color(uint32_t color){
     const uint32_t a = ((color >> 24) & 0xFF);
 
     const uint32_t brightness = a? (rw * r + gw * g + bw * b) / (rw + gw + bw) : 0;
-    const int ascii_index = (brightness <= 255)? (brightness * ascii_maplen) / 255 : ascii_maplen - 1;
-    return ascii_map[ascii_index];
+    const int ascii_index = (brightness < 255)? (brightness * ascii_maplen) / 255 : ascii_maplen - 1;
+    return ascii_map[ascii_maplen - 1 - ascii_index];
 }
 
 // if you provide your own sys_call method, you can to do whatever you want on a syscall with any id number
@@ -96,21 +96,21 @@ int sys_call(VPU* vpu, uint64_t call){
             4
         );
         if(!(((System*) vpu->system)->display)){
-            free(vpu->system);
+            virtual_free(vpu->system);
             vpu->system = NULL;
             return 1;
         }
     }
         return 0;
     case SYS_CLOSE:
-        free(vpu->system);
+        virtual_free(vpu->system);
         vpu->system = NULL;
         return 0;
     case SYS_MEMALLOC:
         vpu->registers[RA >> 3].as_ptr = virtual_alloc((size_t) vpu->registers[RA >> 3].as_uint64);
         return 0;
     case SYS_MEMFREE:
-        free(vpu->registers[RA >> 3].as_ptr);
+        virtual_free(vpu->registers[RA >> 3].as_ptr);
         return 0;
     case SYS_GET_DISPLAY_FRAMEBUFFER:{
         System* const system = vpu->system;
