@@ -32,7 +32,7 @@ SUBF RA RA RB
 MULF RA RC RA
 
 ; display the result
-DISREG RA
+DISREG RA R0 R0
 
 ;; getting the actual exact result
 MOVV RB 1

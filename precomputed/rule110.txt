@@ -1,21 +1,7 @@
-
-;; X====X (SPECIFICATIONS) X====X
-	;; name = precomputed/rule110.out
-	;; executable size = 1012
-	;; inst count      = 151
-	;; inst size       = 4
-	;; flags           = 00
-	;; meta_data_size  = 373
-	;; static_memory   = { position = 0, size = 16 }
-	;; labels          = { position = 32, size = 341 }
-	;; entry point     = 132
-;; X====X (SPECIFICATIONS) X====X
-
-
 %label WIDTH 20
 display_atomaton_return:
 	MOVV RA 0x0a; (u: 10; i: 10; f: 0.000000)
-	PUTC RA RD R0
+	DUMPCHAR RA R0 R0
 	POP RC
 	POP RB
 	POP RA
@@ -32,7 +18,7 @@ display_atomaton:
 	MUL RB RB RA
 	READ RB RE RB
 	ADD RB RB RC
-	PUTC RB RD R0
+	DUMPCHAR RB R0 R0
 	INC RA 0x1; u: 1
 	JMP 0xfff8; -8
 	JMP 0xffec; -20
@@ -41,9 +27,7 @@ get_cell_err:
 	POP RC
 	POP RB
 	POP RA
-	DISREG RA
-	DISREG RB
-	DISREG RC
+	DISREG RA RB RC
 	HALT 	0x1; (u: 1)
 get_cell_ret:
 	POP RD
@@ -73,7 +57,7 @@ get_cell:
 	INC RA 0x1; u: 1
 	JMP RA
 	NOP
-	CALL 0xffde; i: -34
+	CALL 0xffe0; i: -32
 	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
 	JMP 0xffe4; -28
 	MOVV RA 0x01; (u: 1; i: 1; f: 0.000000)
@@ -95,11 +79,11 @@ update_atomaton_return:
 	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
 	MUL RA RD RA
 	DEC RA 0x8; u: 8
-	SET RE RB RA
+	WRITE8 RE RB RA
 	POP RB
 	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
 	MUL RA RD RA
-	SET RE RB RA
+	WRITE8 RE RB RA
 	POP RD
 	POP RC
 	POP RB
@@ -147,7 +131,7 @@ update_atomaton:
 	MOVV RA 0x08; (u: 8; i: 8; f: 0.000000)
 	MUL RA RD RA
 	DEC RA 0x8; u: 8
-	SET RE RB RA
+	WRITE8 RE RB RA
 	INC RD 0x1; u: 1
 	JMP 0xffec; -20
 	JMP 0xffc6; -58
@@ -156,7 +140,6 @@ exit:
 %start
 	MOVV RF 0x14; (u: 20; i: 20; f: 0.000000)
 	GSP RE R0 R0
-	IOE R0 RD R0
 	MOV RA RF
 	DEC RA 0x1; u: 1
 	BIGI RC RA R0
@@ -165,12 +148,12 @@ exit:
 	DEC RA 0x1; u: 1
 	JMP 0xfffc; -4
 	PUSH 0x01; (u: 1; i: 1; f: 0.000000)
-	CALL 0xff77; i: -137
+	CALL 0xff7a; i: -134
 	MOV RA R0
 loop:
 	SMLU RB RA RF
-	JMPFN RB 0xfff1; i: -15
-	CALL 0xffc3; i: -61
-	CALL 0xff72; i: -142
+	JMPFN RB 0xfff2; i: -14
+	CALL 0xffc4; i: -60
+	CALL 0xff75; i: -139
 	INC RA 0x1; u: 1
 	JMP 0xfffb; -5

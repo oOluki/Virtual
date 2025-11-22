@@ -45,10 +45,9 @@ is_prime:
 
 
 ;; takes a range from RB.as_uint64 to RC.as_uint64 and prints
-;; the primes in that range to RA.as_ptr file
 primes_ret:
     MOVV RB '\n'
-    PUTC RB RA R0
+    DUMPCHAR RB R0 R0
     POP RE
     POP RD
     POP RC
@@ -63,18 +62,16 @@ primes:
     SMLU RD RB RC
     JMPFN RD @primes_ret
 
-    MOV RE RA
-
     loop:
         MOV RA RB
         CALL @is_prime
         JMPFN RA 7
-        MOV RA RE
-        CALL @fprint_uint
+        MOV   RA R0
+        CALL @dump_uint
         MOVV RD ','
-        PUTC RD RA R0
+        DUMPCHAR RD R0 R0
         MOVV RD ' '
-        PUTC RD RA R0
+        DUMPCHAR RD R0 R0
         INC  RB 1
         SMLU RD RB RC
     JMPF RD @loop
@@ -87,9 +84,6 @@ primes:
 
 
 %start
-
-IOE R0 RA R0
-
 MOVV RB 1
 MOVV RC 100
 
@@ -97,6 +91,6 @@ CALL @primes
 
 MOVV RB '\n'
 
-PUTC RB RA R0
+DUMPCHAR RB R0 R0
 
 

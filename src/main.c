@@ -1,6 +1,6 @@
+#include "assembler.c"
 #include "execute.c"
 #include "disassembler.c"
-#include "assembler.c"
 #include "debugger.c"
 
 
@@ -16,7 +16,7 @@ int is_file_executable(FILE* file){
 
     fseek(file, pos, 0);
 
-    return mc_compare_str(buff, "VPU:", 1);
+    return mc_compare_str(buff, VIRTUAL_FILE_MAGIC_NUMBER, 1);
 }
 
 
@@ -26,7 +26,8 @@ static inline void help(const char* main_executable){
         "Functionality: either assembles assembly program in <input> to byte code, disassembles byte code in <input> or executes byte code in <input>.\n"
         "Options:\n"
         "   --help:         displays this help message\n"
-        "   --version:      displays VPU's current version\n"
+        "   --version:      displays current version\n"
+        "   --inst:         displays instructions examples\n"
         "   -assemble:      assemble mode\n"
         "   -disassemble:   disassemble mode\n"
         "   -execute:       execute mode\n"
@@ -59,11 +60,13 @@ int main(int argc, char** argv){
     int input_file_arg  = -1;
     int output_file_arg = -1;
     int export_labels   = 0;
+
+    VIRTUAL_DEBUG_LOG("parsing cmd arguments\n");
     
     for(int i = 1; i < argc; i++){
         if(mc_compare_str(argv[i], "--help", 0)){
             help(argv[0]);
-            continue;
+            return 0;
         }
         if(mc_compare_str(argv[i], "--version", 0)){
             printf(
@@ -72,7 +75,18 @@ int main(int argc, char** argv){
                 "Copyright (c) 2024 oOluki\n"
                 "WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY.\n"
             );
-            continue;
+            return 0;
+        }
+        if(mc_compare_str(argv[i], "--inst", 0)){
+            char _buff[24];
+            char* buff[] = {&_buff[0], &_buff[8], &_buff[16]};
+            for(Inst i = 0; i < INST_TOTAL_COUNT; i+=1){
+                if(print_inst(stdout, i, buff)){
+                    fprintf(stderr, "[ERROR] print_inst missing %"PRIu32"th instruction\n", i);
+                    return 1;
+                }
+            }
+            return 0;
         }
         if(mc_compare_str(argv[i], "-assemble", 0)){
             mode |= MODE_ASSEMBLE;
@@ -149,16 +163,19 @@ int main(int argc, char** argv){
     }
 
     if(mode == MODE_NONE){
+        VIRTUAL_DEBUG_LOG("no mode provided, deducing best mode\n");
         FILE* input = fopen(argv[input_file_arg], "rb");
         if(!input){
             fprintf(stderr, "[ERROR] Can't open '%s'\n", argv[input_file_arg]);
             return 1;
         }
         mode = is_file_executable(input)? MODE_EXECUTE : MODE_ASSEMBLE;
+        VIRTUAL_DEBUG_LOG("choose %s\n", (mode == MODE_EXECUTE)? "execute" : "assemble");
         fclose(input);
     }
 
     if(mode & MODE_ASSEMBLE){
+        VIRTUAL_DEBUG_LOG("assembling %s to %s\n", argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : "output.out");
         const int status = assemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL, export_labels);
         if(status){
             fprintf(stderr, "[ERROR] Assembler Failed ^^^\n");
@@ -166,7 +183,8 @@ int main(int argc, char** argv){
         }
     }
     if(mode & MODE_DISASSEMBLE){
-        const int status = disassemble(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL);
+        VIRTUAL_DEBUG_LOG("disassembling %s to %s\n", argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : "stdout");
+        const int status = disassemble_file(argv[input_file_arg], (output_file_arg > 0)? argv[output_file_arg] : NULL);
         if(status){
             fprintf(stderr, "[ERROR] Disassembler Failed ^^^\n");
             return status;
