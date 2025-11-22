@@ -217,7 +217,7 @@ int vfopen(VirtualFile* vfile, const char* path, const char** required_fields, c
         }
         if(field < 0){
             VIRTUAL_DEBUG_LOG("field is neither optional nor required\n");
-            if(fseek(f, size - sizeof(size) - id_len - 1, SEEK_CUR)){
+            if(fseek(f, (long) (size - sizeof(size) - id_len - 1), SEEK_CUR)){
                 perror("fseek");
                 VIRTUAL_DEBUG_ERR("tried to skip from %lu to fseek(f, %"PRIu64", SEEK_CUR);\n", ftell(f), (size_t) (size - sizeof(size) - id_len - 1));
                 DEFER_ERROR("failed to skip field %zu 0x%.*"PRIx64", '%.*s'\n", meta_data_block, id_len, buff, id_len, id);

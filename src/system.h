@@ -78,7 +78,7 @@ int sys_call(VPU* vpu, uint64_t call){
     {
     case SYS_GET_SYSTEM_SPECIFICATIONS:
         // system name goes in RA
-        vpu->registers[RA >> 3].as_ptr   = "VPU_STANDARD_SYSTEM";
+        vpu->registers[RA >> 3].as_ptr   = (uint8_t*) "VPU_STANDARD_SYSTEM";
         // system bitsize architecture goes in RB
         vpu->registers[RB >> 3].as_uint8 = sizeof(size_t);
         // get system active state to RC

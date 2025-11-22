@@ -11,17 +11,17 @@
 
 #ifdef VIRTUAL_DEBUG_MODE
 
-    #define DEBUG_CODE(X...) X
+    #define DEBUG_CODE(...) __VA_ARGS__
 
 #else
 
-    #define DEBUG_CODE(X...)
+    #define DEBUG_CODE(...)
 
 #endif // END OF #ifdef VIRTUAL_DEBUG_MODE
 
-#define VIRTUAL_DEBUG_LOG(X...) DEBUG_CODE(do { fprintf(stderr, "[INFO] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, X); } while(0))
-#define VIRTUAL_DEBUG_ERR(X...) DEBUG_CODE(do { fprintf(stderr, "[ERROR] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, X); } while(0))
-#define VIRTUAL_DEBUG_WARN(X...) DEBUG_CODE(do { fprintf(stderr, "[WARNING] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, X); } while(0))
+#define VIRTUAL_DEBUG_LOG(...) DEBUG_CODE(do { fprintf(stderr, "[INFO] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, __VA_ARGS__); } while(0))
+#define VIRTUAL_DEBUG_ERR(...) DEBUG_CODE(do { fprintf(stderr, "[ERROR] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, __VA_ARGS__); } while(0))
+#define VIRTUAL_DEBUG_WARN(...) DEBUG_CODE(do { fprintf(stderr, "[WARNING] " __FILE__ ":%i:0: ", __LINE__); fprintf(stderr, __VA_ARGS__); } while(0))
 
 #define virtual_alloc(size) malloc(size)
 #define virtual_free(ptr) free(ptr)

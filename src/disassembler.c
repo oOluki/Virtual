@@ -432,7 +432,7 @@ int disassemble(
     uint64_t last_label = 0;
     
     for(uint64_t current_label = last_label; current_label < labels_byte_size && queried_stop == inst_count; ){
-        const Label label = get_label_from_raw_data(labels + current_label);
+        const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
         if(label.size == 0 || disassemble_handle_label(output, labels + current_label, &queried_stop)){
             disassembler_invalid_label(labels, current_label);
             return 1;
@@ -458,12 +458,12 @@ int disassemble(
             status = print_inst(output, program[i], buff);
         }
         if(status || i == inst_count) break;
-        const Label l = get_label_from_raw_data(labels + last_label);
-        fprintf(output, "%.*s:\n", (int) l.str_size, (const char*)(labels + last_label + l.str));
+        const Label l = get_label_from_raw_data(((uint8_t*) labels) + last_label);
+        fprintf(output, "%.*s:\n", (int) l.str_size, (const char*)(((uint8_t*) labels) + last_label + l.str));
         for(uint64_t current_label = last_label; current_label < labels_byte_size && i == queried_stop; ){
             const Label label = get_label_from_raw_data(labels + current_label);
-            if(label.size == 0 || disassemble_handle_label(output, labels + current_label, &queried_stop)){
-                disassembler_invalid_label(labels, current_label);
+            if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
+                disassembler_invalid_label(((uint8_t*) labels), current_label);
                 return 1;
             }
             last_label = current_label;
@@ -483,11 +483,11 @@ int disassemble(
         }
         if(status || i == inst_count) break;
         const Label label = get_label_from_raw_data(labels + last_label);
-        fprintf(output, "%.*s:\n", (int) label.str_size, (const char*)(labels + last_label + label.str));
+        fprintf(output, "%.*s:\n", (int) label.str_size, (const char*)(((uint8_t*) labels) + last_label + label.str));
         for(uint64_t current_label = last_label; current_label < labels_byte_size && i == queried_stop; ){
-            const Label label = get_label_from_raw_data(labels + current_label);
-            if(label.size == 0 || disassemble_handle_label(output, labels + current_label, &queried_stop)){
-                disassembler_invalid_label(labels, current_label);
+            const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
+            if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
+                disassembler_invalid_label((uint8_t*) labels, current_label);
                 return 1;
             }
             last_label = current_label;
@@ -495,9 +495,9 @@ int disassemble(
         }
     }
     for(uint64_t current_label = last_label; current_label < labels_byte_size; ){
-        const Label label = get_label_from_raw_data(labels + current_label);
-        if(label.size == 0 || disassemble_handle_label(output, labels + current_label, &queried_stop)){
-            disassembler_invalid_label(labels, current_label);
+        const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
+        if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
+            disassembler_invalid_label((uint8_t*) labels, current_label);
             return 1;
         }
         last_label = current_label;
