@@ -26,7 +26,7 @@
 #define virtual_alloc(size) malloc(size)
 #define virtual_free(ptr) free(ptr)
 
-#define DEFER_ERROR(ERROR...) do { err = 1; fprintf(stderr, "[ERROR] " ERROR); goto defer; } while(0)
+#define DEFER_ERROR(...) do { err = 1; fprintf(stderr, "[ERROR] " __VA_ARGS__); goto defer; } while(0)
 
 
 typedef struct Mc_stream_t{
