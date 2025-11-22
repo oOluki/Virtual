@@ -882,6 +882,8 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                 }
             }
             fprint_token(stderr, token);
+            fprintf(stderr, "\n");
+            fprintf(stderr, "ffffffffffffffffffffffffffff\n");
             REPORT_ERROR(parser, "\n\tExpected Instruction, Got %"PRIu8" '%.*s' Instead\n\n", *token.value.as_str, token.size, token.value.as_str);
             return 1;
         }
