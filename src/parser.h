@@ -574,7 +574,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
                 definition = get_next_token(parser->tokenizer);
                 if(definition.type == TKN_LABEL_REF || definition.type == TKN_ADDR_LABEL_REF){
                     const Token label = definition;
-                    if(label.type == TKN_ADDR_LABEL_REF) definition.type == TKN_LABEL_REF;
+                    if(label.type == TKN_ADDR_LABEL_REF) definition.type = TKN_LABEL_REF;
                     definition = resolve_token(parser->labels, definition);
                     if(definition.type == TKN_ERROR){
                         REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n", label.size, label.value.as_str);
@@ -808,7 +808,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
-        printf("'%.*s'\n", token.size, token.value.as_str);
+        fprintf(stderr, "'%.*s'\n", token.size, token.value.as_str);
         //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
@@ -867,8 +867,8 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         inst_profile = get_inst_profile(token);
         if(inst_profile.opcode == INST_ERROR){
             const Token next_token = get_next_token(parser->tokenizer);
-            fprint_token(stdout, next_token);
-            printf("\n");
+            fprint_token(stderr, next_token);
+            fprintf(stderr, "\n");
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(next_token.value.as_char == ':'){
                     if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
@@ -885,7 +885,6 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             }
             fprint_token(stderr, token);
             fprintf(stderr, "\n");
-            fprintf(stderr, "ffffffffffffffff\n");
             REPORT_ERROR(parser, "\n\tExpected Instruction, Got %"PRIu8" '%.*s' Instead\n\n", *token.value.as_str, token.size, token.value.as_str);
             return 1;
         }
