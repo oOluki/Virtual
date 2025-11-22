@@ -91,9 +91,7 @@ jobs:
       if: runner.os == 'Windows'
       working-directory: ${{ github.workspace }}
       # perform tests in the test.py script
-      run: >
-        python ${{ github.workspace  }}/tests/test.py
-        ${{ steps.strings.outputs.build-output-dir }}/Debug
-        ${{ github.workspace }}/examples
-        ${{ github.workspace }}/precomputed
+      run: |
+        ${{ steps.strings.outputs.build-output-dir }}/tokenizer_test ${{ github.workspace }}/examples/hello_world.txt
+        python ${{ github.workspace  }}/tests/test.py ${{ steps.strings.outputs.build-output-dir }}/Debug ${{ github.workspace }}/examples ${{ github.workspace }}/precomputed
  

@@ -1,13 +1,7 @@
-#ifndef VIRTUAL_LEXER_H
-#define VIRTUAL_LEXER_H
-
-
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
-#include "core.h"
-#include "virtual.h"
-
+#include <inttypes.h>
 
 
 typedef struct Tokenizer
@@ -73,6 +67,73 @@ typedef struct LexizedString{
 
 #define MKTKN(STR) ((Token){.value.as_str = STR, .size = sizeof(STR) - 1, .type = TKN_RAW})
 
+#define is_char_numeric(CHARACTER) (get_digit(CHARACTER) >= 0)
+
+int get_digit(char c){
+    switch (c)
+    {
+    case '0': return 0;
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case '4': return 4;
+    case '5': return 5;
+    case '6': return 6;
+    case '7': return 7;
+    case '8': return 8;
+    case '9': return 9;
+
+    default: return -1;
+    }
+}
+
+char get_char_digit(int d){
+    switch (d)
+    {
+    case 0: return '0';
+    case 1: return '1';
+    case 2: return '2';
+    case 3: return '3';
+    case 4: return '4';
+    case 5: return '5';
+    case 6: return '6';
+    case 7: return '7';
+    case 8: return '8';
+    case 9: return '9';
+
+    default: return '\0';
+    }
+}
+
+uint8_t get_hex_digit(char c){
+    switch (c)
+    {
+    case '0': return 0;
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case '4': return 4;
+    case '5': return 5;
+    case '6': return 6;
+    case '7': return 7;
+    case '8': return 8;
+    case '9': return 9;
+    case 'a':
+    case 'A': return 10;
+    case 'b':
+    case 'B': return 11;
+    case 'c':
+    case 'C': return 12;
+    case 'd':
+    case 'D': return 13;
+    case 'e':
+    case 'E': return 14;
+    case 'f':
+    case 'F': return 15;
+
+    default: return 255;
+    }
+}
 
 // returns the first found character position relative to the offset, or -1 if none are found
 static inline int mc_find_char(const char* str, char c, int offset){
@@ -95,25 +156,42 @@ static inline int mc_find_chars(const char* str, const char* charbuff, int offse
     return -1;
 }
 
-Token get_token_from_cstr(const char* str){
-    if(!str) return (Token){.value.as_str = NULL, .size = 0, .type = TKN_ERROR};
-    Token token = (Token){.value.as_str = (char*) str, .size = 0, .type = TKN_RAW};
-    for(token.size = 0; str[token.size]; token.size+=1);
-    return token;
-}
 
-void tokenizer_goto(Tokenizer* tokenizer, const char* dest){
-
-    for(; tokenizer->data[tokenizer->pos]; tokenizer->pos+=1){
-        if(mc_compare_str(tokenizer->data + tokenizer->pos, dest, 1)){
-            break;
-        }
-        if(tokenizer->data[tokenizer->pos] == '\n'){
-            tokenizer->line += 1;
-            tokenizer->column = 0;
-            continue;
-        }
-        tokenizer->column += 1;
+void fprint_token(FILE* file, const Token token){
+    switch(token.type){
+    case TKN_NONE:
+	fprintf(file, "TOKEN_NONE");
+	break;
+    case TKN_RAW:
+    case TKN_INST:
+    case TKN_REG:
+    case TKN_STR:
+    case TKN_CHAR:
+    case TKN_MACRO_INST:
+    case TKN_LABEL_REF:
+    case TKN_ADDR_LABEL_REF:
+        fprintf(file, "%.*s", token.size, token.value.as_str);
+        break;
+    case TKN_ILIT:
+        fprintf(file, "%"PRIi64"", token.value.as_int);
+        break;
+    case TKN_INST_POSITION:
+    case TKN_ULIT:
+        fprintf(file, "%"PRIu64"", token.value.as_uint);
+        break;
+    case TKN_FLIT:
+        fprintf(file, "%f", token.value.as_float);
+        break;
+    case TKN_SPECIAL_SYM:
+        fprintf(file, "%c", token.value.as_char);
+        break;
+    case TKN_EMPTY:
+        fprintf(file, "TOKEN_EMPTY");
+        break;
+    case TKN_ERROR:
+    default:
+        fprintf(file, "TOKEN_ERROR(%"PRIu8")", token.type);
+        break;
     }
 
 }
@@ -285,26 +363,9 @@ Token get_next_token(Tokenizer* tokenizer){
     return token;
 }
 
+char* read_file(const char* path){
 
-static inline int mc_compare_token(const Token token1, const Token token2, int _only_compare_till_smaller){
-    if(_only_compare_till_smaller == 0 && token1.size != token2.size)
-        return 0;
-
-    const unsigned int range = (token1.size < token2.size)? token1.size : token2.size;
-    
-    for(unsigned int i = 0; i < range; i+=1){
-	    if(token1.value.as_str[i] != token2.value.as_str[i]) return 0;
-    }
-    return 1;
-}
-
-// if include_file_path is NOT 0 then, on success, the file path will be streamed to the stream as streamview
-// (first size (uint32) then cstr (null terminated)) before the file contents
-char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_file_path){
-
-    VIRTUAL_DEBUG_LOG("reading file %s\n", path);
-
-    FILE* file = fopen(path, binary? "rb" : "r");
+    FILE* file = fopen(path, "r");
     if(!file) return NULL;
 
     if(fseek(file, 0, SEEK_END)){
@@ -324,62 +385,48 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
         return NULL;
     }
 
-    const uint64_t issize = stream->size;
-
-    if(include_file_path){
-        uint32_t path_str_size = 0;
-        for ( ; path[path_str_size]; path_str_size+=1);
-        mc_stream(stream, &path_str_size, sizeof(path_str_size));
-        mc_stream(stream, path, path_str_size + 1);
-    }
-
-    void* data = mc_stream(stream, NULL, size);
+    void* data = malloc(size + 1);
 
     fread(data, 1, size, file);
 
-    if(!binary) ((char*)stream->data)[stream->size++] = '\0';
+    ((char*)data)[size] = '\0';
 
     fclose(file);
 
-    return (char*)((uint8_t*)(stream->data) + issize);
+    return data;
 }
 
-// this automatically includes the concatonated file path as stringview (first size (uint32) then cstr (null terminated))
-// to the stream before the file contents, only if on success
-char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView relative_path){
+int main(int argc, char** argv){
 
-    const uint64_t ssize = stream->size;
-    const uint32_t path_str_size = mother_dir.size + relative_path.size;
 
-    // storing the position of the strings on the stream before any eventual
-    // realocation of the stream which would invalidade the pointers
-    // this way we can restore the pointers afterwards
-    const size_t mother_dir_str_pos = mother_dir.str - (char*)((uint8_t*)(stream->data));
-    const size_t relative_path_str_pos = relative_path.str - (char*)((uint8_t*)(stream->data));
-
-    // reserve enough space in the stream for the new file path
-    stream->size += path_str_size + sizeof(path_str_size);
-    mc_stream(stream, "", 0);
-    stream->size -= path_str_size + sizeof(path_str_size);
-
-    // restore pointers
-    mother_dir.str = (char*) mc_stream_on(stream, mother_dir_str_pos);
-    relative_path.str = (char*) mc_stream_on(stream, relative_path_str_pos);
-
-    mc_stream(stream, &path_str_size, sizeof(path_str_size));
-    mc_stream(stream, mother_dir.str, mother_dir.size);
-    mc_stream(stream, relative_path.str, relative_path.size);
-    const char nullterm_ = '\0';
-    mc_stream(stream, &nullterm_, sizeof(nullterm_));
-
-    char* const status = read_file(stream, (char*) mc_stream_on(stream, ssize + sizeof(path_str_size)), 0, 0);
-
-    if(status == NULL){
-        stream->size = ssize;
-        return NULL;
+    if(argc != 2){
+        fprintf(stderr, "[ERROR] %s expects exaclty one argument, file path, got %i instead\n", argv[0], argc - 1);
+        return 1;
     }
 
-    return (char*) mc_stream_on(stream, ssize);
+    char* str = read_file(argv[1]);
+
+    if(!str){
+        fprintf(stderr, "[ERROR] could not read '%s'\n", argv[1]);
+        return 1;
+    }
+
+    Tokenizer tokenizer = (Tokenizer){
+        .data = str,
+        .pos = 0,
+        .line = 0,
+        .column = 0
+    };
+
+    for(Token token = get_next_token(&tokenizer); token.type != TKN_NONE && token.type != TKN_ERROR; token = get_next_token(&tokenizer)){
+        fprint_token(stdout, token);
+        printf("\n");
+    }
+
+
+    free(str);
+
+    return 0;
 }
 
-#endif
+

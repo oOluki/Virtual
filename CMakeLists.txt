@@ -4,3 +4,4 @@ project(Virtual_Processing_Unit VERSION 0.0.1 LANGUAGES C CXX)
 
 add_executable(virtual src/main.c)
 
+add_executable(tokenizer_test tests/tokenizer_test.c)
