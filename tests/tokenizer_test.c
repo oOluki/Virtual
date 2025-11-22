@@ -264,7 +264,7 @@ Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
     const char* special_characters = ":,=";
     const char line_comment = ';';
-    const char* delimiters = " \t\n;:,=";
+    const char* delimiters = " \t\n\r;:,=";
 
     Token token = (Token){0};
     
@@ -273,6 +273,18 @@ Token get_next_token(Tokenizer* tokenizer){
             tokenizer->column += 1;
             tokenizer->pos += 1;
         }
+#ifdef _WIN32
+        if(string[tokenizer->pos] == '\r'){
+            if(string[tokenizer->pos + 1] == '\n'){
+                tokenizer->line += 1;
+                tokenizer->column = 0;
+                tokenizer->pos += 1;
+                continue;
+            }
+            tokenizer->column += 1;
+            continue;
+        }
+#endif // END OF #ifdef _WIN32
         if(string[tokenizer->pos] == '\n'){
             tokenizer->line += 1;
             tokenizer->column = 0;
@@ -375,7 +387,7 @@ char* read_file(const char* path){
 
     const long size = ftell(file);
 
-    if(fseek(file, 0, 0)){
+    if(fseek(file, 0, SEEK_SET)){
         fclose(file);
         return NULL;
     }
@@ -387,9 +399,13 @@ char* read_file(const char* path){
 
     void* data = malloc(size + 1);
 
-    fread(data, 1, size, file);
+    const size_t read = fread(data, 1, size, file);
 
-    ((char*)data)[size] = '\0';
+    if(read != size){
+        free(data);
+        data = NULL;
+    }
+    else ((char*)data)[read] = '\0';
 
     fclose(file);
 

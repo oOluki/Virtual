@@ -125,6 +125,7 @@ static inline char get_escaped_char(char c){
     case '0': return '\0';
     case 'n': return '\n';
     case 't': return '\t';
+    case 'r': return '\r';
     default : return c;
 
     }
@@ -186,7 +187,7 @@ Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
     const char* special_characters = ":,=";
     const char line_comment = ';';
-    const char* delimiters = " \t\n;:,=";
+    const char* delimiters = " \t\n\r;:,=";
 
     Token token = (Token){0};
     
@@ -195,6 +196,18 @@ Token get_next_token(Tokenizer* tokenizer){
             tokenizer->column += 1;
             tokenizer->pos += 1;
         }
+#ifdef _WIN32
+        if(string[tokenizer->pos] == '\r'){
+            if(string[tokenizer->pos + 1] == '\n'){
+                tokenizer->line += 1;
+                tokenizer->column = 0;
+                tokenizer->pos += 1;
+                continue;
+            }
+            tokenizer->column += 1;
+            continue;
+        }
+#endif // END OF #ifdef _WIN32
         if(string[tokenizer->pos] == '\n'){
             tokenizer->line += 1;
             tokenizer->column = 0;
