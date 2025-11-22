@@ -1,8 +1,16 @@
 %label SUCCESS "LABELS TEST WAS SUCCESSFULL"
 
-%label STDOUT 0
+%enum ;; output
 
-%label STDERR 1
+    INVALID = -1,
+
+    STDOUT = 0
+
+    STDERR = 1
+
+    OUTPUT_COUNT,
+
+%endenum
 
 %labelv X
 

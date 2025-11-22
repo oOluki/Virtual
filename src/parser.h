@@ -73,7 +73,7 @@ void fprint_token(FILE* file, const Token token){
         fprintf(file, "%f", token.value.as_float);
         break;
     case TKN_SPECIAL_SYM:
-        fprintf(file, "%c", token.value.as_str[0]);
+        fprintf(file, "%c", token.value.as_char);
         break;
     case TKN_EMPTY:
         fprintf(file, "TOKEN_EMPTY");
@@ -557,6 +557,65 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         }
         return 0;
     }
+    if(COMP_TKN(macro, MKTKN("%enum"))){
+        Token token = get_next_token(parser->tokenizer);
+        Token definition = (Token){.type = TKN_ILIT, .size = 0, .value.as_int = 0};
+        while(token.type != TKN_NONE && token.type != TKN_ERROR && !COMP_TKN(token, MKTKN("%endenum"))){
+            if(token.type != TKN_RAW){
+                REPORT_ERROR(
+                    parser, "\n\t%.*s Macro Element Should Be Raw Token, Got '%.*s' Instead\n",
+                    macro.size, macro.value.as_str,
+                    token.size, token.value.as_str
+                );
+                return 1;
+            }
+            Token next = get_next_token(parser->tokenizer);
+
+            if(next.type == TKN_SPECIAL_SYM && next.value.as_char == '='){
+                definition = get_next_token(parser->tokenizer);
+                if(definition.type == TKN_LABEL_REF || definition.type == TKN_ADDR_LABEL_REF){
+                    const Token label = definition;
+                    if(label.type == TKN_ADDR_LABEL_REF) definition.type == TKN_LABEL_REF;
+                    definition = resolve_token(parser->labels, definition);
+                    if(definition.type == TKN_ERROR){
+                        REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n", label.size, label.value.as_str);
+                        return 1;
+                    }
+                    else if(definition.type != TKN_ULIT && definition.type != TKN_ILIT){
+                        REPORT_ERROR(parser, "\n\t%.*s Expects Valid Number After =\n", macro.size, macro.value.as_str);
+                        return 1;
+                    }
+                    if(label.type == TKN_ADDR_LABEL_REF){
+                        definition.value.as_uint -= parser->program->size / 4;
+                    }
+                }
+                const Operand op = parse_op_literal(definition);
+                if(op.type != TKN_ULIT && op.type != TKN_ILIT){
+                    REPORT_ERROR(parser, "\n\t%.*s Macro Rvalue Should Be Integer\n", macro.size, macro.value.as_str);
+                    return 1;
+                }
+                definition.type = op.type;
+                definition.value.as_uint = op.value.as_uint64;
+                definition.size = 0;
+                next = get_next_token(parser->tokenizer);
+            }
+            if(next.type == TKN_SPECIAL_SYM && next.value.as_char == ','){
+                next = get_next_token(parser->tokenizer);
+            }
+
+            if(add_label(parser->labels, token, definition)){
+                REPORT_ERROR(
+                    parser, "\n\t%.*s Could Not Add Label '%.*s', It's Invalid Or It Already Exists\n",
+                    macro.size, macro.value.as_str,
+                    token.size, token.value.as_str
+                );
+                return 1;
+            }
+            definition.value.as_int += 1;
+            token = next;
+        }
+        return 0;
+    }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
             REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %s\n\n", "%endif");
@@ -809,7 +868,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(inst_profile.opcode == INST_ERROR){
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
-                if(COMP_TKN(next_token, MKTKN(":"))){
+                if(next_token.value.as_char == ':'){
                     if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
                     {
                         REPORT_ERROR(

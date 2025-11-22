@@ -185,9 +185,9 @@ LexizedString lexize_str(char* str, char delim){
 
 Token get_next_token(Tokenizer* tokenizer){
     char* string = tokenizer->data;
-    const char* special_characters = ":";
+    const char* special_characters = ":,=";
     const char line_comment = ';';
-    const char* delimiters = " \t\n;:";
+    const char* delimiters = " \t\n;:,=";
 
     Token token = (Token){0};
     
@@ -245,7 +245,7 @@ Token get_next_token(Tokenizer* tokenizer){
             continue;            
         }
         if(mc_find_char(special_characters, string[tokenizer->pos], 0) >= 0){
-            token.value.as_str = (string + tokenizer->pos);
+            token.value.as_char = string[tokenizer->pos];
             token.size = 1;
             token.type = TKN_SPECIAL_SYM;
             tokenizer->pos += 1;
@@ -261,6 +261,9 @@ Token get_next_token(Tokenizer* tokenizer){
         token.value.as_str = string + tokenizer->pos;
         switch (token.value.as_str[0])
         {
+        case '\0':
+            token.type = TKN_NONE;
+            return token;
         case '%':
             token.type = TKN_MACRO_INST;
             break;
