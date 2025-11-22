@@ -313,11 +313,11 @@ static inline int mc_compare_token(const Token token1, const Token token2, int _
 
 // if include_file_path is NOT 0 then, on success, the file path will be streamed to the stream as streamview
 // (first size (uint32) then cstr (null terminated)) before the file contents
-char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_file_path){
+char* read_file_txt(Mc_stream_t* stream, const char* path, int include_file_path){
 
     VIRTUAL_DEBUG_LOG("reading file %s\n", path);
 
-    FILE* file = fopen(path, binary? "rb" : "r");
+    FILE* file = fopen(path, "rb");
     if(!file) return NULL;
 
     if(fseek(file, 0, SEEK_END)){
@@ -348,11 +348,17 @@ char* read_file(Mc_stream_t* stream, const char* path, int binary, int include_f
 
     void* data = mc_stream(stream, NULL, size);
 
-    fread(data, 1, size, file);
+    const size_t read = fread(data, 1, size, file);
 
-    if(!binary) ((char*)stream->data)[stream->size++] = '\0';
+    if(read != size ||  ferror(file)){
+        fclose(file);
+        stream->size = issize;
+        return NULL;
+    }
 
     fclose(file);
+    const char nullterm = '\0';
+    mc_stream(stream, &nullterm, sizeof(nullterm));
 
     return (char*)((uint8_t*)(stream->data) + issize);
 }
@@ -385,7 +391,7 @@ char* read_file_relative(Mc_stream_t* stream, StringView mother_dir, StringView 
     const char nullterm_ = '\0';
     mc_stream(stream, &nullterm_, sizeof(nullterm_));
 
-    char* const status = read_file(stream, (char*) mc_stream_on(stream, ssize + sizeof(path_str_size)), 0, 0);
+    char* const status = read_file_txt(stream, (char*) mc_stream_on(stream, ssize + sizeof(path_str_size)), 0);
 
     if(status == NULL){
         stream->size = ssize;

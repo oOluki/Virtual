@@ -88,7 +88,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
 
     Mc_stream_t files = mc_create_stream(1000, 0);
 
-    if(!read_file(&files, input_path, 0, 1)){
+    if(!read_file_txt(&files, input_path, 1)){
         fprintf(stderr, "[ERROR] Could Not Open/Read File '%s'\n", input_path);
         mc_destroy_stream(files);
         return 1;
