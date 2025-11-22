@@ -808,7 +808,9 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
-        fprintf(stderr, "'%.*s'\n", token.size, token.value.as_str);
+        fprintf(stderr, "'%.*s' -> ", token.size, token.value.as_str);
+        fprint_token(stderr, token);
+        fprintf(stderr, "    0\n");
         //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
@@ -868,7 +870,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(inst_profile.opcode == INST_ERROR){
             const Token next_token = get_next_token(parser->tokenizer);
             fprint_token(stderr, next_token);
-            fprintf(stderr, "\n");
+            fprintf(stderr, "   1\n");
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(next_token.value.as_char == ':'){
                     if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
@@ -884,7 +886,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                 }
             }
             fprint_token(stderr, token);
-            fprintf(stderr, "\n");
+            fprintf(stderr, "   2\n");
             REPORT_ERROR(parser, "\n\tExpected Instruction, Got %"PRIu8" '%.*s' Instead\n\n", *token.value.as_str, token.size, token.value.as_str);
             return 1;
         }
