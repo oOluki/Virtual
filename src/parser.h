@@ -108,7 +108,6 @@ const char* get_token_type_str(int type){
     case TKN_STATIC_SIZE:       return "TOKEN_STATIC_SIZE";
     case TKN_UNRESOLVED_LABEL:  return "TKN_UNRESOLVED_LABEL";
     case TKN_INST_POSITION:     return "TKN_INST_POSITION";
-    case TKN_STATIC_REF:        return "TKN_STATIC_REF";
     default:                    return "TOKEN_ERROR";
     }
 
@@ -809,6 +808,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
+        printf("'%.*s'\n", token.size, token.value.as_str);
         //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
@@ -867,6 +867,8 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         inst_profile = get_inst_profile(token);
         if(inst_profile.opcode == INST_ERROR){
             const Token next_token = get_next_token(parser->tokenizer);
+            fprint_token(stdout, next_token);
+            printf("\n");
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(next_token.value.as_char == ':'){
                     if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
@@ -883,7 +885,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             }
             fprint_token(stderr, token);
             fprintf(stderr, "\n");
-            fprintf(stderr, "ffffffffffffffffffffffffffff\n");
+            fprintf(stderr, "ffffffffffffffff\n");
             REPORT_ERROR(parser, "\n\tExpected Instruction, Got %"PRIu8" '%.*s' Instead\n\n", *token.value.as_str, token.size, token.value.as_str);
             return 1;
         }

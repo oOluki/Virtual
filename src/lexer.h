@@ -55,7 +55,6 @@ enum TokenTypes{
     TKN_STATIC_SIZE,
     TKN_UNRESOLVED_LABEL,
     TKN_INST_POSITION,
-    TKN_STATIC_REF,
     TKN_ERROR = 255,
 };
 
