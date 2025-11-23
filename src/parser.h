@@ -38,6 +38,7 @@ typedef struct Parser
     char* file_path;
     int file_path_size;
     Mc_stream_t* labels;
+    Mc_stream_t* local_labels;
     Mc_stream_t* static_memory;
     Mc_stream_t* program;
     Tokenizer* tokenizer;
@@ -73,7 +74,7 @@ void fprint_token(FILE* file, const Token token){
         fprintf(file, "%f", token.value.as_float);
         break;
     case TKN_SPECIAL_SYM:
-        fprintf(file, "%c", token.value.as_str[0]);
+        fprintf(file, "%c", token.value.as_char);
         break;
     case TKN_EMPTY:
         fprintf(file, "TOKEN_EMPTY");
@@ -108,126 +109,127 @@ const char* get_token_type_str(int type){
     case TKN_STATIC_SIZE:       return "TOKEN_STATIC_SIZE";
     case TKN_UNRESOLVED_LABEL:  return "TKN_UNRESOLVED_LABEL";
     case TKN_INST_POSITION:     return "TKN_INST_POSITION";
-    case TKN_STATIC_REF:        return "TKN_STATIC_REF";
     default:                    return "TOKEN_ERROR";
     }
 
 }
 
 InstProfile get_inst_profile(const Token inst_token){
+    #define __VIRTUAL_RETURN_INST_PROFILE(INST_NAME, OP_PROFILE, ...)\
+        if(COMP_TKN(inst_token, MKTKN(#INST_NAME))) return (InstProfile){INST_ ## INST_NAME, OP_PROFILE}
+
     if(inst_token.type != TKN_RAW)            return (InstProfile){INST_ERROR , 0};
 
-    if(COMP_TKN(inst_token, MKTKN("NOP")))    return (InstProfile){INST_NOP   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("HALT")))   return (InstProfile){INST_HALT  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("MOV8")))   return (InstProfile){INST_MOV8  , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV16")))  return (InstProfile){INST_MOV16 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV32")))  return (InstProfile){INST_MOV32 , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOV")))    return (InstProfile){INST_MOV   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MOVC")))   return (InstProfile){INST_MOVC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MOVV")))   return (InstProfile){INST_MOVV  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("MOVN")))   return (InstProfile){INST_MOVN  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("MOVV16"))) return (InstProfile){INST_MOVV16, OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("PUSH")))   return (InstProfile){INST_PUSH  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("POP")))    return (InstProfile){INST_POP   , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("GET")))    return (InstProfile){INST_GET   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("WRITE")))  return (InstProfile){INST_WRITE , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("GSP")))    return (InstProfile){INST_GSP   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("STATIC"))) return (InstProfile){INST_STATIC, OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("READ8")))  return (InstProfile){INST_READ8 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ16"))) return (InstProfile){INST_READ16, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ32"))) return (InstProfile){INST_READ32, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("READ")))   return (InstProfile){INST_READ  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET8")))   return (InstProfile){INST_SET8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET16")))  return (InstProfile){INST_SET16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET32")))  return (InstProfile){INST_SET32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SET")))    return (InstProfile){INST_SET   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NOT")))    return (InstProfile){INST_NOT   , OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("NEG")))    return (InstProfile){INST_NEG   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("AND")))    return (InstProfile){INST_AND   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NAND")))   return (InstProfile){INST_NAND  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("OR")))     return (InstProfile){INST_OR    , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("XOR")))    return (InstProfile){INST_XOR   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BSHIFT"))) return (InstProfile){INST_BSHIFT, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("JMP")))    return (InstProfile){INST_JMP   , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("JMPF")))   return (InstProfile){INST_JMPF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("JMPFN")))  return (InstProfile){INST_JMPFN , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("CALL")))   return (InstProfile){INST_CALL  , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("RET")))    return (InstProfile){INST_RET   , OP_PROFILE_NONE};
-    if(COMP_TKN(inst_token, MKTKN("ADD8")))   return (InstProfile){INST_ADD8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB8")))   return (InstProfile){INST_SUB8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL8")))   return (InstProfile){INST_MUL8  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD16")))  return (InstProfile){INST_ADD16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB16")))  return (InstProfile){INST_SUB16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL16")))  return (InstProfile){INST_MUL16 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD32")))  return (InstProfile){INST_ADD32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB32")))  return (InstProfile){INST_SUB32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL32")))  return (InstProfile){INST_MUL32 , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADD")))    return (InstProfile){INST_ADD   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUB")))    return (InstProfile){INST_SUB   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MUL")))    return (InstProfile){INST_MUL   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVI")))   return (InstProfile){INST_DIVI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVU")))   return (InstProfile){INST_DIVU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ADDF")))   return (InstProfile){INST_ADDF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SUBF")))   return (InstProfile){INST_SUBF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MULF")))   return (InstProfile){INST_MULF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("DIVF")))   return (InstProfile){INST_DIVF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("INC")))    return (InstProfile){INST_INC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DEC")))    return (InstProfile){INST_DEC   , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("INCF")))   return (InstProfile){INST_INCF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("DECF")))   return (InstProfile){INST_DECF  , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("ABS")))    return (InstProfile){INST_ABS   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("ABSF")))   return (InstProfile){INST_ABSF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("NEQ")))    return (InstProfile){INST_NEQ   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("EQ")))    return (InstProfile){INST_EQ     , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("EQF")))    return (InstProfile){INST_EQF   , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGI")))   return (InstProfile){INST_BIGI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGU")))   return (InstProfile){INST_BIGU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("BIGF")))   return (InstProfile){INST_BIGF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLI")))   return (InstProfile){INST_SMLI  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLU")))   return (InstProfile){INST_SMLU  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("SMLF")))   return (InstProfile){INST_SMLF  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("CASTIU"))) return (InstProfile){INST_CASTIU, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTIF"))) return (InstProfile){INST_CASTIF, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTUI"))) return (InstProfile){INST_CASTUI, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTUF"))) return (InstProfile){INST_CASTUF, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTFI"))) return (InstProfile){INST_CASTFI, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CASTFU"))) return (InstProfile){INST_CASTFU, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CF3264"))) return (InstProfile){INST_CF3264, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("CF6432"))) return (InstProfile){INST_CF6432, OP_PROFILE_RR};
-    if(COMP_TKN(inst_token, MKTKN("MEMSET"))) return (InstProfile){INST_MEMSET, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMCPY"))) return (InstProfile){INST_MEMCPY, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMMOV"))) return (InstProfile){INST_MEMMOV, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MEMCMP"))) return (InstProfile){INST_MEMCMP, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("MALLOC"))) return (InstProfile){INST_MALLOC, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FREE")))   return (InstProfile){INST_FREE  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FOPEN")))  return (InstProfile){INST_FOPEN , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FCLOSE"))) return (InstProfile){INST_FCLOSE, OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("PUTC")))   return (InstProfile){INST_PUTC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("GETC")))   return (InstProfile){INST_GETC  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FPOS")))   return (InstProfile){INST_FPOS  , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FGOTO")))  return (InstProfile){INST_FGOTO , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("FLOAT")))  return (InstProfile){INST_FLOAT , OP_PROFILE_RRR};
-    if(COMP_TKN(inst_token, MKTKN("LOAD1")))  return (InstProfile){INST_LOAD1 , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("LOAD2")))  return (InstProfile){INST_LOAD2 , OP_PROFILE_RL};
-    if(COMP_TKN(inst_token, MKTKN("IOE")))    return (InstProfile){INST_IOE   , OP_PROFILE_RRR};
+    __VIRTUAL_RETURN_INST_PROFILE(NOP,       OP_PROFILE_NONE, INST_NOP  );
+    __VIRTUAL_RETURN_INST_PROFILE(HALT,      OP_PROFILE_E  , INST_HALT  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV8,      OP_PROFILE_RR , INST_MOV8  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV16,     OP_PROFILE_RR , INST_MOV16 );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV32,     OP_PROFILE_RR , INST_MOV32 );
+    __VIRTUAL_RETURN_INST_PROFILE(MOV,       OP_PROFILE_RR , INST_MOV   );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVC,      OP_PROFILE_RRR, INST_MOVC  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVV,      OP_PROFILE_RL , INST_MOVV  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVN,      OP_PROFILE_RL , INST_MOVN  );
+    __VIRTUAL_RETURN_INST_PROFILE(MOVV16,    OP_PROFILE_RL , INST_MOVV16);
+    __VIRTUAL_RETURN_INST_PROFILE(PUSH,      OP_PROFILE_E  , INST_PUSH  );
+    __VIRTUAL_RETURN_INST_PROFILE(POP,       OP_PROFILE_R  , INST_POP   );
+    __VIRTUAL_RETURN_INST_PROFILE(STACK_GET, OP_PROFILE_RL , INST_STACK_GET);
+    __VIRTUAL_RETURN_INST_PROFILE(STACK_PUT, OP_PROFILE_RL , INST_STACK_PUT);
+    __VIRTUAL_RETURN_INST_PROFILE(GSP,       OP_PROFILE_RRR, INST_GSP   );
+    __VIRTUAL_RETURN_INST_PROFILE(STATIC,    OP_PROFILE_E  , INST_STATIC);
+    __VIRTUAL_RETURN_INST_PROFILE(READ8,     OP_PROFILE_RRR, INST_READ8 );
+    __VIRTUAL_RETURN_INST_PROFILE(READ16,    OP_PROFILE_RRR, INST_READ16);
+    __VIRTUAL_RETURN_INST_PROFILE(READ32,    OP_PROFILE_RRR, INST_READ32);
+    __VIRTUAL_RETURN_INST_PROFILE(READ,      OP_PROFILE_RRR, INST_READ  );
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE8,    OP_PROFILE_RRR, INST_WRITE8 );
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE16,   OP_PROFILE_RRR, INST_WRITE16);
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE32,   OP_PROFILE_RRR, INST_WRITE32);
+    __VIRTUAL_RETURN_INST_PROFILE(WRITE,     OP_PROFILE_RRR, INST_WRITE  );
+    __VIRTUAL_RETURN_INST_PROFILE(MWRITES,   OP_PROFILE_RRR, INST_MWRITES);
+    __VIRTUAL_RETURN_INST_PROFILE(MMOVS,     OP_PROFILE_RRR, INST_MMOVS );
+    __VIRTUAL_RETURN_INST_PROFILE(MEMCMP,    OP_PROFILE_RRR, INST_MEMCMP);
+    __VIRTUAL_RETURN_INST_PROFILE(NOT,       OP_PROFILE_RR , INST_NOT   );
+    __VIRTUAL_RETURN_INST_PROFILE(NEG,       OP_PROFILE_RRR, INST_NEG   );
+    __VIRTUAL_RETURN_INST_PROFILE(AND,       OP_PROFILE_RRR, INST_AND   );
+    __VIRTUAL_RETURN_INST_PROFILE(NAND,      OP_PROFILE_RRR, INST_NAND  );
+    __VIRTUAL_RETURN_INST_PROFILE(OR,        OP_PROFILE_RRR, INST_OR    );
+    __VIRTUAL_RETURN_INST_PROFILE(XOR,       OP_PROFILE_RRR, INST_XOR   );
+    __VIRTUAL_RETURN_INST_PROFILE(BSHIFT,    OP_PROFILE_RRR, INST_BSHIFT);
+    __VIRTUAL_RETURN_INST_PROFILE(JMP,       OP_PROFILE_E  , INST_JMP   );
+    __VIRTUAL_RETURN_INST_PROFILE(JMPF,      OP_PROFILE_RL , INST_JMPF  );
+    __VIRTUAL_RETURN_INST_PROFILE(JMPFN,     OP_PROFILE_RL , INST_JMPFN );
+    __VIRTUAL_RETURN_INST_PROFILE(CALL,      OP_PROFILE_E  , INST_CALL  );
+    __VIRTUAL_RETURN_INST_PROFILE(RET,       OP_PROFILE_NONE, INST_RET  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD8,      OP_PROFILE_RRR, INST_ADD8  );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB8,      OP_PROFILE_RRR, INST_SUB8  );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL8,      OP_PROFILE_RRR, INST_MUL8  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD16,     OP_PROFILE_RRR, INST_ADD16 );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB16,     OP_PROFILE_RRR, INST_SUB16 );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL16,     OP_PROFILE_RRR, INST_MUL16 );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD32,     OP_PROFILE_RRR, INST_ADD32 );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB32,     OP_PROFILE_RRR, INST_SUB32 );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL32,     OP_PROFILE_RRR, INST_MUL32 );
+    __VIRTUAL_RETURN_INST_PROFILE(ADD,       OP_PROFILE_RRR, INST_ADD   );
+    __VIRTUAL_RETURN_INST_PROFILE(SUB,       OP_PROFILE_RRR, INST_SUB   );
+    __VIRTUAL_RETURN_INST_PROFILE(MUL,       OP_PROFILE_RRR, INST_MUL   );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVI,      OP_PROFILE_RRR, INST_DIVI  );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVU,      OP_PROFILE_RRR, INST_DIVU  );
+    __VIRTUAL_RETURN_INST_PROFILE(ADDF,      OP_PROFILE_RRR, INST_ADDF  );
+    __VIRTUAL_RETURN_INST_PROFILE(SUBF,      OP_PROFILE_RRR, INST_SUBF  );
+    __VIRTUAL_RETURN_INST_PROFILE(MULF,      OP_PROFILE_RRR, INST_MULF  );
+    __VIRTUAL_RETURN_INST_PROFILE(DIVF,      OP_PROFILE_RRR, INST_DIVF  );
+    __VIRTUAL_RETURN_INST_PROFILE(INC,       OP_PROFILE_RL , INST_INC   );
+    __VIRTUAL_RETURN_INST_PROFILE(DEC,       OP_PROFILE_RL , INST_DEC   );
+    __VIRTUAL_RETURN_INST_PROFILE(INCF,      OP_PROFILE_RL , INST_INCF  );
+    __VIRTUAL_RETURN_INST_PROFILE(DECF,      OP_PROFILE_RL , INST_DECF  );
+    __VIRTUAL_RETURN_INST_PROFILE(ABS,       OP_PROFILE_RRR, INST_ABS   );
+    __VIRTUAL_RETURN_INST_PROFILE(ABSF,      OP_PROFILE_RRR, INST_ABSF  );
+    __VIRTUAL_RETURN_INST_PROFILE(NEQ,       OP_PROFILE_RRR, INST_NEQ   );
+    __VIRTUAL_RETURN_INST_PROFILE(EQ,        OP_PROFILE_RRR, INST_EQ    );
+    __VIRTUAL_RETURN_INST_PROFILE(EQF,       OP_PROFILE_RRR, INST_EQF   );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGI,      OP_PROFILE_RRR, INST_BIGI  );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGU,      OP_PROFILE_RRR, INST_BIGU  );
+    __VIRTUAL_RETURN_INST_PROFILE(BIGF,      OP_PROFILE_RRR, INST_BIGF  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLI,      OP_PROFILE_RRR, INST_SMLI  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLU,      OP_PROFILE_RRR, INST_SMLU  );
+    __VIRTUAL_RETURN_INST_PROFILE(SMLF,      OP_PROFILE_RRR, INST_SMLF  );
+    __VIRTUAL_RETURN_INST_PROFILE(CASTIU,    OP_PROFILE_RR , INST_CASTIU);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTIF,    OP_PROFILE_RR , INST_CASTIF);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTUI,    OP_PROFILE_RR , INST_CASTUI);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTUF,    OP_PROFILE_RR , INST_CASTUF);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTFI,    OP_PROFILE_RR , INST_CASTFI);
+    __VIRTUAL_RETURN_INST_PROFILE(CASTFU,    OP_PROFILE_RR , INST_CASTFU);
+    __VIRTUAL_RETURN_INST_PROFILE(CF3264,    OP_PROFILE_RR , INST_CF3264);
+    __VIRTUAL_RETURN_INST_PROFILE(CF6432,    OP_PROFILE_RR , INST_CF6432);
+    __VIRTUAL_RETURN_INST_PROFILE(FLOAT,     OP_PROFILE_RRR, INST_FLOAT );
+    __VIRTUAL_RETURN_INST_PROFILE(DUMPCHAR,  OP_PROFILE_RRR, INST_DUMPCHAR);
+    __VIRTUAL_RETURN_INST_PROFILE(GETCHAR,   OP_PROFILE_RR , INST_GETCHAR);
+    __VIRTUAL_RETURN_INST_PROFILE(EXEC,      OP_PROFILE_R  , INST_EXEC  );
+    __VIRTUAL_RETURN_INST_PROFILE(SYS,       OP_PROFILE_E  , INST_SYS   );
+    __VIRTUAL_RETURN_INST_PROFILE(DISREG,    OP_PROFILE_RRR, INST_DISREG);
 
-    if(COMP_TKN(inst_token, MKTKN("EXEC")))   return (InstProfile){INST_EXEC  , OP_PROFILE_R};
-    if(COMP_TKN(inst_token, MKTKN("SYS")))    return (InstProfile){INST_SYS   , OP_PROFILE_E};
-    if(COMP_TKN(inst_token, MKTKN("DISREG"))) return (InstProfile){INST_DISREG, OP_PROFILE_R};
-
-    return (InstProfile){INST_ERROR, 0};
+    return (InstProfile){INST_ERROR, OP_PROFILE_NONE};
+    #undef __VIRTUAL_RETURN_INST_PROFILE
 }
 
 static inline int get_major_reg_identifier(const Token token){
-    if(mc_compare_token(token, MKTKN("R0"), 1))  return R0;
-    if(mc_compare_token(token, MKTKN("RA"), 1))  return RA;
-    if(mc_compare_token(token, MKTKN("RB"), 1))  return RB;
-    if(mc_compare_token(token, MKTKN("RC"), 1))  return RC;
-    if(mc_compare_token(token, MKTKN("RD"), 1))  return RD;
-    if(mc_compare_token(token, MKTKN("RE"), 1))  return RE;
-    if(mc_compare_token(token, MKTKN("RF"), 1))  return RF;
-    if(mc_compare_token(token, MKTKN("RSP"), 1)) return RSP;
-    if(mc_compare_token(token, MKTKN("RIP"), 1)) return RIP;
+    if(token.size < 2) return -1;
+    if(token.value.as_str[0] != 'r' && token.value.as_str[0] != 'R')
+        return -1;
+    
+    if(mc_compare_token(token, MKTKN("r0"), 1))  return MR0;
+    if(mc_compare_token(token, MKTKN("R0"), 1))  return MR0;
+    if(mc_compare_token(token, MKTKN("rsp"), 1)) return MRSP;
+    if(mc_compare_token(token, MKTKN("RSP"), 1)) return MRSP;
+    if(mc_compare_token(token, MKTKN("rip"), 1)) return MRIP;
+    if(mc_compare_token(token, MKTKN("RIP"), 1)) return MRIP;
+
+    if(token.size > 3) return -1;
+
+    if(token.value.as_str[1] >= 'a' && token.value.as_str[1] <= 'z')
+        return MRA + (token.value.as_str[1] - 'a');
+
+    if(token.value.as_str[1] >= 'A' && token.value.as_str[1] <= 'Z')
+        return MRA + (token.value.as_str[1] - 'A');
 
     return -1;
 }
@@ -235,30 +237,30 @@ static inline int get_major_reg_identifier(const Token token){
 int get_reg(const Token token){
     if(token.type == TKN_REG) return (int)token.value.as_uint;
     if(token.type != TKN_RAW) return -1;
+	if(token.size > 4 || token.size < 2) return -1;
+
     const int reg = get_major_reg_identifier(token);
-    if(reg >= 0){
-        if(token.size == 2){
-            return reg;
-        }
-        if(reg == RSP || reg == RIP){
-	    if(token.size > 4) return -1;
-	    if(token.size == 4){
-                const int i = get_digit(token.value.as_str[3]);
-                if((i < 0) || (i > 7)){
-                    return -1;
-                }
-                return reg + i;
-	    }
-	    return reg;
-        }
-	if(token.size == 3){
-            const int i = get_digit(token.value.as_str[2]);
-            if((i < 0) || (i > 7)){
-                return -1;
-            }
-            return reg + i;
-        }
+    if(reg < 0) return -1;
+    if(token.size == 2){
+        return reg * 8;
     }
+	if(token.size == 4){
+        const int i = get_digit(token.value.as_str[3]);
+        if((i < 0) || (i > 7)){
+            return -1;
+        }
+        return reg * 8 + i;
+	}
+    if(reg == MRSP || reg == MRIP || reg == MRST)
+        return reg * 8;
+	if(token.size == 3){
+        const int i = get_digit(token.value.as_str[2]);
+        if((i < 0) || (i > 7)){
+            return -1;
+        }
+        return reg * 8 + i;
+    }
+
     return -1;
 }
 
@@ -355,7 +357,7 @@ int push_to_static(Mc_stream_t* static_memory, const Token token){
         if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
             return 2;
         }
-	mc_stream(static_memory, token.value.as_str + 1, token.size);
+	    mc_stream(static_memory, token.value.as_str + 1, token.size - 2);
         mc_stream_str(static_memory, "");
         return 0;
     }
@@ -454,6 +456,20 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             }
             arg2.value.as_int -= (parser->program->size / 4);
         }
+        else if(arg2.type == TKN_STR){
+            if(!parser->static_memory){
+                REPORT_ERROR(
+                    parser,
+                    "\n\tCan not add '%.*s' label definition string, no static memory available for string allocation\n",
+                    arg1.size, arg1.value.as_str
+                );
+                return 1;
+            }
+            const uint64_t spos = parser->static_memory->size;
+            push_to_static(parser->static_memory, arg2);
+            arg2.value.as_uint = spos;
+            arg2.type = TKN_ULIT;
+        }
         else if(arg2.type == TKN_NONE){
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
@@ -541,6 +557,65 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         }
         return 0;
     }
+    if(COMP_TKN(macro, MKTKN("%enum"))){
+        Token token = get_next_token(parser->tokenizer);
+        Token definition = (Token){.type = TKN_ILIT, .size = 0, .value.as_int = 0};
+        while(token.type != TKN_NONE && token.type != TKN_ERROR && !COMP_TKN(token, MKTKN("%endenum"))){
+            if(token.type != TKN_RAW){
+                REPORT_ERROR(
+                    parser, "\n\t%.*s Macro Element Should Be Raw Token, Got '%.*s' Instead\n",
+                    macro.size, macro.value.as_str,
+                    token.size, token.value.as_str
+                );
+                return 1;
+            }
+            Token next = get_next_token(parser->tokenizer);
+
+            if(next.type == TKN_SPECIAL_SYM && next.value.as_char == '='){
+                definition = get_next_token(parser->tokenizer);
+                if(definition.type == TKN_LABEL_REF || definition.type == TKN_ADDR_LABEL_REF){
+                    const Token label = definition;
+                    if(label.type == TKN_ADDR_LABEL_REF) definition.type = TKN_LABEL_REF;
+                    definition = resolve_token(parser->labels, definition);
+                    if(definition.type == TKN_ERROR){
+                        REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n", label.size, label.value.as_str);
+                        return 1;
+                    }
+                    else if(definition.type != TKN_ULIT && definition.type != TKN_ILIT){
+                        REPORT_ERROR(parser, "\n\t%.*s Expects Valid Number After =\n", macro.size, macro.value.as_str);
+                        return 1;
+                    }
+                    if(label.type == TKN_ADDR_LABEL_REF){
+                        definition.value.as_uint -= parser->program->size / 4;
+                    }
+                }
+                const Operand op = parse_op_literal(definition);
+                if(op.type != TKN_ULIT && op.type != TKN_ILIT){
+                    REPORT_ERROR(parser, "\n\t%.*s Macro Rvalue Should Be Integer\n", macro.size, macro.value.as_str);
+                    return 1;
+                }
+                definition.type = op.type;
+                definition.value.as_uint = op.value.as_uint64;
+                definition.size = 0;
+                next = get_next_token(parser->tokenizer);
+            }
+            if(next.type == TKN_SPECIAL_SYM && next.value.as_char == ','){
+                next = get_next_token(parser->tokenizer);
+            }
+
+            if(add_label(parser->labels, token, definition)){
+                REPORT_ERROR(
+                    parser, "\n\t%.*s Could Not Add Label '%.*s', It's Invalid Or It Already Exists\n",
+                    macro.size, macro.value.as_str,
+                    token.size, token.value.as_str
+                );
+                return 1;
+            }
+            definition.value.as_int += 1;
+            token = next;
+        }
+        return 0;
+    }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
             REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %s\n\n", "%endif");
@@ -558,6 +633,63 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
     return 1;
 }
 
+int pre_parse_inst_operand(const Parser* parser, Token* _token, uint64_t absolute_program_position){
+    Token token = *_token;
+    if(token.type == TKN_LABEL_REF){
+        if(token.size > 2){
+            if(token.value.as_str[2] == '.'){
+                REPORT_ERROR(parser, "\n\tCan Not Reference Local Label With '$', Only Relative Address References Are Allowed '%c'\n", '@');
+                return 1;
+            }
+        }
+        token = resolve_token(parser->labels, token);
+        if(token.type == TKN_ERROR){
+            REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", _token->size, _token->value.as_str);
+            return 1;
+        }
+        if(token.type == TKN_STATIC_SIZE){
+            token.value.as_uint = parser->static_memory->size;
+            token.type = TKN_ULIT;
+        }
+    }
+    else if(token.type == TKN_ADDR_LABEL_REF){
+        token.type = TKN_LABEL_REF;
+        token = resolve_token(parser->labels, token);
+        if(token.type == TKN_ERROR){
+            if(token.size > 1 && parser->local_labels){
+                if(token.value.as_str[1] == '.'){
+                    union {int16_t as_int16; uint16_t as_uint16; } stride;
+                    token.type = TKN_RAW;
+                    if(add_local_labelref(parser->local_labels, &stride.as_int16, token, absolute_program_position)){
+                        REPORT_ERROR(parser, "\n\tCould Not Add Local Label Reference '%.*s'\n", token.size, token.value.as_str);
+                        return 1;
+                    }
+                    *_token = (Token){.value.as_uint = stride.as_uint16, .type = TKN_ILIT, .size = 0};
+                    return 0;
+                }
+            }
+            REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", _token->size, _token->value.as_str);
+            return 1;
+        }
+        if(token.type != TKN_INST_POSITION){
+            REPORT_ERROR(parser, "\n\tInvalid Value For Relative Referencing %c", '\'');
+            fprint_token(stderr, token);
+            fprintf(stderr, "\'\n\n");
+            return 1;
+        }
+        const int64_t v = token.value.as_uint - (parser->program->size / 4);
+        if(v != (int16_t) v){
+            REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
+            return 1;
+        }
+        const Register dummy = (Register){.as_uint64 = (int16_t)(v) & 0xFFFF};
+        token.value.as_uint = dummy.as_uint64;
+    }
+
+    *_token = token;
+    return 0;
+}
+
 // \returns the parsed instruction on success or INST_ERROR on failure
 Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_sv){
 
@@ -570,38 +702,10 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
     {
         const Token tokenRW = get_next_token(parser->tokenizer);
         Token token = tokenRW;
-        if(tokenRW.type == TKN_LABEL_REF){
-            token = resolve_token(parser->labels, tokenRW);
-            if(token.type == TKN_ERROR){
-                REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", tokenRW.size, tokenRW.value.as_str);
-                return INST_ERROR;
-            }
-            if(token.type == TKN_STATIC_SIZE){
-                token.value.as_uint = parser->static_memory->size;
-                token.type = TKN_ULIT;
-            }
-        }
-        if(token.type == TKN_ADDR_LABEL_REF){
-            token.type = TKN_LABEL_REF;
-            token = resolve_token(parser->labels, token);
-            if(token.type == TKN_ERROR){
-                REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", tokenRW.size, tokenRW.value.as_str);
-                return INST_ERROR;
-            }
-            if(token.type != TKN_INST_POSITION){
-                REPORT_ERROR(parser, "\n\tInvalid Value For Relative Referencing %c", '\'');
-                fprint_token(stderr, token);
-                fprintf(stderr, "\'\n\n");
-                return INST_ERROR;
-            }
-            const int64_t v = token.value.as_uint - (parser->program->size / 4);
-            if(v != (int16_t) v){
-                REPORT_ERROR(parser, "\n\tLiteral Has To Be Up To 16 Bits Long, %"PRIi64" != %"PRIi16"\n\n", v, (int16_t) v);
-                return INST_ERROR;
-            }
-            const Register dummy = (Register){.as_uint64 = (int16_t)(v) & 0xFFFF};
-            token.value.as_uint = dummy.as_uint64;
-        }
+
+        if(pre_parse_inst_operand(parser, &token, parser->program->size + op_pos_in_inst))
+            return INST_ERROR;
+
         switch (inst_profile.op_profile & 0XFF)
         {
         case EXPECT_OP_REG:{
@@ -628,10 +732,10 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return INST_ERROR;
                 }
-                token.value.as_uint = parser->static_memory->size;
+                const uint64_t spos = parser->static_memory->size;
+                push_to_static(parser->static_memory, token);
+                token.value.as_uint = spos;
                 token.type = TKN_ULIT;
-                mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
-                mc_stream_str(parser->static_memory, "");
             }
             const Operand operand = parse_op_literal(token);
             if(operand.type == TKN_ERROR){
@@ -641,27 +745,6 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
                     op_token_pos, inst_sv.size, inst_sv.str, tokenRW.size, tokenRW.value.as_str, get_token_type_str(token.type)
                 );
                 return INST_ERROR;
-            }
-            if(inst_profile.opcode == INST_LOAD1){
-                if(operand.value.as_uint64 != operand.value.as_uint32){
-                    REPORT_ERROR(
-                        parser,
-                        "\n\tLOAD1 Literal Argument Has To Be Up To 32 Bits Long %"PRIu64" != %"PRIu32"\n\n",
-                        operand.value.as_uint64, operand.value.as_uint32
-                    );
-                    return INST_ERROR;
-                }
-                inst |= ((operand.value.as_uint32  & 0XFFFF) << 16);
-                mc_stream(parser->program, &inst, sizeof(inst));
-                inst = INST_CONTAINER | (operand.value.as_uint32 & 0xFFFF0000) >> 8;
-                return inst;
-            }
-            if(inst_profile.opcode == INST_LOAD2){
-		        Inst container[2];
-                container[0] = inst | (uint32_t) ((operand.value.as_uint64  & 0XFFFF) << 16);
-                container[1] = INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000) >> 8);
-		        for(int i = 0; i < 2; i+=1) mc_stream(parser->program, &container[i], sizeof(inst));
-                return INST_CONTAINER | (uint32_t) ((operand.value.as_uint64 & 0xFFFFFF0000000000) >> (8 * 4));;
             }
             if(operand.value.as_uint64 != operand.value.as_uint16){
                 REPORT_ERROR(
@@ -678,17 +761,16 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
         
         case EXPECT_OP_EITHER:{
             if(token.type == TKN_STR){
-                if(!parser->static_memory){
-                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
-                    return INST_ERROR;
-                }
                 if(token.size < 2 || token.value.as_str[token.size - 1] != '\"'){
                     REPORT_ERROR(parser, "\n\tMissing Closing %c\n\n", '\"');
                     return INST_ERROR;
                 }
+                if(!parser->static_memory){
+                    REPORT_ERROR(parser, "\n\tNo Static Memory Available%c\n", '\n');
+                    return INST_ERROR;
+                }
                 const uint64_t op_value = parser->static_memory->size;
-                mc_stream(parser->static_memory, token.value.as_str + 1, token.size - 2);
-                mc_stream_str(parser->static_memory, "");
+                push_to_static(parser->static_memory, token);
                 inst |= (op_value & 0XFFFF) << 8;
                 inst |= HINT_LIT << 31;
                 op_token_pos += 1;
@@ -744,6 +826,8 @@ Inst parse_inst(Parser* parser, InstProfile inst_profile, const StringView inst_
 // \return 1 on error or 0 otherwise
 int parse_file(Parser* parser, Mc_stream_t* files_stream){
 
+    VIRTUAL_DEBUG_LOG("parsing file '%s'\n", (char*) parser->file_path);
+
     InstProfile inst_profile = (InstProfile){.opcode = INST_ERROR, .op_profile = OP_PROFILE_NONE};
 
     Token token = get_next_token(parser->tokenizer);
@@ -754,7 +838,6 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         if(token.type == TKN_EMPTY){
             continue;
         }
-        //fprintf(stderr, "%.*s\n", token.size, token.value.as_str);
         if(token.type == TKN_LABEL_REF){
             const Token tmp = resolve_token(parser->labels, token);
             if(tmp.type == TKN_ERROR){
@@ -809,11 +892,30 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             }
             continue;
         }
+        if(token.type == TKN_RAW && token.size > 1){
+            if(token.value.as_str[0] == '.'){
+                if(!parser->local_labels){
+                    REPORT_ERROR(parser, "\n\tNo Local Label Support%c\n", '\n');
+                    return 1;
+                }
+                const Token next_token = get_next_token(parser->tokenizer);
+                if(next_token.type != TKN_SPECIAL_SYM || next_token.value.as_char != ':'){
+                    REPORT_ERROR(parser, "\n\tExpected '%c' After Label Identifier\n", ':');
+                    return 1;
+                }
+                if(solve_local_label(parser->local_labels, parser->program->data, token, parser->program->size / 4)){
+                    REPORT_ERROR(parser, "\n\tCould Not Add Local Label '%.*s'\n", token.size, token.value.as_str);
+                    return 1;
+                }
+                continue;
+            }
+        }
+
         inst_profile = get_inst_profile(token);
         if(inst_profile.opcode == INST_ERROR){
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
-                if(COMP_TKN(next_token, MKTKN(":"))){
+                if(next_token.value.as_char == ':'){
                     if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
                     {
                         REPORT_ERROR(
@@ -822,6 +924,16 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                             token.size, token.value.as_str
                         );
                         return 1;
+                    }
+                    if(parser->local_labels){
+                        const Label* unsolved_local_label = get_missing_local_label(parser->local_labels);
+                        if(unsolved_local_label){
+                            const Label l = get_label_from_raw_data(parser->local_labels->data);
+                            const char* const unsolved_local_label_name = (char*) (((uintptr_t) unsolved_local_label) + l.str);
+                            REPORT_ERROR(parser, "\n\tUnsolved Local Label '%.*s'\n", l.size, unsolved_local_label_name);
+                            return 1;
+                        }
+                        parser->local_labels->size = 0;
                     }
                     continue;
                 }
@@ -841,6 +953,17 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
     if(token.type == TKN_ERROR){
         REPORT_ERROR(parser, "Invalid Token%c\n", ' ');
         return 1;
+    }
+
+    if(parser->local_labels){
+        const Label* unsolved_local_label = get_missing_local_label(parser->local_labels);
+        if(unsolved_local_label){
+            const Label l = get_label_from_raw_data(parser->local_labels->data);
+            const char* const unsolved_local_label_name = (char*) (((uintptr_t) unsolved_local_label) + l.str);
+            REPORT_ERROR(parser, "\n\tUnsolved Local Label '%.*s'\n", l.size, unsolved_local_label_name);
+            return 1;
+        }
+        parser->local_labels->size = 0;
     }
 
     return 0;

@@ -1,7 +1,5 @@
 # Set the minimum version of CMake
 cmake_minimum_required(VERSION 3.10.0)
-project(Virtual_Processing_Unit VERSION 1.5.3 LANGUAGES C CXX)
+project(Virtual_Processing_Unit VERSION 0.1.0 LANGUAGES C CXX)
 
-add_executable(virtual src/virtual.c)
-
-
+add_executable(virtual src/main.c)

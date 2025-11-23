@@ -36,7 +36,7 @@ else:
 ASSEMBLE    = VPU + " -assemble"
 DISASSEMBLE = VPU + " -disassemble"
 RUN         = VPU + " -execute"
-DEBUG       = VPU + " -debug"
+DEBUG       = VPU + " -debug -0"
 
 def run_process(*command, text=True, shell=False, _input=None):
     cmd = ""
@@ -196,7 +196,31 @@ if len(dummy) > 0:
 else:
     test_dir = "." + PATH_SEP
 
+
+
 DEBUG_EXAMPLE_PATH = test_dir + "debug_example.out"
+
+
+if PRECOMPUTE:
+    DEBUG_EXAMPLESRC_PATH = test_dir + "debug_example.txt"
+    print(f"quering debug example source in {DEBUG_EXAMPLESRC_PATH}")
+    try:
+        debug_example_file = open(DEBUG_EXAMPLESRC_PATH, "r")
+        debug_example_file.close()
+        print(f"compiling {DEBUG_EXAMPLESRC_PATH} to {DEBUG_EXAMPLE_PATH}")
+        process = run_process(ASSEMBLE, DEBUG_EXAMPLESRC_PATH, "-o", DEBUG_EXAMPLE_PATH)
+        if process.returncode:
+            print(f"*Precompute Debug Failed trying to compile {DEBUG_EXAMPLESRC_PATH} to {DEBUG_EXAMPLE_PATH} ***")
+            print("stderr: " + process.stderr.decode(ENCODING))
+            exit(1)
+    except FileNotFoundError:
+        print(\
+            "no debug example src file",\
+            "will proceed to query already existing program"
+        )
+    except Exception as e:
+        print(f"Exception {e} ocurred while trying to compile the debug test example source file in {DEBUG_EXAMPLESRC_PATH}")
+        exit(1)
 
 print(f"quering debug example in {DEBUG_EXAMPLE_PATH}")
 

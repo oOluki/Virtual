@@ -1,5 +1,17 @@
 %label SUCCESS "LABELS TEST WAS SUCCESSFULL"
 
+%enum ;; output
+
+    INVALID = -1,
+
+    STDOUT = 0
+
+    STDERR = 1
+
+    OUTPUT_COUNT,
+
+%endenum
+
 %labelv X
 
 %label FAIL "[ERROR] TEST FAILED"
@@ -11,35 +23,70 @@ dummy:
 %iflabel X      ;; testing the if macros
 
 %label HELLO $FAIL
+%label OUTPUT $STDERR
 
 %endif
 
 %ifnlabel X
 
 %label HELLO $SUCCESS
+%label OUTPUT $STDOUT
 
 %endif
 
 %unlabel dummy
 
-say_hello:
-    STATIC $HELLO
+say_hello_false:
+    .say_hello:
+    STATIC $FAIL
     POP RB
-    IOE  R0 RA R0
     MOVV RE 1
+    MOVV RD $STDERR
     
-    say_hello_loop:
-        READ8 RC RB R0
-        PUTC RC RA R0
-        ADD RB RE RB
-    JMPF RC @say_hello_loop
+    READ8    RC RB R0
+    .say_hello_loop:
+        JMPFN    RC @.say_hello_loop_end
+        DUMPCHAR RC RD R0
+        ADD      RB RE RB
+        READ8    RC RB R0
+        JMP @.say_hello_loop
+    .say_hello_loop_end:
 
     MOVV RC 10
-    PUTC RC RA R0
+    DUMPCHAR RC RD R0
     RET
 
-%unlabel say_hello_loop
+
+say_hello:
+    JMP @.say_hello
+    JMP @say_hello_false
+    .say_hello:
+
+    STATIC $HELLO
+    POP RB
+    MOVV RE 1
+    MOVV RD $OUTPUT
+    
+    READ8    RC RB R0
+    .say_hello_loop:
+        JMPFN    RC @.say_hello_loop_end
+        DUMPCHAR RC RD R0
+        ADD      RB RE RB
+        READ8    RC RB R0
+        JMP @.say_hello_loop
+    .say_hello_loop_end:
+
+    MOVV RC 10
+    DUMPCHAR RC RD R0
+    RET
+
+;%unlabel say_hello_false
 
 %start
     CALL @say_hello
-    HALT 0
+    MOVV RA $OUTPUT
+    MOVV RB $STDOUT
+    NEQ  RA RA RB
+    MOVN RB 255
+    OR   RA RA RB
+    HALT RA

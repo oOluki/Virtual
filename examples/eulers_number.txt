@@ -5,9 +5,11 @@
 ;; RE holds 1 / n!
 
 
-LOAD2 RA 1.0f
+MOVV RA 1
+CASTFU RA RA
 MOVV RB 0.0f
-LOAD2 RC 10.0f
+MOVV RC 10
+CASTFU RC RC
 MOV RD RA
 MOV RE RA
 
@@ -20,7 +22,7 @@ loop:
 JMPF RF @loop
 
 ;; display the result
-DISREG RA
+DISREG RA R0 R0
 
 ;; writting e by piecewise reconstruction
 MOVV16 RB6 0x4005

@@ -4,7 +4,7 @@
 %start
     STATIC "INCLUDE TEST WAS SUCCESSFULL\n"
     POP RB
-    IOE  R0 RA R0
-    CALL @fprintf_str
+    MOV RA R0
+    CALL @dump_str
     HALT 0
 

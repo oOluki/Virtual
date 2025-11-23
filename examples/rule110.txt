@@ -4,7 +4,7 @@
 display_atomaton_return:
 
     MOVV RA '\n'
-    PUTC RA RD R0
+    DUMPCHAR RA R0 R0
 
     POP RC
     POP RB
@@ -26,7 +26,7 @@ display_atomaton:
         MUL  RB RB RA
         READ RB RE RB
         ADD  RB RB RC
-        PUTC RB RD R0
+        DUMPCHAR RB R0 R0
         INC RA 1
         JMP @loop
 
@@ -40,9 +40,7 @@ get_cell_err:
     POP RC
     POP RB
     POP RA
-    DISREG RA
-    DISREG RB
-    DISREG RC
+    DISREG RA RB RC
     HALT 1
 get_cell_ret:
     POP RD
@@ -104,11 +102,11 @@ update_atomaton_return:
     MOVV  RA 8
     MUL   RA RD RA
     DEC   RA 8
-    SET   RE RB RA
+    WRITE8 RE RB RA
     POP   RB
     MOVV  RA 8
     MUL   RA RD RA
-    SET   RE RB RA
+    WRITE8   RE RB RA
 
     POP RD
     POP RC
@@ -164,7 +162,7 @@ update_atomaton:
         MOVV  RA 8
         MUL   RA RD RA
         DEC   RA 8
-        SET   RE RB RA
+        WRITE8   RE RB RA
         INC   RD 1
         JMP   @loop
 
@@ -180,7 +178,6 @@ exit:
 
 MOVV RF $WIDTH
 GSP  RE R0 R0
-IOE  R0 RD R0
 
 ;; fill first atomaton's row
 

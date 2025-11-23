@@ -128,6 +128,6 @@ loop:
     SMLU   RB RA RSP
     JMPFN  RB @exit
     POP    RC
-    DISREG RC
+    DISREG RC R0 R0
 JMP @loop
 

@@ -60,6 +60,8 @@ typedef struct Debugger
     FILE*       output;
     FILE*       err;
 
+    int         argc;
+    char**      argv;
     VPU*        vpu;
     Parser      parser;
     Mc_stream_t stream;
@@ -356,6 +358,26 @@ int debugger_help(Debugger* debugger, int dupc){
     }
 }
 
+static inline int get_labelpos_to(uint64_t* pos, const char** str, const Mc_stream_t* labels, uint64_t ip){
+
+    for(uint64_t i = 0; i < labels->size; ){
+        const Label* const labelptr = (const Label*) (((uint8_t*) labels->data) + i);
+        const Label label = get_label_from_raw_data(labelptr);
+
+        if(label.type == TKN_INST_POSITION && label.definition.as_uint >= ip){
+            if(pos) *pos = label.definition.as_uint;
+            if(str) *str = (const char*) (((uint8_t*) labelptr) + label.str);
+            return 1;
+        }
+
+        if(label.size == 0){
+            return -1;
+        }
+        i += label.size;
+    }
+    return 0;
+}
+
 int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
 
     VPU* const vpu = debugger->vpu;
@@ -372,31 +394,58 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     int digit_len_max = 1;
     for(uint64_t psize = debugger->program_size; psize / 10; psize /= 10) digit_len_max += 1;
 
+    uint64_t    label_ip;
+    const char* label_ip_str = NULL;
+    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, i) > 0;
+
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H\n");
     fprintf(
         debugger->output,
-        "inst: %"PRIu64"  stack: %"PRIu64"  breakpoints: %"PRIu64"  status: %i\n",
-        vpu->registers[RIP >> 3].as_uint64, vpu->registers[RSP >> 3].as_uint64, debugger->breakpoint_count, debugger->vpu->status
+        "inst: %"PRIu64" / %"PRIu64"    stack: %"PRIu64"  breakpoints: %"PRIu64"  status: %i\n",
+        vpu->registers[RIP >> 3].as_uint64,
+        debugger->program_size,
+        vpu->registers[RSP >> 3].as_uint64,
+        debugger->breakpoint_count,
+        debugger->vpu->status
     );
-
     for(; i < finish && i < vpu->registers[RIP >> 3].as_uint64; i+=1){
+        for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
+            fprintf(debugger->output, "%s:\n", label_ip_str);
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+            width = (width > 0)? width - 1 : width;
+            finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+        }
+        if(i >= finish) break;
         if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
+        print_inst(debugger->output, debugger->program[i], buff);
     }
-    if(i == vpu->registers[RIP >> 3].as_uint64){
+    for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
+        fprintf(debugger->output, "%s:\n", label_ip_str);
+        found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+        width = (width > 0)? width - 1 : width;
+        finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+    }
+    if(i == vpu->registers[RIP >> 3].as_uint64 && i < finish){
         fprintf(debugger->output, "*");
         if(i >= debugger->program_size){
             fputc('\n', debugger->output);
         } else{
             if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-            print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i++, buff);
+            print_inst(debugger->output, debugger->program[i++], buff);
         }
     }
     for(; i < finish; i+=1){
+        for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
+            fprintf(debugger->output, "%s:\n", label_ip_str);
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+            width = (width > 0)? width - 1 : width;
+            finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+        }
+        if(i >= finish) break;
         if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
         else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program, debugger->vpu->static_memory, i, buff);
+        print_inst(debugger->output, debugger->program[i], buff);
     }
     return 0;
 }
@@ -509,6 +558,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;
     case DUPC_RESTART:{
         memset(debugger->vpu->register_space, 0, REGISTER_SPACE_SIZE);
+        debugger->vpu->registers[RA >> 3].as_int64 = debugger->argc;
+        debugger->vpu->registers[RB >> 3].as_ptr   = (uint8_t*) debugger->argv;
         debugger->vpu->registers[RIP >> 3].as_uint64 = debugger->parser.entry_point;
         debugger->vpu->registers[RSP >> 3].as_uint64 = 0;
         debugger->vpu->status = 0;
@@ -619,10 +670,6 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         {
         case INST_ERROR:
             fprintf(debugger->output, "failed to parse '%s'\n", argv[1]);
-            return 1;
-        case INST_LOAD1:
-        case INST_LOAD2:
-            fprintf(debugger->output, "'%s' instruction not supported in debug's %s command\n", argv[1], argv[0]);
             return 1;
         case INST_JMP:
         case INST_JMPF:
@@ -749,27 +796,40 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         }
     }
         break;
-    case DUPC_DO:
-        if((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL){
-            VPU* const vpu = debugger->vpu;
-            int ret_required_count = 0;
-            do {
-                ret_required_count += ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
-                ret_required_count -= ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
+    case DUPC_DO:{
+        if(argc > 2){
+            fprintf(debugger->err, "[ERROR] %s expects at most one argument, the number of steps, got %i instead\n", argv[0], argc - 1);
+            return 1;
+        }
+        uint64_t steps = 1;
+        if(argc == 2){
+            EXPECT(argv[1], TKN_ULIT, op);
+            steps = op.value.as_uint64;
+        }
+        if(debugger->vpu->registers[RIP >> 3].as_uint64 >= debugger->program_size) return 0;
+        for(uint64_t i = 0; i < steps; i+=1){
+            if((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL){
+                VPU* const vpu = debugger->vpu;
+                int ret_required_count = 0;
+                do {
+                    ret_required_count += ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
+                    ret_required_count -= ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
 
-                vpu->registers[RIP >> 3].as_int64 += perform_inst(
-                    vpu,
-                    debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                    vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                        vpu,
+                        debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                    );
+
+                } while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
+            }
+            else if(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size){
+                debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                    debugger->vpu,
+                    debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
                 );
-
-            } while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
+            }
         }
-        else if(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size){
-            debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
-                debugger->vpu,
-                debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
-            );
-        }
+    }
         break;
     case DUPC_STEP:{
         if(argc > 2){
@@ -781,9 +841,10 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             EXPECT(argv[1], TKN_ULIT, op);
             steps = op.value.as_uint64;
         }
+        if(debugger->vpu->registers[RIP >> 3].as_uint64 >= debugger->program_size)
+            return debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
         for(uint64_t i = 0; i < steps; i+=1){
-            if(((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL) &&
-            debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !debugger->vpu->status){
+            if(((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL) && !debugger->vpu->status){
                 VPU* const vpu = debugger->vpu;
                 int ret_required_count = 0;
                 do {
@@ -885,10 +946,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             for(int i = 0; i < INST_TOTAL_COUNT; i+=1){
                 char _buff[24];
                 char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
-                const Inst little_program[4] = {i, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
-                const uint64_t dummy_static[2] = {0, 0};
                 fprintf(debugger->output, "%*i-> ", digit_len_max, i);
-                print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+                print_inst(debugger->output, i, buff);
             }
             break;
         }
@@ -903,15 +962,12 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 );
                 continue;
             }
-            if((inst & 0xFF) == INST_LOAD1 && (inst & 0xFF) == INST_LOAD2){
-                fprintf(debugger->output, "instruction of kind LOAD, containers will be zeroed as they can't be infered\n");
-            }
             char _buff[24];
             char* buff[3] = {&_buff[0], &_buff[8], &_buff[16]};
             const Inst little_program[4] = {inst, INST_CONTAINER, INST_CONTAINER, INST_CONTAINER};
             const uint64_t dummy_static[2] = {0, 0};
             fprintf(debugger->output, "op code: %*i    machine code: %8"PRIx32"\n", digit_len_max, (int) (inst & 0xFF), inst);
-            print_inst(debugger->output, little_program, (const uint8_t*) dummy_static, 0, buff);
+            print_inst(debugger->output, inst, buff);
         }
     }
         break;;
@@ -1090,63 +1146,63 @@ int get_user_prompt(Debugger* debugger, int* _argc, char*** _argv){
 // takes input from file at _input or stdin if input == NULL
 // writes output to provided _output or stdout if output == NULL
 // writes errors to _err or stderr if err == NULL
-int debug(const char* exe){
+int debug(const char* input_file, int argc, char** argv){
 
-    if(!exe){
-        fprintf(stderr, "[ERROR] Expected Input Program Path\n");
+    VIRTUAL_DEBUG_LOG("requested debugging '%s'\n", input_file);
+
+    if(!input_file){
+        fprintf(stderr, "[ERROR] debug missing input file\n");
         return 1;
     }
 
-    Mc_stream_t stream = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
-
-    if(!read_file(&stream, exe, 1, 0)){
-        fprintf(stderr, "[ERROR] Could Not Open/Read '%s'\n", exe);
-        return 2;
+    VirtualFile vfile;
+    const char* required_fields[] = {
+        VIRTUAL_FILE_PROGRAM_FIELD_NAME,
+        NULL
+    };
+    const char* optional_fields[] = {
+        VIRTUAL_FILE_LABELS_FIELD_NAME,
+        VIRTUAL_FILE_STATIC_FIELD_NAME,
+        NULL
+    };
+    if(vfopen(&vfile, input_file, required_fields, optional_fields)){
+        fprintf(stderr, "[ERROR] debugger failed trying to open virtual file '%s'\n", input_file);
+        return 1;
     }
 
-    uint64_t flags;
-    uint64_t meta_data_size;
+    VIRTUAL_DEBUG_LOG("getting program...\n");
+    const void* const program_field = get_virtual_file_field(vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME);
     uint64_t entry_point;
-    uint32_t padding;
-
-    const uint64_t skip = sizeof(uint32_t) + sizeof(padding) + sizeof(flags) + sizeof(entry_point) + sizeof(meta_data_size);
-
-    void* meta_data = get_exe_specifications(stream.data, &meta_data_size, &entry_point, &flags, &padding);
-
-    if(!meta_data){
-        fprintf(stderr, "[ERROR] No MetaData In Program '%s'\n", exe);
-        mc_destroy_stream(stream);
+    uint64_t program_size;
+    const Inst* program = get_program_from_vfield(program_field, &program_size, &entry_point);
+    if(program == NULL){
+        fprintf(stderr, "[ERROR] debugger failed, virtual file in '%s' has corrupt program\n", input_file);
+        vfclose(vfile);
         return 1;
     }
 
-    Mc_stream_t static_memory = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
-    Mc_stream_t labels        = (Mc_stream_t){.data = NULL, .size = 0, .capacity = 0};
-
-    VPU vpu;
-
-    for(size_t i = 0; i + 8 < meta_data_size; ){
-        const uint64_t size = *(uint64_t*)((uint8_t*)(meta_data) + i);
-        const uint64_t id   = *(uint64_t*)((uint8_t*)(meta_data) + i + sizeof(uint64_t));
-        if(size == 0){
-            fprintf(stderr, "[ERROR] Corrupted File: Metadata With Block Of Size 0 (%"PRIu64")\n", id);
-            mc_destroy_stream(stream);
-            return 1;
-        }
-        else if(id == (is_little_endian()? mc_swap64(0x5354415449433a00) : 0x5354415449433a00)){
-            static_memory.data = (uint8_t*) (meta_data) + i;
-            static_memory.size = size;
-            vpu.static_memory  = (uint8_t*) static_memory.data;
-        }
-        else if(id == (is_little_endian()? mc_swap64(0x4c4142454c533a00) : 0x4c4142454c533a00)){
-            labels.data = (uint8_t*) (meta_data) + i + sizeof(size) + sizeof(id);
-            labels.size = (size > sizeof(size) + sizeof(id))? size - sizeof(size) - sizeof(id) : 0;
-        }
-        i+=size;
+    void* _labels = get_virtual_file_field(vfile, VIRTUAL_FILE_LABELS_FIELD_NAME);
+    uint64_t labels_size = 0;
+    if(_labels){
+        labels_size = *(uint64_t*) _labels;
+        labels_size -= sizeof(uint64_t) + sizeof(VIRTUAL_FILE_LABELS_FIELD_NAME);
+        _labels = (void*) (((uintptr_t) _labels) + sizeof(uint64_t) + sizeof(VIRTUAL_FILE_LABELS_FIELD_NAME));
     }
-    
-    const uint64_t program_size = (stream.size - meta_data_size - skip - padding) / 4;
 
-    vpu.program = (Inst*)((uint8_t*)(stream.data) + skip + meta_data_size + padding);
+    Mc_stream_t labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
+
+    void* static_memory = get_virtual_file_field(vfile, VIRTUAL_FILE_STATIC_FIELD_NAME);
+    uint64_t static_memory_size = 0;
+    if(static_memory){
+        static_memory_size = *(uint64_t*) static_memory;
+        static_memory_size -= sizeof(uint64_t) + sizeof(VIRTUAL_FILE_STATIC_FIELD_NAME);
+        static_memory = (void*) (((uintptr_t) static_memory) + sizeof(uint64_t) + sizeof(VIRTUAL_FILE_STATIC_FIELD_NAME));
+    }
+
+    VIRTUAL_DEBUG_LOG("setting up virtual processing unit\n");
+    VPU vpu;
+    vpu.program = (Inst*) program;
+    vpu.static_memory = static_memory;
 
     Register registers[REGISTER_SPACE_SIZE / sizeof(Register)];
     for(int i = 0; i < REGISTER_SPACE_SIZE / sizeof(Register); i+=1){
@@ -1158,19 +1214,26 @@ int debug(const char* exe){
 
     vpu.stack = (uint64_t*) malloc(1024);
 
+    vpu.registers[RA >> 3].as_int64 = argc;
+    vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
+
     vpu.status = 0;
 
+    VIRTUAL_DEBUG_LOG("setting up mini parser...\n");
+
+    // for storing temporary data
+    Mc_stream_t dstream = mc_create_stream(1024, 8);
+
     Tokenizer tokenizer = (Tokenizer){
-        .data = (char*)((uint8_t*)(stream.data) + sizeof(uint32_t) + *(uint32_t*)(stream.data) + 1),
+        .data = (char*)((uint8_t*)(dstream.data) + sizeof(uint32_t) + *(uint32_t*)(dstream.data) + 1),
         .line = 0, .column = 0, .pos = 0
     };
-    // for storing temporary data
-    Mc_stream_t dstream = mc_create_stream(1000);
 
     Parser parser;
     parser.file_path = "stdin";
     parser.file_path_size = sizeof("stdin") - sizeof("");
     parser.labels = &labels;
+    parser.local_labels = NULL;
     parser.static_memory = NULL;
     parser.program = &dstream;
     parser.tokenizer = &tokenizer;
@@ -1178,32 +1241,39 @@ int debug(const char* exe){
     parser.flags = EXEFLAG_NONE;
     parser.macro_if_depth = 0;
 
-    Debugger debugger;
-    debugger.input = stdin;
-    debugger.output = stdout;
-    debugger.err = stderr;
-    debugger.is_active = 1;
-    debugger.labels = labels;
-    debugger.parser = parser;
-    debugger.program = vpu.program;
-    debugger.program_size = program_size;
+    VIRTUAL_DEBUG_LOG("setting up debugger...\n");
+
+    Debugger debugger = (Debugger){
+        .input = stdin,
+        .output = stdout,
+        .err = stderr,
+        .is_active = 1,
+        .labels = labels,
+        .parser = parser,
+        .program = vpu.program,
+        .program_size = program_size,
+        .breakpoint_count = 0,
+        .stream = dstream,
+        .argc = argc,
+        .argv = argv,
+        .vpu = &vpu,
+        .display_size = 5,
+    };
     debugger.signals = malloc((size_t) debugger.program_size);
     memset(debugger.signals, 0, (size_t) debugger.program_size);
-    debugger.breakpoint_count = 0;
-    debugger.stream = dstream;
-    debugger.vpu = &vpu;
-    debugger.display_size = 5;
+
+    VIRTUAL_DEBUG_LOG("start debugging...\n");
 
     debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
 
-    int argc;
-    char** argv;
+    int prompt_argc;
+    char** prompt_argv;
 
     for(uint64_t scope = 0; debugger.is_active; debugger.stream.size = scope) {
 	    
         scope = debugger.stream.size;
 
-        const int sig = get_user_prompt(&debugger, &argc, &argv);
+        const int sig = get_user_prompt(&debugger, &prompt_argc, &prompt_argv);
 
         // stdin closed
         if(sig == 1) break;
@@ -1212,11 +1282,11 @@ int debug(const char* exe){
             continue;
         }
 
-        if(argc == 0){ // perform smooth step v v v
-            if((debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL){
+        if(prompt_argc == 0){ // perform smooth step v v v
+            if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
                 VPU* const vpu = debugger.vpu;
                 int ret_required_count = 0;
-                do {
+                if((debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL) do {
                     ret_required_count += ((debugger.program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
                     ret_required_count -= ((debugger.program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
 
@@ -1226,32 +1296,33 @@ int debug(const char* exe){
                     );
 
                 } while(vpu->registers[RIP >> 3].as_uint64 < debugger.program_size && !vpu->status && ret_required_count > 0);
-            }
-            else if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
-                debugger.vpu->registers[RIP >> 3].as_int64 += perform_inst(
-                    debugger.vpu,
-                    debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64]
-                );
-            }
+                else if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
+                    debugger.vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                        debugger.vpu,
+                        debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64]
+                    );
+                }
+            }                
             debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
             continue;
         }
 
-        const int dupc = get_dupc_code(argv[0]);
+        const int dupc = get_dupc_code(prompt_argv[0]);
         if(dupc == DUPC_ERROR){
-            fprintf(debugger.err, "[ERROR] no command for %s, use help in case you want to check available commands\n", argv[0]);
+            fprintf(debugger.err, "[ERROR] no command for %s, use help in case you want to check available commands\n", prompt_argv[0]);
         }
-        else if(perform_user_prompt(&debugger, dupc, argc, argv)){
-            fprintf(debugger.err, "*** command %s failed ^^^\n", argv[0]);
+        else if(perform_user_prompt(&debugger, dupc, prompt_argc, prompt_argv)){
+            fprintf(debugger.err, "*** command %s failed ^^^\n", prompt_argv[0]);
         }
     }
 
 
+    VIRTUAL_DEBUG_LOG("finnished debugging, cleaning up...\n");
     free(vpu.stack);
-    mc_destroy_stream(stream);
+    mc_destroy_stream(dstream);
     free(debugger.signals);
-    mc_destroy_stream(debugger.stream);
-
+    vfclose(vfile);
+    VIRTUAL_DEBUG_LOG("debugging complete\n");
     return vpu.status;
 }
 

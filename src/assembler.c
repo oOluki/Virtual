@@ -1,9 +1,12 @@
 #ifndef _VPU_ASSEMBLER
 #define _VPU_ASSEMBLER
 
+#include "virtual.h"
+#include "virtual_files.h"
 #include <stdio.h>
 #include "parser.h"
 #include <inttypes.h>
+
 
 
 
@@ -83,23 +86,20 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
 
 #endif
 
-    Mc_stream_t files = mc_create_stream(1000);
+    Mc_stream_t files = mc_create_stream(1000, 0);
 
-    if(!read_file(&files, input_path, 0, 1)){
+    if(!read_file_txt(&files, input_path, 1)){
         fprintf(stderr, "[ERROR] Could Not Open/Read File '%s'\n", input_path);
         mc_destroy_stream(files);
         return 1;
     }
 
-    Mc_stream_t program = mc_create_stream(1000);
+    Mc_stream_t program = mc_create_stream(1024 * sizeof(Inst), 8);
 
-    Mc_stream_t static_memory = mc_create_stream(sizeof(uint64_t) + sizeof("STATIC:"));
+    Mc_stream_t static_memory = mc_create_stream(0, 0);
 
-    mc_stream(&static_memory, &static_memory.size, sizeof(uint64_t));
-
-    mc_stream(&static_memory, "STATIC:", sizeof("STATIC:"));
-
-    Mc_stream_t labels = mc_create_stream(1000);
+    Mc_stream_t labels = mc_create_stream(0, 0);
+    Mc_stream_t local_labels = mc_create_stream(0, 0);
 
     Tokenizer tokenizer = (Tokenizer){
         .data = (char*)((uint8_t*)(files.data) + sizeof(uint32_t) + *(uint32_t*)(files.data) + 1),
@@ -110,6 +110,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
     parser.file_path_size = *(uint32_t*)(files.data);
     parser.labels = &labels;
+    parser.local_labels = &local_labels;
     parser.static_memory = &static_memory;
     parser.program = &program;
     parser.tokenizer = &tokenizer;
@@ -118,24 +119,44 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     parser.macro_if_depth = 0;
     
     int status = parse_file(&parser, &files);
+
     if(status) goto defer;
 
-    *(uint64_t*)(static_memory.data) = static_memory.size;
+    if(program.size % sizeof(Inst))
+        VIRTUAL_DEBUG_WARN(
+            "program stream does not have compatible size with Inst array, "
+            "expected multiple of %i, got %"PRIu64" instead\n",
+            (int) sizeof(Inst), program.size
+        );
 
-    status = write_exe(
-        &program,
-        (output_path)? output_path : "output.bin",
-        parser.entry_point,
-        static_memory,
-        labels,
-        parser.flags
+    mc_stream(&program, &parser.entry_point, sizeof(parser.entry_point));
+
+    VirtualFile vfile = create_virtual_file(
+        NULL,
+        is_little_endian()? VIRTUAL_FILE_INTERNAL_FLAG_IS_LITTLE_ENDIAN : 0,
+        VIRTUAL_FILE_TYPE_EXE, 0, 0, NULL, NULL
     );
 
+    if(static_memory.size){
+        add_virtual_file_field(&vfile, VIRTUAL_FILE_STATIC_FIELD_NAME, static_memory.size, static_memory.data);
+    }
+    if(labels.size){
+        add_virtual_file_field(&vfile, VIRTUAL_FILE_LABELS_FIELD_NAME, labels.size, labels.data);
+    }
+    add_virtual_file_field(&vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME, program.size, program.data);
+
+    if(vfsave(vfile, output_path? output_path : "output.out")){
+        fprintf(stderr, "[ERROR] failed to save virtual file to '%s'\n", output_path? output_path : "output.out");
+        status = 1;
+    }
+
     defer:
-    mc_destroy_stream(program);
-    mc_destroy_stream(static_memory);
-    mc_destroy_stream(labels);
-    mc_destroy_stream(files);
+
+    if(program.data)        mc_destroy_stream(program);
+    if(static_memory.data)  mc_destroy_stream(static_memory);
+    if(labels.data)         mc_destroy_stream(labels);
+    if(local_labels.data)   mc_destroy_stream(local_labels);
+    if(files.data)          mc_destroy_stream(files);
 
     return status;
 }

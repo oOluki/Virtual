@@ -1,77 +1,43 @@
 %ifnlabel _VSTDIO_IN
 %labelv   _VSTDIO_IN
 
-;; fread reads RB.as_uint64 bytes from the stream in RC.as_ptr to RA.as_ptr
-fread:
-
-    JMPF RB 2
-    RET
-
-    ;; read byte
-    PUSH RD
-    ;; position
-    PUSH RE
-    PUSH RF
-
-    
-    
-    XOR RD RD RD
-    XOR RE RE RE
-    XOR RF RF RF
-
-    loop:
-        GETC RD RC R0
-        SET8 RA RD RE
-        INC  RE 1
-        MOV32 RD4 RD
-        BIGI RD RD R0
-        MOVV RF 0xFF
-        AND  RD RD RF
-        SMLU RF RE RB
-        NEQ  RF RF R0
-        NEQ  RD RD R0
-        AND  RF RF RD
-    JMPF RF @loop
-
-    POP RF
-    POP RE
-    POP RD
-    RET
-%unlabel loop
-
-;; fprintf_str takes the output file from RA and the input string from RB, it then prints the string up to the first '\0'.
-__fprintf_str_start:
-    PUTC RC RA R0
+;; dump_str takes an output file from RA (0 for stdout, else stderr) and a const char* str from RB.as_ptr and dumps the str to the file
+__dump_str_start:
+    DUMPCHAR RC RA R0
     INC RB 1
     READ8 RC RB R0
-JMPF RC @__fprintf_str_start
-;; restoring register RC
-POP RC
-RET
-fprintf_str:
-    ;; saving registers RC
+    JMPF RC @__dump_str_start
+    ;; restoring registers RC and RB
+    POP RC
+    POP RB
+    RET
+dump_str:
+    ;; saving registers RB and RC
+    PUSH RB
     PUSH RC
     
     READ8 RC RB R0
-    JMPF RC @__fprintf_str_start
-    ;; restoring register RC
+    JMPF RC @__dump_str_start
+    ;; restoring registers RB and RC
     POP RC
+    POP RB
     RET
-%unlabel __fprintf_str_start
+%unlabel __dump_str_start
 
-;; fprint_uint takes the output file from RA and an unsigned integer from RB, it then prints the unsigned integer to the output file
-fprint_uint_print:
+
+;; dump_uint takes the output file from RA.u8 (0 for stdout, else stderr) and an unsigned integer from RB.u64, it then dumps the unsigned integer to the provided file
+dump_uint_print:
     loop:
         DIVU RE RB RC
         MUL  RE RE RC
-	SUB  RF RB RE
+	    SUB  RF RB RE
         DIVU RC RC RD
         DIVU RE RF RC
-	MOVV RF '0'
-	ADD  RF RF RE
-	PUTC RF RA R0
-	MOVV RF 1
-	BIGU RF RC RF
+        MOVV RF '0'
+        ADD  RF RF RE
+        DUMPCHAR RF RA R0
+        MOVV RF 1
+        BIGU RF RC RF
     JMPF RF @loop
     POP RF
     POP RE
@@ -79,7 +45,7 @@ fprint_uint_print:
     POP RC
     RET
 %unlabel loop
-fprint_uint:
+dump_uint:
     ; saving auxiliary registers
     PUSH RC
     PUSH RD
@@ -91,33 +57,33 @@ fprint_uint:
     loop:
         DIVI RE RB RC
         NOT  RE RE
-        JMPF RE @fprint_uint_print
+        JMPF RE @dump_uint_print
         MUL  RC RC RD
     JMP @loop
 %unlabel loop
-%unlabel fprint_uint_print
+%unlabel dump_uint_print
 
 
-;; fprint_int takes the output file from RA and a signed integer from RB, it then prints the signed integer to the output file
-fprint_int_neg:
+;; dump_int takes the output file from RA (0 for stdout, else stderr) and a signed integer from RB, it then prints the signed integer to the output file
+dump_int_neg:
     MOVV RC '-'
-    PUTC RC RA R0
+    DUMPCHAR RC RA R0
     PUSH RB
     ABS  RB RB R0
-    CALL @fprint_uint
+    CALL @dump_uint
     POP RB
     POP RC
     RET
-fprint_int:
+dump_int:
     PUSH RC
     
     SMLI RC RB R0
-    JMPF RC @fprint_int_neg
+    JMPF RC @dump_int
 
-    CALL @fprint_uint
+    CALL @dump_uint
     POP RC
     RET
-%unlabel fprint_int_neg
+%unlabel dump_int_neg
 
 
 %endif
