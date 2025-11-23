@@ -140,7 +140,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     if(static_memory.size){
         add_virtual_file_field(&vfile, VIRTUAL_FILE_STATIC_FIELD_NAME, static_memory.size, static_memory.data);
     }
-    if(labels.size){
+    if(labels.size && export_labels){
         add_virtual_file_field(&vfile, VIRTUAL_FILE_LABELS_FIELD_NAME, labels.size, labels.data);
     }
     add_virtual_file_field(&vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME, program.size, program.data);

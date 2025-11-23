@@ -27,16 +27,16 @@ static inline void help(const char* main_executable){
         "Options:\n"
         "   --help:         displays this help message\n"
         "   --version:      displays current version\n"
-        "   --inst:         displays instructions examples\n"
+        "   --inst:         displays instructions desciptions and examples\n"
         "   -assemble:      assemble mode\n"
         "   -disassemble:   disassemble mode\n"
         "   -execute:       execute mode\n"
         "   -debug:         debug mode\n"
         "   -o <output>:    choose <output> as output file\n"
         "   -i <input>:     choose <input> as input file\n"
-        "   -args:          marks the beggining of the arguments to pass to executable\n"
-        "   -0:             pass no argument to virtual machine\n"
-        "   -export_labels: assembled executable/library will include all instruction position labels still defined by the end of the code\n",
+        "   -args:          marks the beggining of the arguments to pass to the virtual machine executable\n"
+        "   -0:             pass no argument to the virtual machine executable\n"
+        "   -no_export_labels: assembled executable/library will not include labels still defined by the end of the code\n",
         main_executable
     );
 }
@@ -57,10 +57,10 @@ int main(int argc, char** argv){
         MODE_DEBUG       = 1 << 3
     } mode = MODE_NONE;
 
-    int vpu_argv_begin  = argc;
+    int vpu_argv_begin  = argc - 1;
     int input_file_arg  = -1;
     int output_file_arg = -1;
-    int export_labels   = 0;
+    int export_labels   = 1;
 
     VIRTUAL_DEBUG_LOG("parsing cmd arguments\n");
     
@@ -82,6 +82,11 @@ int main(int argc, char** argv){
             char _buff[24];
             char* buff[] = {&_buff[0], &_buff[8], &_buff[16]};
             for(Inst i = 0; i < INST_TOTAL_COUNT; i+=1){
+                if(print_inst_description(stdout, i)){
+                    fprintf(stderr, "[ERROR] print_inst_description missing %"PRIu32"th instruction\n", i);
+                    return 1;
+                }
+                printf("\texample: ");
                 if(print_inst(stdout, i, buff)){
                     fprintf(stderr, "[ERROR] print_inst missing %"PRIu32"th instruction\n", i);
                     return 1;
@@ -129,8 +134,8 @@ int main(int argc, char** argv){
             input_file_arg = ++i;
             continue;
         }
-        if(mc_compare_str(argv[i], "-export_labels", 0)){
-            export_labels = 1;
+        if(mc_compare_str(argv[i], "-no_export_labels", 0)){
+            export_labels = 0;
             continue;
         }
         if(mc_compare_str(argv[i], "-args", 0)){
@@ -201,10 +206,10 @@ int main(int argc, char** argv){
     }
 
     else if((mode & MODE_EXECUTE) || (mode & MODE_DEBUG)){
-        const char* save_argvn1 = NULL;
-        const char* save_argv0 = NULL;
+        char* save_argvn1 = NULL;
+        char* save_argv0 = NULL;
         const char* input_file_path = argv[input_file_arg];
-        const int   program_argc = (vpu_argv_begin > 0)? argc - vpu_argv_begin + 1 : 0;
+        const int   program_argc =  (vpu_argv_begin > 0)? argc - vpu_argv_begin : 0;
         char** const program_argv = (vpu_argv_begin > 0)? argv + vpu_argv_begin : NULL;
         if(vpu_argv_begin > 0 ){
             save_argvn1 = argv[vpu_argv_begin - 1];
@@ -229,10 +234,10 @@ int main(int argc, char** argv){
             }
         }
         if(vpu_argv_begin > 0 ){
-            argv[vpu_argv_begin - 1] = argv[vpu_argv_begin - 1];
+            argv[vpu_argv_begin - 1] = save_argvn1;
         }
         if(vpu_argv_begin > -1){
-            argv[vpu_argv_begin] = argv[vpu_argv_begin];
+            argv[vpu_argv_begin] = save_argv0;
         }
     }
 
