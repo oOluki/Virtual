@@ -33,7 +33,7 @@
 #endif
 
 #ifndef VERSION
-    #define VERSION "0.0.1"
+    #define VERSION "VERSION NOT PROVIDED"
 #endif
 
 typedef struct Mc_stream_t{

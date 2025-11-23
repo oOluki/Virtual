@@ -19,14 +19,18 @@ Section 1: Build And Use
 	Use the virtual executable like so: virtual [options] <input>
     this will either assemble assembly program in <input> to byte code, disassemble byte code in <input> or execute byte code in <input>
     options are:
-        --help:             displays this help message
-        --version:          displays virtual current version
-        -assemble:          assemble mode
-        -disassemble:       disassemble mode
-        -execute:           execute mode
-        -o <output>:        place output to <file>
-        -i <input>:         take <input> as the input
-        -args:              marks the beggining of the arguments to pass to executable
+        --help:         displays this help message
+        --version:      displays current version
+        --inst:         displays instructions desciptions and examples
+        -assemble:      assemble mode
+        -disassemble:   disassemble mode
+        -execute:       execute mode
+        -debug:         debug mode
+        -o <output>:    choose <output> as output file
+        -i <input>:     choose <input> as input file
+        -args:          marks the beggining of the arguments to pass to executable
+        -0:             pass no argument to virtual machine
+        -no_export_labels: assembled executable/library will not include labels still defined by the end of the code
 
 
 Section 2: Assembly (VASM)
@@ -40,7 +44,9 @@ Section 2: Assembly (VASM)
     the first byte is always the opcode.
 
     registers:
-        R0, RA, RB, RC, RD, RE, RF, RSP and RIP are 64 bit registers, you can put a number from 0 to 7
+        Registers name don't differentiate between uppercase and lower case RX is equivalent to
+        rX and Rx and rx.
+        R0, RA to RZ, RSP and RIP are 64 bit registers, you can put a number from 0 to 7
         immediately after a register identifier to take a subregister starting from that byte offset,
         for example RD4 is a subregister that starts at the address of RD + 4. You can use subregisters
         as 8, 16, 32 or 64 bit registers, but it is worth noting that taking some subregisters with some sizes
@@ -119,9 +125,9 @@ Section 2: Assembly (VASM)
         POP:
             pop the top of the stack into R1
             R1 = STACK[--RSP]
-        GET:
+        INST_STACK_GET:
             R1 = STACK[RSP - L2.as_uint16]
-        WRITE:
+        INST_STACK_PUT:
             STACK[RSP - L2.as_uint16] = R1
         GSP:
             R1 = (uint8_t*) ((uint64_t*)(STACK_POINTER) + R2.as_uint64) + R3.as_uint64
@@ -135,14 +141,22 @@ Section 2: Assembly (VASM)
             R1.32 = *(uint32_t*)(R2.as_ptr + R3.as_uint64)
         READ:
             R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
-        SET8:
+        MREADS:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
+        WRITE8:
             *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
-        SET16:
+        WRITE16:
             *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.16
-        SET32:
+        WRITE32:
             *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.32
-        SET:
+        WRITE:
             *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2
+        MWRITES:
+            sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
+        MMOVS:
+            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
+        MEMCMP:
+            compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
         NOT:
             R1 = !R2
         NEG:
@@ -253,60 +267,43 @@ Section 2: Assembly (VASM)
             R1.as_float32 = (float) R2.as_float64
         CF6432:
             R1.as_float64 = (double) R2.as_float32
-        MEMSET:
-            sets R3.as_uint64 bytes to R2.8 starting from R1.as_ptr, sets R1 to NULL on failure
-        MEMCPY:
-            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1 to NULL on failure
-        MEMMOV:
-            copy R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr taking into account overlapping strings, sets R1 to NULL on failure
-        MEMCMP:
-            compares R3.as_uint64 bytes from R1.as_ptr to R2.as_ptr, sets R1.8 to 1 if all the bytes are equal or 0 otherwise
-        MALLOC:
-            allocates R2.as_uint64 bytes aligned to R3.as_uint8 + 1 and stores it to R1.as_ptr
-        FREE:
-            frees a block of memory allocated with MALLOC in R1.as_ptr + R2.as_int64 aligned to R3.as_uint8 + 1
-        FOPEN:
-            opens a file given by the string in R2.as_ptr in mode R3.as_uint8 and stores it to R1.as_ptr
-        FCLOSE:
-            closes a file in R2.as_ptr + R3.as_int64, sets R1.as_int64 to an error value on failure
-        PUTC:
-            puts ((char)R1.32) to the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
-        GETC:
-            gets a byte from the file at R2.as_ptr + R3.as_int64, sets R1.as_int32 to an error value on failure
-        INST_FPOS:
-            gets the current read/overwrite position in the file at R2.as_ptr + R3.as_int64 to R1.as_uint64
-        INST_FGOTO:
-            sets the current read/overwrite position in the file at R1.as_ptr to R2.as_int32 + R3.as_uint64
-            sets R1.as_int32 to 0 on success or 1 on failure
         FLOAT:
             R1.as_float64 = (double)(R2.as_int64) / (double)(R3.as_uint64)
-        LOAD1:
-            loads up to a 32 bit long value to a register
-            R1 = L2.32
-        LOAD2:
-            loads up to a 64 bit long value to a register
-            R1 = L2.64
-        IOE:
-            sets R1.as_ptr, R2.as_ptr and R3.as_ptr to the standard input, output and error, respectively
-        INST_EXEC:
+        INST_DUMPCHAR:
+            dumps R1.as_int8 character to stdout if R2.as_uint8 != 0 or stderr otherwise
+            and flushes the output stream if R3.as_uint8 != 0
+        INST_GETCHAR:
+            reads a single character from stdin, or -1 if stdin is closed, to R1.as_int32
+            closes stdin if R2.as_uint8 != 0
+        EXEC:
             executes the instructions given by R1.as_uint32
         SYS:
             perfomrs a syscall identified by the value in E
         DISREG:
-            displays a register's value, for debugging purposes
+            displays R1, R2 and R3 registers values, ignores R0s, for debugging purposes
 
     Subsection labels
         labels are a way to use compile time definitions and values. To create a label you can
         put a ':' symbol after it and the current instruction position will be labeled as that symbol,
-        alternatively you can use the %label and %labelv macros (see subsection macros). To access the
-        label's definition you can preffix it with '$' to get the actual value or, in the case of a label
+        if the label starts with '.' it will be taken as a local label, local labels are auto removed whenever
+        a new (not local and instruction) label appears, you can only jump down to local labels.
+        Alternatively you can use the %label and %labelv macros (see subsection macros), this will not auto remove local labels.
+        To access the label's definition you can preffix it with '$' to get the actual value or, in the case of a label
         defined as a number, you can preffix it with '@' to get the value relative to the current instruction position
-        (good for the JMP, JMPF, JMPFN and CALL instructions).
+        (good for the JMP, JMPF, JMPFN and CALL instructions), local labels only support '@' references. STATIC_SIZE is
+        a label that is automatically added for you and contains the current static memory byte size at that point in compilation.
         example:
             loop:
-                ;; code
-            JMP @loop
-            ;; jumps to label 'loop'
+                ;; conditional jump to .loop_end
+                JMPF RA @.loop_end
+
+                ;; code...
+
+                ;; jumps to label 'loop'
+                JMP @loop
+            .loop_end:
+            ;; new not local label, this will clean all local labels, so .loop_end will be removed and can now be relabeled
+            new_label:
         example:
             %label value 5
             MOVV RA $value
@@ -334,6 +331,16 @@ Section 2: Assembly (VASM)
             if the following symbol is not labeled
         %endif:
             marks the end of a macro if
+        %enum:
+            labels a sequence of tokens as ordered numbers, you can set any specific element with =,
+            commas ',' are optional, all %enum can be closed with %endenum
+            example:
+                %enum
+                    LABEL0 = 0,
+                    LABEL1
+                    LABEL2,
+                    LABEL_ = -8
+                %endenum
         %static:
             pushes the following data to the static memory
 
