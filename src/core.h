@@ -22,14 +22,6 @@
 #include <inttypes.h>
 #include "virtual.h"
 
-#ifndef VPU_MEMALIGN_TO
-    #define VPU_MEMALIGN_TO 8
-#endif
-
-#ifndef VERSION
-    #define VERSION "0.0.1"
-#endif
-
 
 typedef enum OpCode{
 

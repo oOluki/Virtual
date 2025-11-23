@@ -44,8 +44,6 @@ dump_uint:
 	JMPF RE 0xffe8; i: -24
 	MUL RC RC RD
 	JMP 0xfffc; -4
-dump_int_neg:
-%labelv _VMATH_IN
 	MOVV RC 0x2d; (u: 45; i: 45; f: 0.000000)
 	DUMPCHAR RC RA R0
 	PUSH RB
@@ -54,6 +52,8 @@ dump_int_neg:
 	POP RB
 	POP RC
 	RET
+dump_int:
+%labelv _VMATH_IN
 	PUSH RC
 	SMLI RC RB R0
 	JMPF RC 0xfffe; i: -2
@@ -98,5 +98,6 @@ sqrt:
 %start
 	STATIC 0x0
 	POP RB
-	CALL 0xffad; i: -83
+	MOV RA R0
+	CALL 0xffac; i: -84
 	HALT 	0x0; (u: 0)

@@ -8,18 +8,41 @@
 %label FAIL 28
 %label HELLO 0
 %label OUTPUT 0
+say_hello_false:
+	STATIC 0x1c
+	POP RB
+	MOVV RE 0x01; (u: 1; i: 1; f: 0.000000)
+	MOVV RD 0x01; (u: 1; i: 1; f: 0.000000)
+	READ8 RC RB R0
+	JMPFN RC 0x5; i: 5
+	DUMPCHAR RC RD R0
+	ADD RB RE RB
+	READ8 RC RB R0
+	JMP 0xfffc; -4
+	MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
+	DUMPCHAR RC RD R0
+	RET
 say_hello:
+	JMP 0x2; 2
+	JMP 0xfff2; -14
 	STATIC 0x0
 	POP RB
 	MOVV RE 0x01; (u: 1; i: 1; f: 0.000000)
 	MOVV RD 0x00; (u: 0; i: 0; f: 0.000000)
 	READ8 RC RB R0
+	JMPFN RC 0x5; i: 5
 	DUMPCHAR RC RD R0
 	ADD RB RE RB
-	JMPF RC 0xfffd; i: -3
+	READ8 RC RB R0
+	JMP 0xfffc; -4
 	MOVV RC 0x0a; (u: 10; i: 10; f: 0.000000)
 	DUMPCHAR RC RD R0
 	RET
 %start
-	CALL 0xfff5; i: -11
-	HALT 	0x0; (u: 0)
+	CALL 0xfff1; i: -15
+	MOVV RA 0x00; (u: 0; i: 0; f: 0.000000)
+	MOVV RB 0x00; (u: 0; i: 0; f: 0.000000)
+	NEQ RA RA RB
+	MOVN RB 0xff; (u: 255; i: 255; f: 0.000000)
+	OR RA RA RB
+	HALT RA

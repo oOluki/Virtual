@@ -83,7 +83,7 @@ dump_int:
     CALL @dump_uint
     POP RC
     RET
-%unlabel dump_int
+%unlabel dump_int_neg
 
 
 %endif

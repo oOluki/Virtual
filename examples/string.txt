@@ -18,6 +18,7 @@
 STATIC "\t\This \ is \a te\st for testing the string and character parsing\n\t\t\151==\x69\n\t\t\71==\x39\n\t\t\123==\x53\\\n\0"
 
 POP RB
+MOV RA R0
 CALL @dump_str
 
 

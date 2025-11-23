@@ -4,6 +4,7 @@
 %start
     STATIC "INCLUDE TEST WAS SUCCESSFULL\n"
     POP RB
+    MOV RA R0
     CALL @dump_str
     HALT 0
 

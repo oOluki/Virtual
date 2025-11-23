@@ -5,7 +5,8 @@
 
 enum LabelFlags{
     LABELFLAG_NONE = 0,
-    LABELFLAG_EXPORT = 1 << 0
+    LABELFLAG_EXPORT = 1 << 0,
+    LABELFLAG_RESOLVED = 1 << 1,
 };
 
 typedef struct Label
@@ -17,6 +18,13 @@ typedef struct Label
     uint8_t    flags;
     TokenValue definition;
 } Label;
+
+typedef struct Labeler
+{
+    Mc_stream_t labels;
+    Mc_stream_t local_labels;
+} Labeler;
+
 
 #define SIZEOF_LABEL (14 + sizeof(TokenValue))
 
@@ -87,9 +95,12 @@ int remove_label(Mc_stream_t* labels, const Token label_token){
     return 0;
 }
 
-int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition){
+int add_label_with_flag(Mc_stream_t* labels, const Token label_tkn, const Token definition, uint8_t flags){
 
-    if(get_label(labels, label_tkn)) return 1;
+    if(get_label(labels, label_tkn)){
+        fprintf(stderr, "[ERROR] Label Already Exists\n");
+        return 1;
+    }
     
     const int add_def_as_str = (definition.type == TKN_STR) || (definition.type == TKN_RAW);
 
@@ -98,7 +109,7 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
         .str = SIZEOF_LABEL,
         .str_size = label_tkn.size,
         .type = definition.type,
-        .flags = LABELFLAG_NONE,
+        .flags = flags,
         .definition.as_uint = add_def_as_str? SIZEOF_LABEL + label_tkn.size : definition.value.as_uint
     };
 
@@ -122,6 +133,10 @@ int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition
     return 0;
 }
 
+static inline int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition){
+    return add_label_with_flag(labels, label_tkn, definition, LABELFLAG_NONE);
+}
+
 
 Token resolve_token(const Mc_stream_t* labels, const Token token){
     if(token.type != TKN_LABEL_REF) return token;
@@ -139,6 +154,122 @@ Token resolve_token(const Mc_stream_t* labels, const Token token){
         .size  = 0,
         .type  = label.type
     };
+}
+
+int add_local_labelref(Mc_stream_t* local_labels, int16_t* stride, const Token name, uint64_t refposition){
+    if(name.type != TKN_RAW){
+        fprintf(stderr, "[ERROR] Invalid Local Label Reference\n");
+        return 1;
+    }
+    if(name.size < 1){
+        fprintf(stderr, "[ERROR] Invalid Local Label Reference, Missing '@' Preffix\n");
+        return 1;
+    }
+    if(name.value.as_str[0] != '@'){
+        fprintf(stderr, "[ERROR] Invalid Local Label Reference, Missing '@' Preffix\n");
+        return 1;
+    }
+    if(name.size < 2){
+        fprintf(stderr, "[ERROR] Invalid Local Label Reference, Missing '.' After '@' Preffix\n");
+        return 1;
+    }
+    if(name.value.as_str[1] != '.'){
+        fprintf(stderr, "[ERROR] Invalid Local Label Reference, Missing '.' After '@' Preffix\n");
+        return 1;
+    }
+    Label* lp = get_label(local_labels, (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1});
+    if(!lp){
+        if(stride) *stride = 0;
+        return add_label(
+            local_labels,
+            (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1},
+            (Token){.value.as_uint = refposition, .type = TKN_ULIT}
+        );
+    }
+    Label label = get_label_from_raw_data(lp);
+
+    const uint64_t last_pos = label.definition.as_uint;
+
+    const int64_t o = (label.flags & LABELFLAG_RESOLVED)?
+        (int64_t) (last_pos) - (int64_t)(refposition / sizeof(Inst))
+                            :
+        (int64_t) (last_pos) - (int64_t)(refposition);
+    if(o > INT16_MAX || o < INT16_MIN){
+        fprintf(stderr, "[ERROR] local label is too far from reference\n");
+        return 1;
+    }
+    const int16_t output = (int16_t) o;
+    if(stride) *stride = output;
+    if(!(label.flags & LABELFLAG_RESOLVED)){
+        label.definition.as_uint = refposition;
+        put_label_in_raw_data(label, lp);
+    }
+    return 0;
+}
+
+Label* get_missing_local_label(Mc_stream_t* local_labels){
+    if(!local_labels)
+        return NULL;
+    if(local_labels->size < SIZEOF_LABEL)
+        return NULL;
+    
+    for(size_t i = 0; i < local_labels->size; ){
+        const uint8_t* data = (uint8_t*)(local_labels->data) + i;
+        const Label label = get_label_from_raw_data(data);
+        if(!(label.flags & LABELFLAG_RESOLVED))
+            return (Label*) data;
+        if(label.size == 0){
+            fprintf(stderr, "[INTERNAL ERROR] The Labeler Got To An Invalid Label With Size 0. "
+            "If You're An User Beware That This May Be A Problem With The Compiler Implementation And Not With Your Usage\n\n");
+            return NULL;
+        }
+        i += label.size;
+    }
+    return NULL;
+}
+
+int solve_local_label(Mc_stream_t* local_labels, void* program, const Token name, uint64_t label_pos){
+
+    Label* lp = get_label(local_labels, name);
+    if(!lp){
+        return add_label_with_flag(local_labels, name, (Token){.value.as_uint = label_pos, .type = TKN_INST_POSITION, .size = 0}, LABELFLAG_RESOLVED);
+    }
+
+    Label label = get_label_from_raw_data(lp);
+
+    if(label.flags & LABELFLAG_RESOLVED){
+        fprintf(stderr, "[ERROR] Label Already Exists\n");
+        return 1;
+    }
+
+    uint64_t pos = label.definition.as_uint;
+
+    uint16_t stride = 0;
+
+    for(memcpy(&stride, ((uint8_t*) program) + pos, sizeof(stride)); stride; memcpy(&stride, ((uint8_t*) program) + pos, sizeof(stride))){
+        const int64_t o = (int64_t) (label_pos) - (int64_t)(pos / sizeof(Inst));
+        if(o > INT16_MAX || o < INT16_MIN){
+            fprintf(stderr, "[ERROR] local label is too far from reference\n");
+            return 1;
+        }
+        const int16_t output = (int16_t) o;
+        memcpy(((uint8_t*) program) + pos, &output, sizeof(output));
+        pos += stride;
+    }
+
+    const int64_t o = (int64_t) (label_pos) - (int64_t)(pos / sizeof(Inst));
+    if(o > INT16_MAX || o < INT16_MIN){
+        fprintf(stderr, "[ERROR] local label is too far from reference\n");
+        return 1;
+    }
+    const int16_t output = (int16_t) o;
+    memcpy(((uint8_t*) program) + pos, &output, sizeof(output));
+
+    label.flags |= LABELFLAG_RESOLVED;
+    label.definition.as_uint = label_pos;
+    put_label_in_raw_data(label, lp);
+
+    return 0;
 }
 
 #endif

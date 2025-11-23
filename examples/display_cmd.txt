@@ -1,0 +1,34 @@
+;; a little example of how command line arguments are received inside the virtual machine
+%include "vstd/vstdio.in"
+
+%start
+
+MOV  RC R0
+
+;; RA holds argc, which will be moved to RD
+MOV  RD RA
+;; RB holds argv, which will be moved to RE
+MOV  RE RB
+
+loop:
+    SMLI  RX RC RD
+    JMPFN RX @.loop_end
+
+    MOV   RA R0
+    MOV   RB RC
+    CALL  @dump_int
+    MOVV  RB '-'
+    DUMPCHAR RB R0 R0
+    MOVV  RB ' '
+    DUMPCHAR RB R0 R0
+
+    MOVV  RB 8
+    MUL   RB RB RC
+    READ  RB RE RB
+    CALL  @dump_str
+    MOVV  RB '\n'
+    DUMPCHAR RB R0 R0
+
+    INC   RC 1
+JMP @loop
+.loop_end:

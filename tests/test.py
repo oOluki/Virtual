@@ -36,7 +36,7 @@ else:
 ASSEMBLE    = VPU + " -assemble"
 DISASSEMBLE = VPU + " -disassemble"
 RUN         = VPU + " -execute"
-DEBUG       = VPU + " -debug"
+DEBUG       = VPU + " -debug -0"
 
 def run_process(*command, text=True, shell=False, _input=None):
     cmd = ""

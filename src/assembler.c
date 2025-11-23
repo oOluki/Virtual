@@ -99,6 +99,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     Mc_stream_t static_memory = mc_create_stream(0, 0);
 
     Mc_stream_t labels = mc_create_stream(0, 0);
+    Mc_stream_t local_labels = mc_create_stream(0, 0);
 
     Tokenizer tokenizer = (Tokenizer){
         .data = (char*)((uint8_t*)(files.data) + sizeof(uint32_t) + *(uint32_t*)(files.data) + 1),
@@ -109,6 +110,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
     parser.file_path_size = *(uint32_t*)(files.data);
     parser.labels = &labels;
+    parser.local_labels = &local_labels;
     parser.static_memory = &static_memory;
     parser.program = &program;
     parser.tokenizer = &tokenizer;
@@ -153,6 +155,7 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     if(program.data)        mc_destroy_stream(program);
     if(static_memory.data)  mc_destroy_stream(static_memory);
     if(labels.data)         mc_destroy_stream(labels);
+    if(local_labels.data)   mc_destroy_stream(local_labels);
     if(files.data)          mc_destroy_stream(files);
 
     return status;

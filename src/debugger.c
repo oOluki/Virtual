@@ -60,6 +60,8 @@ typedef struct Debugger
     FILE*       output;
     FILE*       err;
 
+    int         argc;
+    char**      argv;
     VPU*        vpu;
     Parser      parser;
     Mc_stream_t stream;
@@ -556,6 +558,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;
     case DUPC_RESTART:{
         memset(debugger->vpu->register_space, 0, REGISTER_SPACE_SIZE);
+        debugger->vpu->registers[RA >> 3].as_int64 = debugger->argc;
+        debugger->vpu->registers[RB >> 3].as_ptr   = (uint8_t*) debugger->argv;
         debugger->vpu->registers[RIP >> 3].as_uint64 = debugger->parser.entry_point;
         debugger->vpu->registers[RSP >> 3].as_uint64 = 0;
         debugger->vpu->status = 0;
@@ -1142,7 +1146,7 @@ int get_user_prompt(Debugger* debugger, int* _argc, char*** _argv){
 // takes input from file at _input or stdin if input == NULL
 // writes output to provided _output or stdout if output == NULL
 // writes errors to _err or stderr if err == NULL
-int debug(const char* input_file){
+int debug(const char* input_file, int argc, char** argv){
 
     VIRTUAL_DEBUG_LOG("requested debugging '%s'\n", input_file);
 
@@ -1210,6 +1214,9 @@ int debug(const char* input_file){
 
     vpu.stack = (uint64_t*) malloc(1024);
 
+    vpu.registers[RA >> 3].as_int64 = argc;
+    vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
+
     vpu.status = 0;
 
     VIRTUAL_DEBUG_LOG("setting up mini parser...\n");
@@ -1226,6 +1233,7 @@ int debug(const char* input_file){
     parser.file_path = "stdin";
     parser.file_path_size = sizeof("stdin") - sizeof("");
     parser.labels = &labels;
+    parser.local_labels = NULL;
     parser.static_memory = NULL;
     parser.program = &dstream;
     parser.tokenizer = &tokenizer;
@@ -1246,6 +1254,8 @@ int debug(const char* input_file){
         .program_size = program_size,
         .breakpoint_count = 0,
         .stream = dstream,
+        .argc = argc,
+        .argv = argv,
         .vpu = &vpu,
         .display_size = 5,
     };
@@ -1256,14 +1266,14 @@ int debug(const char* input_file){
 
     debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
 
-    int argc;
-    char** argv;
+    int prompt_argc;
+    char** prompt_argv;
 
     for(uint64_t scope = 0; debugger.is_active; debugger.stream.size = scope) {
 	    
         scope = debugger.stream.size;
 
-        const int sig = get_user_prompt(&debugger, &argc, &argv);
+        const int sig = get_user_prompt(&debugger, &prompt_argc, &prompt_argv);
 
         // stdin closed
         if(sig == 1) break;
@@ -1272,7 +1282,7 @@ int debug(const char* input_file){
             continue;
         }
 
-        if(argc == 0){ // perform smooth step v v v
+        if(prompt_argc == 0){ // perform smooth step v v v
             if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
                 VPU* const vpu = debugger.vpu;
                 int ret_required_count = 0;
@@ -1297,12 +1307,12 @@ int debug(const char* input_file){
             continue;
         }
 
-        const int dupc = get_dupc_code(argv[0]);
+        const int dupc = get_dupc_code(prompt_argv[0]);
         if(dupc == DUPC_ERROR){
-            fprintf(debugger.err, "[ERROR] no command for %s, use help in case you want to check available commands\n", argv[0]);
+            fprintf(debugger.err, "[ERROR] no command for %s, use help in case you want to check available commands\n", prompt_argv[0]);
         }
-        else if(perform_user_prompt(&debugger, dupc, argc, argv)){
-            fprintf(debugger.err, "*** command %s failed ^^^\n", argv[0]);
+        else if(perform_user_prompt(&debugger, dupc, prompt_argc, prompt_argv)){
+            fprintf(debugger.err, "*** command %s failed ^^^\n", prompt_argv[0]);
         }
     }
 

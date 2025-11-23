@@ -402,7 +402,7 @@ int execute(const char* input_file, int argc, char** argv){
     vpu.stack = &(stack[0]);
     vpu.registers = &(registers[0]);
 
-    // sets argc and argv of the program to RA.as_int32 and RB.as_ptr, respectively
+    // sets argc and argv of the program to RA.as_int64 and RB.as_ptr, respectively
     vpu.registers[RA >> 3].as_int64 = argc;
     vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
 

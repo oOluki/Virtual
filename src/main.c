@@ -35,6 +35,7 @@ static inline void help(const char* main_executable){
         "   -o <output>:    choose <output> as output file\n"
         "   -i <input>:     choose <input> as input file\n"
         "   -args:          marks the beggining of the arguments to pass to executable\n"
+        "   -0:             pass no argument to virtual machine\n"
         "   -export_labels: assembled executable/library will include all instruction position labels still defined by the end of the code\n",
         main_executable
     );
@@ -133,8 +134,16 @@ int main(int argc, char** argv){
             continue;
         }
         if(mc_compare_str(argv[i], "-args", 0)){
+            if(vpu_argv_begin < 0){
+                fprintf(stderr, "[ERROR] Can't use -args flag together with -0\n");
+                return 1;
+            }
             vpu_argv_begin = i;
             break;
+        }
+        if(mc_compare_str(argv[i], "-0", 0)){
+            vpu_argv_begin = -1;
+            continue;
         }
         if(input_file_arg > 0){
             fprintf(stderr, "[ERROR] Multiple Input Files, Input Files In Arguments %i And %i\n", input_file_arg, i);
@@ -191,21 +200,39 @@ int main(int argc, char** argv){
         }
     }
 
-    if(mode & MODE_DEBUG){
-        const int status = debug(argv[input_file_arg]);
-        if(status){
-            fprintf(stderr, "[ERROR] Debug Failed ^^^\n");
-            return status;
+    else if((mode & MODE_EXECUTE) || (mode & MODE_DEBUG)){
+        const char* save_argvn1 = NULL;
+        const char* save_argv0 = NULL;
+        const char* input_file_path = argv[input_file_arg];
+        const int   program_argc = (vpu_argv_begin > 0)? argc - vpu_argv_begin + 1 : 0;
+        char** const program_argv = (vpu_argv_begin > 0)? argv + vpu_argv_begin : NULL;
+        if(vpu_argv_begin > 0 ){
+            save_argvn1 = argv[vpu_argv_begin - 1];
+            argv[vpu_argv_begin - 1] = argv[0];
         }
-    }
-
-    if(mode & MODE_EXECUTE){
-        if(vpu_argv_begin > 1) argv[vpu_argv_begin - 2] = argv[0];
-        if(vpu_argv_begin > 0) argv[vpu_argv_begin - 1] = argv[input_file_arg];
-        const int status = execute(argv[input_file_arg], argc - vpu_argv_begin, argv + vpu_argv_begin);
-        if(status){
-            fprintf(stderr, "[ERROR] Execution Failed ^^^\n");
-            return status;
+        if(vpu_argv_begin > -1){
+            save_argv0 = argv[vpu_argv_begin];
+            argv[vpu_argv_begin] = argv[input_file_arg];
+        }
+        if(mode & MODE_EXECUTE){
+            const int status = execute(input_file_path, program_argc, program_argv);
+            if(status){
+                fprintf(stderr, "[ERROR] Execution Failed ^^^\n");
+                return status;
+            }
+        }
+        else{
+            const int status = debug(input_file_path, program_argc, program_argv);
+            if(status){
+                fprintf(stderr, "[ERROR] Debug Failed ^^^\n");
+                return status;
+            }
+        }
+        if(vpu_argv_begin > 0 ){
+            argv[vpu_argv_begin - 1] = argv[vpu_argv_begin - 1];
+        }
+        if(vpu_argv_begin > -1){
+            argv[vpu_argv_begin] = argv[vpu_argv_begin];
         }
     }
 

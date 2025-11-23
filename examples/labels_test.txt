@@ -36,24 +36,57 @@ dummy:
 
 %unlabel dummy
 
-say_hello:
-    STATIC $HELLO
+say_hello_false:
+    .say_hello:
+    STATIC $FAIL
     POP RB
     MOVV RE 1
-    MOVV RD $OUTPUT
+    MOVV RD $STDERR
     
-    say_hello_loop:
-        READ8    RC RB R0
+    READ8    RC RB R0
+    .say_hello_loop:
+        JMPFN    RC @.say_hello_loop_end
         DUMPCHAR RC RD R0
         ADD      RB RE RB
-    JMPF RC @say_hello_loop
+        READ8    RC RB R0
+        JMP @.say_hello_loop
+    .say_hello_loop_end:
 
     MOVV RC 10
     DUMPCHAR RC RD R0
     RET
 
-%unlabel say_hello_loop
+
+say_hello:
+    JMP @.say_hello
+    JMP @say_hello_false
+    .say_hello:
+
+    STATIC $HELLO
+    POP RB
+    MOVV RE 1
+    MOVV RD $OUTPUT
+    
+    READ8    RC RB R0
+    .say_hello_loop:
+        JMPFN    RC @.say_hello_loop_end
+        DUMPCHAR RC RD R0
+        ADD      RB RE RB
+        READ8    RC RB R0
+        JMP @.say_hello_loop
+    .say_hello_loop_end:
+
+    MOVV RC 10
+    DUMPCHAR RC RD R0
+    RET
+
+;%unlabel say_hello_false
 
 %start
     CALL @say_hello
-    HALT $OUTPUT
+    MOVV RA $OUTPUT
+    MOVV RB $STDOUT
+    NEQ  RA RA RB
+    MOVN RB 255
+    OR   RA RA RB
+    HALT RA

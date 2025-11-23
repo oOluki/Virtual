@@ -28,6 +28,13 @@
 
 #define DEFER_ERROR(...) do { err = 1; fprintf(stderr, "[ERROR] " __VA_ARGS__); goto defer; } while(0)
 
+#ifndef VPU_MEMALIGN_TO
+    #define VPU_MEMALIGN_TO 8
+#endif
+
+#ifndef VERSION
+    #define VERSION "0.0.1"
+#endif
 
 typedef struct Mc_stream_t{
     void*            data;

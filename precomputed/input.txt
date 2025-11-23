@@ -44,7 +44,6 @@ dump_uint:
 	JMPF RE 0xffe8; i: -24
 	MUL RC RC RD
 	JMP 0xfffc; -4
-dump_int_neg:
 	MOVV RC 0x2d; (u: 45; i: 45; f: 0.000000)
 	DUMPCHAR RC RA R0
 	PUSH RB
@@ -53,13 +52,14 @@ dump_int_neg:
 	POP RB
 	POP RC
 	RET
+dump_int:
 	PUSH RC
 	SMLI RC RB R0
 	JMPF RC 0xfffe; i: -2
 	CALL 0xffea; i: -22
 	POP RC
 	RET
-read_line:
+read_linœ:
 	PUSH RD
 	PUSH RE
 	PUSH RF
