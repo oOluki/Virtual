@@ -1,5 +1,6 @@
+#include "system.c"
 #include "assembler.c"
-#include "execute.c"
+#include "core.c"
 #include "disassembler.c"
 #include "debugger.c"
 

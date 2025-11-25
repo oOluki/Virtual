@@ -310,11 +310,17 @@ int print_inst(FILE* output, Inst inst, char** buff){
         if(GET_OP_HINT(inst) == HINT_REG)
             fprintf(output, "%s\n", get_reg_str(R1, buff[0]));
         else
-            fprintf(output, "%"PRIx16"\n", L1);
+            fprintf(output, "%"PRIu16"\n", L1);
 
         return 0;
     case INST_DISREG:
         fprintf(output, "\tDISREG %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
+	case INST_GRP:
+	    fprintf(output, "\tGRP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
+        return 0;
+	case INST_GIP:
+	    fprintf(output, "\tGIP %s %s %s\n", get_reg_str(R1, buff[0]), get_reg_str(R2, buff[1]), get_reg_str(R3, buff[2]));
         return 0;
 
     case INST_CONTAINER:

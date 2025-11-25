@@ -1,8 +1,7 @@
 #ifndef _VDEBUG_HEADER
 #define _VDEBUG_HEADER
 
-#include "core.h"
-#include "execute.c"
+#include "core.c"
 #include "parser.h"
 #include "disassembler.c"
 
@@ -402,13 +401,13 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     fprintf(
         debugger->output,
         "inst: %"PRIu64" / %"PRIu64"    stack: %"PRIu64"  breakpoints: %"PRIu64"  status: %i\n",
-        vpu->registers[RIP >> 3].as_uint64,
+        GET_REG(vpu->register_space, RIP)->as_uint64,
         debugger->program_size,
-        vpu->registers[RSP >> 3].as_uint64,
+        GET_REG(vpu->register_space, RSP)->as_uint64,
         debugger->breakpoint_count,
         debugger->vpu->status
     );
-    for(; i < finish && i < vpu->registers[RIP >> 3].as_uint64; i+=1){
+    for(; i < finish && i < GET_REG(vpu->register_space, RIP)->as_uint64; i+=1){
         for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
             fprintf(debugger->output, "%s:\n", label_ip_str);
             found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
@@ -426,7 +425,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         width = (width > 0)? width - 1 : width;
         finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
     }
-    if(i == vpu->registers[RIP >> 3].as_uint64 && i < finish){
+    if(i == GET_REG(vpu->register_space, RIP)->as_uint64 && i < finish){
         fprintf(debugger->output, "*");
         if(i >= debugger->program_size){
             fputc('\n', debugger->output);
@@ -498,8 +497,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             fprintf(debugger->output, "could not open '%s'\n", argv[1]);
             return 1;
         }
-        const uint64_t ip = debugger->vpu->registers[RIP >> 3].as_uint64;
-        const uint64_t sp = debugger->vpu->registers[RSP >> 3].as_uint64;
+        const uint64_t ip = GET_REG(debugger->vpu->register_space, RIP)->as_uint64;
+        const uint64_t sp = GET_REG(debugger->vpu->register_space, RSP)->as_uint64;
         fprintf(where, "display height: %"PRIu8"\n", debugger->display_size);
         fprintf(
             where,
@@ -523,7 +522,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 where,
                 "%s.as_uint64 = %"PRIu64"\n",
                 get_reg_str(i * ((int) sizeof(Register)), buff),
-                debugger->vpu->registers[i].as_uint64
+                GET_REG(debugger->vpu->register_space, i * 8)->as_uint64
             );
         }
 
@@ -543,7 +542,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             }
             fprintf(debugger->output, "\x1B[2J\x1B[H\n");
         }
-        else debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        else debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
         break;
     case DUPC_RESIZE_DISPLAY:{
         EXPECT_ARGC(1);
@@ -553,17 +552,17 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             return 1;
         }
         debugger->display_size = (size.value.as_uint64 < 100)? (uint8_t) size.value.as_uint64 : 100;
-        debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_RESTART:{
         memset(debugger->vpu->register_space, 0, REGISTER_SPACE_SIZE);
-        debugger->vpu->registers[RA >> 3].as_int64 = debugger->argc;
-        debugger->vpu->registers[RB >> 3].as_ptr   = (uint8_t*) debugger->argv;
-        debugger->vpu->registers[RIP >> 3].as_uint64 = debugger->parser.entry_point;
-        debugger->vpu->registers[RSP >> 3].as_uint64 = 0;
+        GET_REG(debugger->vpu->register_space, RA)->as_int64    = debugger->argc;
+        GET_REG(debugger->vpu->register_space, RB)->as_ptr      = (uint8_t*) debugger->argv;
+        GET_REG(debugger->vpu->register_space, RIP)->as_uint64  = debugger->parser.entry_point;
+        GET_REG(debugger->vpu->register_space, RSP)->as_uint64  = 0;
         debugger->vpu->status = 0;
-        debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_EXIT:
@@ -609,28 +608,28 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 return 1;
             }
         }
-        while(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !debugger->vpu->status){
+        while(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 < debugger->program_size && !debugger->vpu->status){
 
-            if(!nobreaks && (debugger->signals[debugger->vpu->registers[RIP >> 3].as_uint64] & DEBUG_SIGNAL_BREAK_MASK))
+            if(!nobreaks && (debugger->signals[GET_REG(debugger->vpu->register_space, RIP)->as_uint64] & DEBUG_SIGNAL_BREAK_MASK))
                 break;
-            if(go_till_position && debugger->vpu->registers[RIP >> 3].as_uint64 == position.value.as_uint64)
+            if(go_till_position && GET_REG(debugger->vpu->register_space, RIP)->as_uint64 == position.value.as_uint64)
                 break;
-            if(go_up_to_position && debugger->vpu->registers[RIP >> 3].as_uint64 >= position.value.as_uint64)
+            if(go_up_to_position && GET_REG(debugger->vpu->register_space, RIP)->as_uint64 >= position.value.as_uint64)
                 break;
 
-            debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
+            GET_REG(debugger->vpu->register_space, RIP)->as_int64 += perform_inst(
                 debugger->vpu,
-                debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
+                debugger->vpu->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64]
             );
         }
-        debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_GO_TILL_END:
-        while(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !debugger->vpu->status){
-            debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
+        while(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 < debugger->program_size && !debugger->vpu->status){
+            GET_REG(debugger->vpu->register_space, RIP)->as_int64 += perform_inst(
                 debugger->vpu,
-                debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
+                debugger->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64]
             );
         }
         fprintf(debugger->output, "Vpu Returned Status %u\n", debugger->vpu->status);
@@ -676,7 +675,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         case INST_JMPFN:
         case INST_CALL:
         case INST_RET:
-            debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(debugger->vpu, inst);
+            GET_REG(debugger->vpu->register_space, RIP)->as_int64 += perform_inst(debugger->vpu, inst);
             return 0;
         default:
             perform_inst(debugger->vpu, inst);
@@ -701,7 +700,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             if(!(debugger->signals[breakpoint_position.value.as_uint64] & DEBUG_SIGNAL_BREAK_MASK))
                 debugger->breakpoint_count += 1;
             debugger->signals[breakpoint_position.value.as_uint64] |= DEBUG_SIGNAL_BREAK_MASK;
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+            debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
         }
         break;
     case DUPC_REMOVE_BREAKPOINT:{
@@ -710,7 +709,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 debugger->signals[i] &= ~DEBUG_SIGNAL_BREAK_MASK;
             }
             debugger->breakpoint_count = 0;
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+            debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
             break;
         }
         uint64_t remove_breakpoints_errors = 0;
@@ -734,7 +733,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             debugger->signals[breakpoint.value.as_uint64] &= ~DEBUG_SIGNAL_BREAK_MASK;
         }
         if(!remove_breakpoints_errors)
-            debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+            debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_BREAKPOINT:{
@@ -769,6 +768,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                     fprintf(debugger->output, "no breakpoint at %"PRIu64"\n", breakpoint.value.as_uint64);
                     continue;
                 }
+                fprintf(debugger->output, "breakpoint at %"PRIu64"\n", breakpoint.value.as_uint64);
                 continue;
             }
             EXPECT(argv[i], TKN_ULIT, breakpoint);
@@ -788,7 +788,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 }
             }
             if(breakpoint_number == breakpoint.value.as_uint64 + 1){
-                fprintf(debugger->output, "breakpoint number %"PRIu64" at %"PRIu64"\n", breakpoint_number, j);
+                fprintf(debugger->output, "breakpoint number %"PRIu64" at %"PRIu64"\n", breakpoint_number - 1, (j > 0)? j - 1 : j);
             }
             else{
                 fprintf(debugger->err, "[ERROR] expected to find breakpoint number %"PRIu64", but found none\n", breakpoint_number);
@@ -806,26 +806,26 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             EXPECT(argv[1], TKN_ULIT, op);
             steps = op.value.as_uint64;
         }
-        if(debugger->vpu->registers[RIP >> 3].as_uint64 >= debugger->program_size) return 0;
+        if(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 >= debugger->program_size) return 0;
         for(uint64_t i = 0; i < steps; i+=1){
-            if((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL){
+            if((debugger->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL){
                 VPU* const vpu = debugger->vpu;
                 int ret_required_count = 0;
                 do {
-                    ret_required_count += ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
-                    ret_required_count -= ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
+                    ret_required_count += ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL);
+                    ret_required_count -= ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_RET);
 
-                    vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                    GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                         vpu,
-                        debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                        debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64]
                     );
 
-                } while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
+                } while(GET_REG(vpu->register_space, RIP)->as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
             }
-            else if(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size){
-                debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
+            else if(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 < debugger->program_size){
+                GET_REG(debugger->vpu->register_space, RIP)->as_int64 += perform_inst(
                     debugger->vpu,
-                    debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
+                    debugger->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64]
                 );
             }
         }
@@ -841,73 +841,73 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             EXPECT(argv[1], TKN_ULIT, op);
             steps = op.value.as_uint64;
         }
-        if(debugger->vpu->registers[RIP >> 3].as_uint64 >= debugger->program_size)
-            return debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        if(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 >= debugger->program_size)
+            return debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
         for(uint64_t i = 0; i < steps; i+=1){
-            if(((debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL) && !debugger->vpu->status){
+            if(((debugger->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL) && !debugger->vpu->status){
                 VPU* const vpu = debugger->vpu;
                 int ret_required_count = 0;
                 do {
-                    ret_required_count += ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
-                    ret_required_count -= ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
+                    ret_required_count += ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL);
+                    ret_required_count -= ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_RET);
 
-                    vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                    GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                         vpu,
-                        debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                        debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64]
                     );
 
-                } while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
+                } while(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0);
             }
-            else if(debugger->vpu->registers[RIP >> 3].as_uint64 < debugger->program_size){
-                debugger->vpu->registers[RIP >> 3].as_int64 += perform_inst(
+            else if(GET_REG(debugger->vpu->register_space, RIP)->as_uint64 < debugger->program_size){
+                GET_REG(debugger->vpu->register_space, RIP)->as_int64 += perform_inst(
                     debugger->vpu,
-                    debugger->program[debugger->vpu->registers[RIP >> 3].as_uint64]
+                    debugger->program[GET_REG(debugger->vpu->register_space, RIP)->as_uint64]
                 );
             }
             else break;
         }
-        debug_display_inst(debugger, debugger->vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(debugger->vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_STEP_IN:{
         VPU* const vpu = debugger->vpu;
-        while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status &&
-            (debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) != INST_CALL){
-            vpu->registers[RIP >> 3].as_int64 += perform_inst(
+        while(GET_REG(vpu->register_space, RIP)->as_uint64 < debugger->program_size && !vpu->status &&
+            (debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) != INST_CALL){
+            GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                 vpu,
-                debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64]
             );
         }
-        if((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL){
-            vpu->registers[RIP >> 3].as_int64 += perform_inst(
+        if((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL){
+            GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                 vpu,
-                debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64]
             );
         }
-        debug_display_inst(debugger, vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_STEP_OUT:{
         VPU* const vpu = debugger->vpu;
         int ret_required_count = 1;
-        while(vpu->registers[RIP >> 3].as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0){
+        while(GET_REG(vpu->register_space, RIP)->as_uint64 < debugger->program_size && !vpu->status && ret_required_count > 0){
 
-            ret_required_count += ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
-            ret_required_count -= ((debugger->program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
+            ret_required_count += ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL);
+            ret_required_count -= ((debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_RET);
 
-            vpu->registers[RIP >> 3].as_int64 += perform_inst(
+            GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                 vpu,
-                debugger->program[vpu->registers[RIP >> 3].as_uint64]
+                debugger->program[GET_REG(vpu->register_space, RIP)->as_uint64]
             );
         }
-        debug_display_inst(debugger, vpu->registers[RIP >> 3].as_uint64, debugger->display_size);
+        debug_display_inst(debugger, GET_REG(vpu->register_space, RIP)->as_uint64, debugger->display_size);
     }
         break;
     case DUPC_DISREG:
         if(argc <= 1){
             for(int i = 0; i < REGISTER_SPACE_SIZE / sizeof(Register); i+=1){
                 char buff[8];
-                const Register r = debugger->vpu->registers[i];
+                const Register r = *GET_REG(debugger->vpu->register_space, i * 8);
                 fprintf(
                     debugger->output,
                     "%.*s = (%08"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n",
@@ -974,7 +974,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
     case DUPC_SHOW_LABEL:{
         if(argc <= 1){
             for(uint64_t i = 0; i < debugger->labels.size; ){
-                const Label* label_ptr = debugger->labels.data;
+                const Label* label_ptr = (Label*) (((uintptr_t) debugger->labels.data) + i);
                 const Label  label = get_label_from_raw_data(label_ptr);
                 fprintf(
                     debugger->output,
@@ -1047,11 +1047,11 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;
     case DUPC_STACK_DISPLAY:{
         if(argc <= 1){
-            if(debugger->vpu->registers[RSP >> 3].as_uint64 == 0){
+            if(GET_REG(debugger->vpu->register_space, RSP)->as_uint64 == 0){
                 fprintf(debugger->output, "stack is empty\n");
                 break;
             }
-            for(uint64_t i = 0; i < debugger->vpu->registers[RSP >> 3].as_uint64; i+=1){
+            for(uint64_t i = 0; i < GET_REG(debugger->vpu->register_space, RSP)->as_uint64; i+=1){
                 const Register v = (Register){.as_uint64 = debugger->vpu->stack[i]};
                 fprintf(
                     debugger->output,
@@ -1062,9 +1062,9 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
             break;
         }
         EXPECT(argv[1], TKN_ULIT, stack_position);
-        if(stack_position.value.as_uint64 >= debugger->vpu->registers[RSP >> 3].as_uint64){
+        if(stack_position.value.as_uint64 >= GET_REG(debugger->vpu->register_space, RSP)->as_uint64){
             fprintf(debugger->output, "%"PRIu64" is out of stack's bounds (%"PRIu64")\n",
-                stack_position.value.as_uint64, debugger->vpu->registers[RSP >> 3].as_uint64);
+                stack_position.value.as_uint64, GET_REG(debugger->vpu->register_space, RSP)->as_uint64);
             return 1;
         } else{
             const Register v = (Register){.as_uint64 = debugger->vpu->stack[stack_position.value.as_uint64]};
@@ -1210,12 +1210,11 @@ int debug(const char* input_file, int argc, char** argv){
     }
     registers[RIP >> 3].as_uint64 = entry_point;
     vpu.register_space = (uint8_t*) registers;
-    vpu.registers = (Register*) vpu.register_space;
 
     vpu.stack = (uint64_t*) malloc(1024);
 
-    vpu.registers[RA >> 3].as_int64 = argc;
-    vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
+    registers[RA >> 3].as_int64 = argc;
+    registers[RB >> 3].as_ptr   = (uint8_t*) argv;
 
     vpu.status = 0;
 
@@ -1264,7 +1263,7 @@ int debug(const char* input_file, int argc, char** argv){
 
     VIRTUAL_DEBUG_LOG("start debugging...\n");
 
-    debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
+    debug_display_inst(&debugger, registers[RIP >> 3].as_uint64, debugger.display_size);
 
     int prompt_argc;
     char** prompt_argv;
@@ -1283,27 +1282,27 @@ int debug(const char* input_file, int argc, char** argv){
         }
 
         if(prompt_argc == 0){ // perform smooth step v v v
-            if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
+            if(GET_REG(debugger.vpu->register_space, RIP)->as_uint64 < debugger.program_size){
                 VPU* const vpu = debugger.vpu;
                 int ret_required_count = 0;
-                if((debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL) do {
-                    ret_required_count += ((debugger.program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_CALL);
-                    ret_required_count -= ((debugger.program[vpu->registers[RIP >> 3].as_uint64] & 0xFF) == INST_RET);
+                if((debugger.program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL) do {
+                    ret_required_count += ((debugger.program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_CALL);
+                    ret_required_count -= ((debugger.program[GET_REG(vpu->register_space, RIP)->as_uint64] & 0xFF) == INST_RET);
 
-                    vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                    GET_REG(vpu->register_space, RIP)->as_int64 += perform_inst(
                         vpu,
-                        debugger.program[vpu->registers[RIP >> 3].as_uint64]
+                        debugger.program[GET_REG(vpu->register_space, RIP)->as_uint64]
                     );
 
-                } while(vpu->registers[RIP >> 3].as_uint64 < debugger.program_size && !vpu->status && ret_required_count > 0);
-                else if(debugger.vpu->registers[RIP >> 3].as_uint64 < debugger.program_size){
-                    debugger.vpu->registers[RIP >> 3].as_int64 += perform_inst(
+                } while(GET_REG(vpu->register_space, RIP)->as_uint64 < debugger.program_size && !vpu->status && ret_required_count > 0);
+                else if(GET_REG(debugger.vpu->register_space, RIP)->as_uint64 < debugger.program_size){
+                    GET_REG(debugger.vpu->register_space, RIP)->as_int64 += perform_inst(
                         debugger.vpu,
-                        debugger.program[debugger.vpu->registers[RIP >> 3].as_uint64]
+                        debugger.program[GET_REG(debugger.vpu->register_space, RIP)->as_uint64]
                     );
                 }
             }                
-            debug_display_inst(&debugger, debugger.vpu->registers[RIP >> 3].as_uint64, debugger.display_size);
+            debug_display_inst(&debugger, GET_REG(debugger.vpu->register_space, RIP)->as_uint64, debugger.display_size);
             continue;
         }
 
