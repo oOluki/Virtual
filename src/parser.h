@@ -218,10 +218,10 @@ static inline int get_major_reg_identifier(const Token token){
     
     if(mc_compare_token(token, MKTKN("r0"), 1))  return MR0;
     if(mc_compare_token(token, MKTKN("R0"), 1))  return MR0;
-    if(mc_compare_token(token, MKTKN("rsp"), 1)) return MRSP;
-    if(mc_compare_token(token, MKTKN("RSP"), 1)) return MRSP;
-    if(mc_compare_token(token, MKTKN("rip"), 1)) return MRIP;
-    if(mc_compare_token(token, MKTKN("RIP"), 1)) return MRIP;
+    if(mc_compare_token(token, MKTKN("rsp"), 1) && token.size > 2) return MRSP;
+    if(mc_compare_token(token, MKTKN("RSP"), 1) && token.size > 2) return MRSP;
+    if(mc_compare_token(token, MKTKN("rip"), 1) && token.size > 2) return MRIP;
+    if(mc_compare_token(token, MKTKN("RIP"), 1) && token.size > 2) return MRIP;
 
     if(token.size > 3) return -1;
 
