@@ -1,0 +1,7 @@
+#.gitignore
+build
+.vscode
+ignore
+browser
+tmp.txt
+tmp.bin

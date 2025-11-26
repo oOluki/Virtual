@@ -1,5 +1,5 @@
-#ifndef _VPU_EXE
-#define _VPU_EXE
+#ifndef VCORE_C
+#define VCORE_C
 
 #include "core.h"
 #include "lexer.h"
@@ -12,6 +12,8 @@
 
 // returns the number of instruction to sum to RIP
 int64_t perform_inst(VPU* vpu, Inst inst){
+
+    Register* const registers = (Register*) vpu->register_space;
 
     // the first register operand
     #define R1 (*(Register*)(vpu->register_space + (uint8_t) ((inst & 0XFF00)      >> 8)))
@@ -31,7 +33,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     #define OPERATION(OP, TYPE) R1.as_##TYPE = R2.as_##TYPE OP R3.as_##TYPE
     #define COMPARE(OP, TYPE)   R1.as_uint8 = R2.as_##TYPE OP R3.as_##TYPE
     
-    vpu->registers[R0 >> 3].as_uint64 = 0;
+    registers[R0 >> 3].as_uint64 = 0;
 
     switch (inst & 0XFF)
     {
@@ -90,28 +92,31 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         vpu->stack[SP++] = (uint64_t)(uintptr_t)(vpu->static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
         return 1;
     case INST_READ8:
-        R1.as_uint8 = *(uint8_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint8 = *(uint8_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ16:
-        R1.as_uint16 = *(uint16_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint16 = *(uint16_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ32:
-        R1.as_uint32 = *(uint32_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint32 = *(uint32_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ:
-        R1.as_uint64 = *(uint64_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint64 = *(uint64_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
+        return 1;
+    case INST_MREADS:
+        R1.as_ptr = memcpy(R1.as_ptr, R2.as_ptr, (size_t) R3.as_uint64);
         return 1;
     case INST_WRITE8:
-        *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint8;
+        *(uint8_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint8;
         return 1;
     case INST_WRITE16:
-        *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint16;
+        *(uint16_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint16;
         return 1;
     case INST_WRITE32:
-        *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint32;
+        *(uint32_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint32;
         return 1;
     case INST_WRITE:
-        *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint64;
+        *(uint64_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint64;
         return 1;
     case INST_MWRITES:
         R1.as_ptr = memset(R1.as_ptr, (int) R2.as_int8, (size_t) R3.as_uint64);
@@ -318,7 +323,7 @@ int64_t perform_inst(VPU* vpu, Inst inst){
     case INST_EXEC:
         return perform_inst(vpu, R3.as_uint32);
     case INST_SYS:
-        if(sys_call(vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
+        if(virtual_syscall(vpu, (GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1)){
             fprintf(stderr, "Syscall Failed At IP %"PRIu64"\n", IP);
             vpu->status = 1;
             return 0xFFFFFFFFFFFFFFFF - IP;
@@ -333,6 +338,12 @@ int64_t perform_inst(VPU* vpu, Inst inst){
             if((inst >> 24) & 0xFF)
                 printf("%s = (%02"PRIx64"; u: %"PRIu64"; i: %"PRIi64"; f: %f)\n", get_reg_str((inst >> 24) & 0xFF, buff), R3.as_uint64, R3.as_uint64, R3.as_int64, R3.as_float64);
         }
+        return 1;
+	case INST_GRP:
+	    R1.as_ptr = ((uint8_t*) &R2) + R3.as_int64;
+        return 1;
+    case INST_GIP:
+        R1.as_ptr = ((uint8_t*) (vpu->program + R2.as_uint64)) + R3.as_uint64;
         return 1;
     
     
@@ -400,20 +411,19 @@ int execute(const char* input_file, int argc, char** argv){
     }
     
     vpu.stack = &(stack[0]);
-    vpu.registers = &(registers[0]);
 
     // sets argc and argv of the program to RA.as_int64 and RB.as_ptr, respectively
-    vpu.registers[RA >> 3].as_int64 = argc;
-    vpu.registers[RB >> 3].as_ptr   = (uint8_t*) argv;
+    registers[RA >> 3].as_int64 = argc;
+    registers[RB >> 3].as_ptr   = (uint8_t*) argv;
 
-    vpu.register_space = (uint8_t*)vpu.registers;
+    vpu.register_space = (uint8_t*) &registers[0];
 
     vpu.status = 0;
 
     for(
-        vpu.registers[RIP >> 3].as_uint64 = entry_point;
-        vpu.registers[RIP >> 3].as_uint64 < program_size;
-        vpu.registers[RIP >> 3].as_int64 += perform_inst(&vpu, vpu.program[vpu.registers[RIP >> 3].as_uint64])
+        registers[RIP >> 3].as_uint64 = entry_point;
+        registers[RIP >> 3].as_uint64 < program_size;
+        registers[RIP >> 3].as_int64 += perform_inst(&vpu, vpu.program[registers[RIP >> 3].as_uint64])
     ) {
 	    //vpu.registers[R0].as_uint64 = 0;
     }
@@ -423,4 +433,4 @@ int execute(const char* input_file, int argc, char** argv){
     return vpu.status;
 }
 
-#endif // END OF FILE
+#endif // END OF FILE VCORE_C =================================================

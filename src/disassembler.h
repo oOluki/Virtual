@@ -7,7 +7,7 @@
 
 // \param buff should be an array of 3 buffers of size 8 bytes each
 // \returns 0 on success or 1 otherwise
-int print_inst(FILE* output, const Inst* program, const uint8_t* static_memory, uint64_t ip, char** buff);
+int print_inst(FILE* output, Inst inst, char** buff);
 
 // disassembles program in input_path, writing the result to output_path
 // \returns 0 on success or error identifier on failure

@@ -68,7 +68,7 @@ typedef enum OpCode{
     // R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ,
     // reads R3.as_uint64 bytes from R2.as_ptr to R1.as_ptr
-    // memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
+    // R1.as_ptr = memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
     INST_MREADS,
     // *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
     INST_WRITE8,
@@ -211,6 +211,10 @@ typedef enum OpCode{
     INST_SYS,
     // displays the R1, R2 and R3 register's values (ignores R0), for debugging purposes
     INST_DISREG,
+	// R1.as_ptr = &R2 + R3.as_int64
+	INST_GRP,
+	// R1.as_ptr = PROGRAM_BEGIN_POINTER + E
+	INST_GIP,
     // for counting putposes
     INST_TOTAL_COUNT,
     // a dummy instruction that serves to hold immediate values, no use yet...
@@ -286,16 +290,35 @@ enum MajorRegisterId{
 // valid registers id go from 0 to 255
 enum RegisterId{
     // R0 = 0
-    R0 = 0 ,
+    R0 = 0, R01, R02, R03, R04, R05, R06, R07,
 
-    // registers used inside the code
 
-    RA = MRA * 8, RA1, RA2, RA3, RA4,
-    RB = MRB * 8, RB1, RB2, RB3, RB4,
-    RC = MRC * 8, RC1, RC2, RC3, RC4,
-    RD = MRD * 8, RD1, RD2, RD3, RD4,
-    RE = MRE * 8, RE1, RE2, RE3, RE4,
-    RF = MRF * 8,
+    RA = MRA * 8, RA1, RA2, RA3, RA4, RA5, RA6, RA7,
+    RB, RB1, RB2, RB3, RB4, RB5, RB6, RB7,
+    RC, RC1, RC2, RC3, RC4, RC5, RC6, RC7,
+    RD, RD1, RD2, RD3, RD4, RD5, RD6, RD7,
+    RE, RE1, RE2, RE3, RE4, RE5, RE6, RE7,
+    RF, RF1, RF2, RF3, RF4, RF5, RF6, RF7,
+	RG, RG1, RG2, RG3, RG4, RG5, RG6, RG7,
+	RH, RH1, RH2, RH3, RH4, RH5, RH6, RH7,
+	RI, RI1, RI2, RI3, RI4, RI5, RI6, RI7,
+	RJ, RJ1, RJ2, RJ3, RJ4, RJ5, RJ6, RJ7,
+	RK, RK1, RK2, RK3, RK4, RK5, RK6, RK7,
+	RL, RL1, RL2, RL3, RL4, RL5, RL6, RL7,
+    RM, RM1, RM2, RM3, RM4, RM5, RM6, RM7,
+	RN, RN1, RN2, RN3, RN4, RN5, RN6, RN7,
+	RO, RO1, RO2, RO3, RO4, RO5, RO6, RO7,
+	RP, RP1, RP2, RP3, RP4, RP5, RP6, RP7,
+	RQ, RQ1, RQ2, RQ3, RQ4, RQ5, RQ6, RQ7,
+	RR, RR1, RR2, RR3, RR4, RR5, RR6, RR7,
+    RS, RS1, RS2, RS3, RS4, RS5, RS6, RS7,
+	RT, RT1, RT2, RT3, RT4, RT5, RT6, RT7,
+	RU, RU1, RU2, RU3, RU4, RU5, RU6, RU7,
+	RV, RV1, RV2, RV3, RV4, RV5, RV6, RV7,
+	RW, RW1, RW2, RW3, RW4, RW5, RW6, RW7,
+	RX, RX1, RX2, RX3, RX4, RX5, RX6, RX7,
+    RY, RY1, RY2, RY3, RY4, RY5, RY6, RY7,
+	RZ, RZ1, RZ2, RZ3, RZ4, RZ5, RZ6, RZ7,
 
     // special registers
 
@@ -326,7 +349,7 @@ typedef union Register{
     
     double   as_float64;
     float    as_float32;
-    uint8_t* as_ptr;
+    void* 	 as_ptr;
 } Register;
 
 // Virtual Processing Unit
@@ -339,7 +362,7 @@ typedef struct VPU
 
     void*       system;
 
-    Register*   registers;
+    void*   	data;
 
     uint8_t*    register_space;
 
@@ -349,8 +372,11 @@ typedef struct VPU
     
 } VPU;
 
+#define GET_REG(register_space, POS) ((Register*)((uintptr_t)(register_space) + POS))
+
 #define GET_OP_HINT(INST) (INST >> 31)
 
+int64_t perform_inst(VPU* vpu, Inst inst);
 
 char get_digit_char(int i){
     switch (i)
@@ -778,6 +804,14 @@ int print_inst_description(FILE* output, int inst){
 	    fprintf(output, "DISREG:\n");
 	    fprintf(output, "\tdisplays the R1, R2 and R3 register's values (ignores R0), for debugging purposes\n");
         return 0;
+	case INST_GRP:
+	    fprintf(output, "GRP:\n");
+	    fprintf(output, "\tR1.as_ptr = &R2 + R3.as_int64\n");
+        return 0;
+	case INST_GIP:
+		fprintf(output, "GIP:\n");
+		fprintf(output, "\tR1.as_ptr = PROGRAM_BEGIN_POINTER + R2.as_uint64 * sizeof(Inst) + R3.as_uint64\n");
+		return 0;
     default:
         fprintf(output, "NO INSTRUCTION FOR %i\n", inst);
         return 1;
