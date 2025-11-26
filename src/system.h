@@ -27,6 +27,7 @@ enum VSysCall{
     VSYS_GET_SYSTEM_SPECIFICATIONS = 0,
     VSYS_INITIALIZE,
     VSYS_CLOSE,
+    VSYS_EXIT,
 
     // heap
 
@@ -45,19 +46,32 @@ enum VSysCall{
     VSYS_FGETC,
     VSYS_IOE,
 
-    // TODO: threads
+    // threads
 
     VSYS_NEW_THREAD,
     VSYS_WAIT_THREAD,
     VSYS_DETACH_THREAD,
+    VSYS_KILL_THREAD,
+    VSYS_CREATE_MUTEX,
+    VSYS_DESTROY_MUTEX,
+    VSYS_LOCK_MUTEX,
+    VSYS_UNLOCK_MUTEX,
+    VSYS_CREATE_COND,
+    VSYS_DESTROY_COND,
+    VSYS_SIGNAL_COND,
+    VSYS_BROADCAST_COND,
+    VSYS_WAIT_COND,
+
     VSYS_SLEEP,
+    VSYS_GET_TIME,
+    VSYS_POLL_EVENT,
 
     // display
 
     VSYS_GET_DISPLAY_FRAMEBUFFER,
     VSYS_DISPLAY_UPDATE,
 
-    // for counting putposes
+    // for counting purposes
     VSYS_CALL_COUNT
 };
 
