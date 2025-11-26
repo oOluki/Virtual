@@ -473,11 +473,13 @@ int virtual_syscall(VPU* vpu, uint64_t call){
                 GET_REG(registers, RB )->as_float32 = event.tfinger.x;
                 GET_REG(registers, RB4)->as_float32 = event.tfinger.y;
                 GET_REG(registers, RC )->as_int64   = event.tfinger.fingerId;
+                GET_REG(registers, RD )->as_int64   = event.tfinger.touchId;
                 break;
             case SDL_FINGERMOTION:
                 GET_REG(registers, RB )->as_float32 = event.tfinger.dx;
                 GET_REG(registers, RB4)->as_float32 = event.tfinger.dy;
                 GET_REG(registers, RC )->as_int64   = event.tfinger.fingerId;
+                GET_REG(registers, RD )->as_int64   = event.tfinger.touchId;
                 break;
             
             default:
