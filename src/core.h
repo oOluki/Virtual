@@ -68,7 +68,7 @@ typedef enum OpCode{
     // R1 = *(uint64_t*)(R2.as_ptr + R3.as_uint64)
     INST_READ,
     // reads R3.as_uint64 bytes from R2.as_ptr to R1.as_ptr
-    // memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
+    // R1.as_ptr = memcpy(R1.as_ptr, R2.as_ptr, R3.as_uint64) basically
     INST_MREADS,
     // *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.8
     INST_WRITE8,

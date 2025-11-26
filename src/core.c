@@ -92,28 +92,31 @@ int64_t perform_inst(VPU* vpu, Inst inst){
         vpu->stack[SP++] = (uint64_t)(uintptr_t)(vpu->static_memory + ((GET_OP_HINT(inst) == HINT_REG)? R1.as_uint64 : L1));
         return 1;
     case INST_READ8:
-        R1.as_uint8 = *(uint8_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint8 = *(uint8_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ16:
-        R1.as_uint16 = *(uint16_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint16 = *(uint16_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ32:
-        R1.as_uint32 = *(uint32_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint32 = *(uint32_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
         return 1;
     case INST_READ:
-        R1.as_uint64 = *(uint64_t*)(R2.as_ptr + R3.as_int64);
+        R1.as_uint64 = *(uint64_t*)((uintptr_t)(R2.as_ptr) + R3.as_int64);
+        return 1;
+    case INST_MREADS:
+        R1.as_ptr = memcpy(R1.as_ptr, R2.as_ptr, (size_t) R3.as_uint64);
         return 1;
     case INST_WRITE8:
-        *(uint8_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint8;
+        *(uint8_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint8;
         return 1;
     case INST_WRITE16:
-        *(uint16_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint16;
+        *(uint16_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint16;
         return 1;
     case INST_WRITE32:
-        *(uint32_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint32;
+        *(uint32_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint32;
         return 1;
     case INST_WRITE:
-        *(uint64_t*)(R1.as_ptr + R3.as_int64) = R2.as_uint64;
+        *(uint64_t*)((uintptr_t)(R1.as_ptr) + R3.as_int64) = R2.as_uint64;
         return 1;
     case INST_MWRITES:
         R1.as_ptr = memset(R1.as_ptr, (int) R2.as_int8, (size_t) R3.as_uint64);
