@@ -123,7 +123,7 @@ int add_label_with_flag(Mc_stream_t* labels, const Token label_tkn, const Token 
 
     put_label_in_raw_data(label, data);
 
-    memcpy((uint8_t*)(data) + label.str, label_tkn.value.as_str, label_tkn.size);
+    printf("label: '%.*s'\n", label_tkn.size, (char*) memcpy((uint8_t*)(data) + label.str, label_tkn.value.as_str, label_tkn.size));
 
     const uint32_t definition_size = (uint32_t) definition.size;
     // only copy definition.size and definition.value.as_str only if add_def_as_str

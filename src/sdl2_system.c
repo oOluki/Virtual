@@ -38,6 +38,15 @@ typedef struct VSystem
     uint32_t  display_width;
     uint32_t  display_height;
 
+    uint8_t   keys[8];
+    int       mouse;
+    int       mousex;
+    int       mousey;
+
+    int       touch;
+    int       fingerx;
+    int       fingery;
+
 } VSystem;
 
 static int _vthread(void* _data){
@@ -109,7 +118,7 @@ int virtual_syscall(VPU* vpu, uint64_t call){
     {
     case VSYS_GET_SYSTEM_SPECIFICATIONS:
         // _vsystem name goes in RA
-        GET_REG(registers, RA)->as_uint64   = *(uint64_t*) "DEFAULT";
+        GET_REG(registers, RA)->as_uint64   = *(uint64_t*) "SDL2...";
         // _vsystem bitsize architecture goes in RB
         GET_REG(registers, RB)->as_uint8    = sizeof(size_t);
         // get _vsystem active state to RC
@@ -435,10 +444,45 @@ int virtual_syscall(VPU* vpu, uint64_t call){
         GET_REG(registers, RA)->as_uint64 = SDL_GetTicks64();
         return 0;
     case VSYS_POLL_EVENT:{
-        SDL_Event event;
-        GET_REG(registers, RA)->as_uint32 = 0;
+        static SDL_Event event;
+        GET_REG(registers, RA)->as_uint64 = 0;
         if(SDL_PollEvent(&event)){
-            GET_REG(registers, RA)->as_uint32 = event.type;
+            GET_REG(registers, RA )->as_uint32 = 1;
+            GET_REG(registers, RA4)->as_uint32 = event.type;
+            switch (event.type)
+            {
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+            case SDL_KEYMAPCHANGED:
+                GET_REG(registers, RB )->as_int32 = event.key.keysym.sym;
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+            case SDL_MOUSEBUTTONUP:
+                GET_REG(registers, RB )->as_uint8 = event.button.button;
+                break;
+            case SDL_MOUSEMOTION:
+                GET_REG(registers, RB )->as_int32 = event.motion.x;
+                GET_REG(registers, RB4)->as_int32 = event.motion.y;
+                break;
+            case SDL_MOUSEWHEEL:
+                GET_REG(registers, RB )->as_int32 = event.wheel.x;
+                GET_REG(registers, RB4)->as_int32 = event.wheel.y;
+                break;
+            case SDL_FINGERDOWN:
+            case SDL_FINGERUP:
+                GET_REG(registers, RB )->as_float32 = event.tfinger.x;
+                GET_REG(registers, RB4)->as_float32 = event.tfinger.y;
+                GET_REG(registers, RC )->as_int64   = event.tfinger.fingerId;
+                break;
+            case SDL_FINGERMOTION:
+                GET_REG(registers, RB )->as_float32 = event.tfinger.dx;
+                GET_REG(registers, RB4)->as_float32 = event.tfinger.dy;
+                GET_REG(registers, RC )->as_int64   = event.tfinger.fingerId;
+                break;
+            
+            default:
+                break;
+            }
         }
     }
         return 0;

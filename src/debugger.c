@@ -357,7 +357,7 @@ int debugger_help(Debugger* debugger, int dupc){
     }
 }
 
-static inline int get_labelpos_to(uint64_t* pos, const char** str, const Mc_stream_t* labels, uint64_t ip){
+static inline int get_labelpos_to(uint64_t* pos, int* str_len, const char** str, const Mc_stream_t* labels, uint64_t ip){
 
     for(uint64_t i = 0; i < labels->size; ){
         const Label* const labelptr = (const Label*) (((uint8_t*) labels->data) + i);
@@ -366,6 +366,7 @@ static inline int get_labelpos_to(uint64_t* pos, const char** str, const Mc_stre
         if(label.type == TKN_INST_POSITION && label.definition.as_uint >= ip){
             if(pos) *pos = label.definition.as_uint;
             if(str) *str = (const char*) (((uint8_t*) labelptr) + label.str);
+            if(str_len) *str_len = label.str_size;
             return 1;
         }
 
@@ -395,7 +396,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
 
     uint64_t    label_ip;
     const char* label_ip_str = NULL;
-    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, i) > 0;
+    int         label_ip_strlen;
+    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, i) > 0;
 
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H\n");
     fprintf(
@@ -409,8 +411,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     );
     for(; i < finish && i < GET_REG(vpu->register_space, RIP)->as_uint64; i+=1){
         for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-            fprintf(debugger->output, "%s:\n", label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+            fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
             width = (width > 0)? width - 1 : width;
             finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
         }
@@ -420,8 +422,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         print_inst(debugger->output, debugger->program[i], buff);
     }
     for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-        fprintf(debugger->output, "%s:\n", label_ip_str);
-        found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+        fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
+        found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
         width = (width > 0)? width - 1 : width;
         finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
     }
@@ -436,8 +438,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     }
     for(; i < finish; i+=1){
         for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-            fprintf(debugger->output, "%s:\n", label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_str, &debugger->labels, lip) > 0;
+            fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
             width = (width > 0)? width - 1 : width;
             finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
         }
