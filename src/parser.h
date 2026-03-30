@@ -37,8 +37,7 @@ typedef struct Parser
 {
     char* file_path;
     int file_path_size;
-    Mc_stream_t* labels;
-    Mc_stream_t* local_labels;
+    Labeler      labeler;
     Mc_stream_t* static_memory;
     Mc_stream_t* program;
     Tokenizer* tokenizer;
@@ -438,7 +437,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             }
         }
         else if(arg2.type == TKN_LABEL_REF){
-            arg2 = resolve_token(parser->labels, arg2);
+            arg2 = resolve_token(&parser->labeler, arg2);
             if(arg2.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", arg2.size, arg2.value.as_str);
                 return 1;
@@ -446,7 +445,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         }
         else if(arg2.type == TKN_ADDR_LABEL_REF){
             arg2.type = TKN_LABEL_REF;
-            arg2 = resolve_token(parser->labels, arg2);
+            arg2 = resolve_token(&parser->labeler, arg2);
             if(arg2.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", arg2.size, arg2.value.as_str);
                 return 1;
@@ -477,7 +476,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
         }
-        if(add_label(parser->labels, arg1, arg2)){
+        if(add_label(&parser->labeler, arg1, arg2)){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifine Already Labeled Labels\n\n",
                 "%label",
@@ -493,7 +492,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(add_label(parser->labels, arg1, (Token){.type = TKN_EMPTY})){
+        if(add_label(&parser->labeler, arg1, (Token){.type = TKN_EMPTY})){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s'\n\tNOTE: You Can Not Relabel\n\n",
                 "%label", arg1.size, arg1.value.as_str
@@ -508,7 +507,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(remove_label(parser->labels, arg)){
+        if(remove_label(&parser->labeler, arg)){
             REPORT_ERROR(parser, "\n\tAttempting To Unlabel '%.*s' While Label Does Not Exist\n\n", arg.size, arg.value.as_str);
             return 1;
         }
@@ -520,7 +519,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(!get_label(parser->labels, arg)){
+        if(!get_label(&parser->labeler, arg)){
             tokenizer_goto(parser->tokenizer, "%endif");
             get_next_token(parser->tokenizer);
         }
@@ -533,7 +532,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(get_label(parser->labels, arg)){
+        if(get_label(&parser->labeler, arg)){
             tokenizer_goto(parser->tokenizer, "%endif");
             get_next_token(parser->tokenizer);
         }
@@ -579,7 +578,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
                 if(definition.type == TKN_LABEL_REF || definition.type == TKN_ADDR_LABEL_REF){
                     const Token label = definition;
                     if(label.type == TKN_ADDR_LABEL_REF) definition.type = TKN_LABEL_REF;
-                    definition = resolve_token(parser->labels, definition);
+                    definition = resolve_token(&parser->labeler, definition);
                     if(definition.type == TKN_ERROR){
                         REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n", label.size, label.value.as_str);
                         return 1;
@@ -606,7 +605,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
                 next = get_next_token(parser->tokenizer);
             }
 
-            if(add_label(parser->labels, token, definition)){
+            if(add_label(&parser->labeler, token, definition)){
                 REPORT_ERROR(
                     parser, "\n\t%.*s Could Not Add Label '%.*s', It's Invalid Or It Already Exists\n",
                     macro.size, macro.value.as_str,
@@ -621,7 +620,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
     }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
-            REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %s\n\n", "%endif");
+            REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %.*s\n\n", macro.size, macro.value.as_str);
             return 1;
         }
         parser->macro_if_depth -= 1;
@@ -636,7 +635,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
     return 1;
 }
 
-int pre_parse_inst_operand(const Parser* parser, Token* _token, uint64_t absolute_program_position){
+int pre_parse_inst_operand(Parser* parser, Token* _token, uint64_t absolute_program_position){
     Token token = *_token;
     if(token.type == TKN_LABEL_REF){
         if(token.size > 2){
@@ -645,7 +644,7 @@ int pre_parse_inst_operand(const Parser* parser, Token* _token, uint64_t absolut
                 return 1;
             }
         }
-        token = resolve_token(parser->labels, token);
+        token = resolve_token(&parser->labeler, token);
         if(token.type == TKN_ERROR){
             REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", _token->size, _token->value.as_str);
             return 1;
@@ -657,13 +656,13 @@ int pre_parse_inst_operand(const Parser* parser, Token* _token, uint64_t absolut
     }
     else if(token.type == TKN_ADDR_LABEL_REF){
         token.type = TKN_LABEL_REF;
-        token = resolve_token(parser->labels, token);
+        token = resolve_token(&parser->labeler, token);
         if(token.type == TKN_ERROR){
-            if(token.size > 1 && parser->local_labels){
+            if(token.size > 1 && parser->labeler.local_labels.data){
                 if(token.value.as_str[1] == '.'){
                     union {int16_t as_int16; uint16_t as_uint16; } stride;
                     token.type = TKN_RAW;
-                    if(add_local_labelref(parser->local_labels, &stride.as_int16, token, absolute_program_position)){
+                    if(add_local_labelref(&parser->labeler, &stride.as_int16, token, absolute_program_position)){
                         REPORT_ERROR(parser, "\n\tCould Not Add Local Label Reference '%.*s'\n", token.size, token.value.as_str);
                         return 1;
                     }
@@ -842,7 +841,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             continue;
         }
         if(token.type == TKN_LABEL_REF){
-            const Token tmp = resolve_token(parser->labels, token);
+            const Token tmp = resolve_token(&parser->labeler, token);
             if(tmp.type == TKN_ERROR){
                 REPORT_ERROR(parser, "\n\tCould Not Resolve Label '%.*s'\n\n", token.size, token.value.as_str);
                 return 1;
@@ -897,7 +896,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         }
         if(token.type == TKN_RAW && token.size > 1){
             if(token.value.as_str[0] == '.'){
-                if(!parser->local_labels){
+                if(!(parser->labeler.flags & LABELERFLAG_LOCAL_LABEL_SUPPORT)){
                     REPORT_ERROR(parser, "\n\tNo Local Label Support%c\n", '\n');
                     return 1;
                 }
@@ -906,7 +905,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                     REPORT_ERROR(parser, "\n\tExpected '%c' After Label Identifier\n", ':');
                     return 1;
                 }
-                if(solve_local_label(parser->local_labels, parser->program->data, token, parser->program->size / 4)){
+                if(solve_local_label(&parser->labeler, parser->program->data, token, parser->program->size / 4)){
                     REPORT_ERROR(parser, "\n\tCould Not Add Local Label '%.*s'\n", token.size, token.value.as_str);
                     return 1;
                 }
@@ -919,7 +918,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(next_token.value.as_char == ':'){
-                    if(add_label(parser->labels, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
+                    if(add_label(&parser->labeler, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
                     {
                         REPORT_ERROR(
                             parser,
@@ -928,15 +927,15 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
                         );
                         return 1;
                     }
-                    if(parser->local_labels){
-                        const Label* unsolved_local_label = get_missing_local_label(parser->local_labels);
+                    if(parser->labeler.flags & LABELERFLAG_LOCAL_LABEL_SUPPORT){
+                        const Label* unsolved_local_label = get_missing_local_label(&parser->labeler.local_labels);
                         if(unsolved_local_label){
-                            const Label l = get_label_from_raw_data(parser->local_labels->data);
+                            const Label l = get_label_from_raw_data(parser->labeler.local_labels.data);
                             const char* const unsolved_local_label_name = (char*) (((uintptr_t) unsolved_local_label) + l.str);
                             REPORT_ERROR(parser, "\n\tUnsolved Local Label '%.*s'\n", l.size, unsolved_local_label_name);
                             return 1;
                         }
-                        parser->local_labels->size = 0;
+                        parser->labeler.local_labels.size = 0;
                     }
                     continue;
                 }
@@ -958,15 +957,15 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
         return 1;
     }
 
-    if(parser->local_labels){
-        const Label* unsolved_local_label = get_missing_local_label(parser->local_labels);
+    if(parser->labeler.flags & LABELERFLAG_LOCAL_LABEL_SUPPORT){
+        const Label* unsolved_local_label = get_missing_local_label(&parser->labeler.local_labels);
         if(unsolved_local_label){
-            const Label l = get_label_from_raw_data(parser->local_labels->data);
+            const Label l = get_label_from_raw_data(parser->labeler.local_labels.data);
             const char* const unsolved_local_label_name = (char*) (((uintptr_t) unsolved_local_label) + l.str);
             REPORT_ERROR(parser, "\n\tUnsolved Local Label '%.*s'\n", l.size, unsolved_local_label_name);
             return 1;
         }
-        parser->local_labels->size = 0;
+        parser->labeler.local_labels.size = 0;
     }
 
     return 0;

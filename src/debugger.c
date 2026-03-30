@@ -66,7 +66,6 @@ typedef struct Debugger
     Mc_stream_t stream;
     uint8_t*    signals;
     uint64_t    breakpoint_count;
-    Mc_stream_t labels;
 
     Inst*       program;
     uint64_t    program_size;
@@ -397,7 +396,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     uint64_t    label_ip;
     const char* label_ip_str = NULL;
     int         label_ip_strlen;
-    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, i) > 0;
+    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->parser.labeler.labels, i) > 0;
 
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H\n");
     fprintf(
@@ -412,7 +411,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     for(; i < finish && i < GET_REG(vpu->register_space, RIP)->as_uint64; i+=1){
         for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
             fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->parser.labeler.labels, lip) > 0;
             width = (width > 0)? width - 1 : width;
             finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
         }
@@ -423,7 +422,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     }
     for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
         fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-        found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
+        found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->parser.labeler.labels, lip) > 0;
         width = (width > 0)? width - 1 : width;
         finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
     }
@@ -439,7 +438,7 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     for(; i < finish; i+=1){
         for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
             fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
+            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->parser.labeler.labels, lip) > 0;
             width = (width > 0)? width - 1 : width;
             finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
         }
@@ -975,8 +974,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;;
     case DUPC_SHOW_LABEL:{
         if(argc <= 1){
-            for(uint64_t i = 0; i < debugger->labels.size; ){
-                const Label* label_ptr = (Label*) (((uintptr_t) debugger->labels.data) + i);
+            for(uint64_t i = 0; i < debugger->parser.labeler.labels.size; ){
+                const Label* label_ptr = (Label*) (((uintptr_t) debugger->parser.labeler.labels.data) + i);
                 const Label  label = get_label_from_raw_data(label_ptr);
                 fprintf(
                     debugger->output,
@@ -1012,14 +1011,14 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                     return 1;
                 }
                 EXPECT(argv[i], TKN_ULIT, label_position);
-                if(label_position.value.as_uint64 >= debugger->labels.size){
+                if(label_position.value.as_uint64 >= debugger->parser.labeler.labels.size){
                     fprintf(debugger->output, "No label at %"PRIu64", labels total size = %"PRIu64"\n",
-                        label_position.value.as_uint64, debugger->labels.size);
+                        label_position.value.as_uint64, debugger->parser.labeler.labels.size);
                 }
-                label_ptr = (Label*) (((uintptr_t) debugger->labels.data) + label_position.value.as_uint64);
+                label_ptr = (Label*) (((uintptr_t) debugger->parser.labeler.labels.data) + label_position.value.as_uint64);
             }
             else{
-                label_ptr = get_label(debugger->parser.labels, get_token_from_cstr(argv[i]));
+                label_ptr = get_label(&debugger->parser.labeler, get_token_from_cstr(argv[i]));
             }
             if(!label_ptr){
                 fprintf(debugger->output, "Could not find label '%s'\n", argv[i]);
@@ -1032,7 +1031,7 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 "\tname: %.*s\n"
                 "\ttype: %"PRIu8" \'%s\'\n"
                 "\tdefinition: ",
-                ((uintptr_t) label_ptr) - ((uintptr_t) debugger->labels.data), label.size,
+                ((uintptr_t) label_ptr) - ((uintptr_t) debugger->parser.labeler.labels.data), label.size,
                 (int) label.str_size, (char*) (get_label_name(label_ptr)),
                 label.type, get_token_type_str(label.type)
             );
@@ -1191,7 +1190,7 @@ int debug(const char* input_file, int argc, char** argv){
         _labels = (void*) (((uintptr_t) _labels) + sizeof(uint64_t) + sizeof(VIRTUAL_FILE_LABELS_FIELD_NAME));
     }
 
-    Mc_stream_t labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
+    //Mc_stream_t labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
 
     void* static_memory = get_virtual_file_field(vfile, VIRTUAL_FILE_STATIC_FIELD_NAME);
     uint64_t static_memory_size = 0;
@@ -1230,11 +1229,10 @@ int debug(const char* input_file, int argc, char** argv){
         .line = 0, .column = 0, .pos = 0
     };
 
-    Parser parser;
+    Parser parser = {};
     parser.file_path = "stdin";
     parser.file_path_size = sizeof("stdin") - sizeof("");
-    parser.labels = &labels;
-    parser.local_labels = NULL;
+    parser.labeler.labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
     parser.static_memory = NULL;
     parser.program = &dstream;
     parser.tokenizer = &tokenizer;
@@ -1249,7 +1247,6 @@ int debug(const char* input_file, int argc, char** argv){
         .output = stdout,
         .err = stderr,
         .is_active = 1,
-        .labels = labels,
         .parser = parser,
         .program = vpu.program,
         .program_size = program_size,
@@ -1323,6 +1320,7 @@ int debug(const char* input_file, int argc, char** argv){
     mc_destroy_stream(dstream);
     free(debugger.signals);
     vfclose(vfile);
+    if(debugger.parser.labeler.labels.data != _labels) destroy_labeler(parser.labeler);
     VIRTUAL_DEBUG_LOG("debugging complete\n");
     return vpu.status;
 }

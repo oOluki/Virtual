@@ -4,9 +4,13 @@
 #include "lexer.h"
 
 enum LabelFlags{
-    LABELFLAG_NONE = 0,
-    LABELFLAG_EXPORT = 1 << 0,
-    LABELFLAG_RESOLVED = 1 << 1,
+    LABELFLAG_NONE      = 0,
+    LABELFLAG_RESOLVED  = 1 << 0,
+};
+
+enum LabelerFlags{
+    LABELERFLAG_NONE                = 0,
+    LABELERFLAG_LOCAL_LABEL_SUPPORT = 1 << 0,
 };
 
 typedef struct Label
@@ -23,6 +27,7 @@ typedef struct Labeler
 {
     Mc_stream_t labels;
     Mc_stream_t local_labels;
+    uint8_t     flags;
 } Labeler;
 
 
@@ -59,7 +64,8 @@ static inline const char* get_label_def_as_str(const void* label){
     return (const char*)((uint8_t*)(label) + l.definition.as_uint + sizeof(uint32_t));  
 }
 
-Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
+Label* get_label(const Labeler* labeler, const Token label_tkn){
+    const Mc_stream_t* const labels = (label_tkn.value.as_str[0] == '.')? &labeler->local_labels : &labeler->labels;
     for(size_t i = 0; i < labels->size; ){
         const uint8_t* data = (uint8_t*)(labels->data) + i;
         const Label label = get_label_from_raw_data(data);
@@ -84,23 +90,25 @@ Label* get_label(const Mc_stream_t* labels, const Token label_tkn){
     return NULL;
 }
 
-int remove_label(Mc_stream_t* labels, const Token label_token){
-    Label* const label_ptr = get_label(labels, label_token);
+int remove_label(Labeler* labeler, const Token label_token){
+    Label* const label_ptr = get_label(labeler, label_token);
     if(label_ptr == NULL) return 1;
     const Label label = get_label_from_raw_data(label_ptr);
     const uint32_t removed_label_size = label.size;
-    const size_t ssize = (size_t)(labels->size - label.size - (size_t)((uint8_t*)(label_ptr) - (uint8_t*)(labels->data)));
+    const size_t ssize = (size_t)(labeler->labels.size - label.size - (size_t)((uint8_t*)(label_ptr) - (uint8_t*)(labeler->labels.data)));
     memmove(label_ptr, ((uint8_t*)label_ptr) + label.size, ssize);
-    labels->size -= removed_label_size;
+    labeler->labels.size -= removed_label_size;
     return 0;
 }
 
-int add_label_with_flag(Mc_stream_t* labels, const Token label_tkn, const Token definition, uint8_t flags){
+int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token definition, uint8_t flags){
 
-    if(get_label(labels, label_tkn)){
+    if(get_label(labeler, label_tkn)){
         fprintf(stderr, "[ERROR] Label Already Exists\n");
         return 1;
     }
+
+    Mc_stream_t* const labels = (label_tkn.value.as_str[0] == '.')? &labeler->local_labels : &labeler->labels;
     
     const int add_def_as_str = (definition.type == TKN_STR) || (definition.type == TKN_RAW);
 
@@ -133,14 +141,14 @@ int add_label_with_flag(Mc_stream_t* labels, const Token label_tkn, const Token 
     return 0;
 }
 
-static inline int add_label(Mc_stream_t* labels, const Token label_tkn, const Token definition){
-    return add_label_with_flag(labels, label_tkn, definition, LABELFLAG_NONE);
+static inline int add_label(Labeler* labeler, const Token label_tkn, const Token definition){
+    return add_label_with_flag(labeler, label_tkn, definition, LABELFLAG_NONE);
 }
 
 
-Token resolve_token(const Mc_stream_t* labels, const Token token){
+Token resolve_token(const Labeler* labeler, const Token token){
     if(token.type != TKN_LABEL_REF) return token;
-    const Label* const label_ptr = get_label(labels, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1});
+    const Label* const label_ptr = get_label(labeler, (Token){.value.as_str = token.value.as_str + 1, .size = token.size - 1});
     if(!label_ptr) return (Token){.value.as_str = token.value.as_str, .size = token.size, .type = TKN_ERROR};
     const Label label = get_label_from_raw_data(label_ptr);
     if(label.type == TKN_STR)
@@ -156,7 +164,7 @@ Token resolve_token(const Mc_stream_t* labels, const Token token){
     };
 }
 
-int add_local_labelref(Mc_stream_t* local_labels, int16_t* stride, const Token name, uint64_t refposition){
+int add_local_labelref(Labeler* labeler, int16_t* stride, const Token name, uint64_t refposition){
     if(name.type != TKN_RAW){
         fprintf(stderr, "[ERROR] Invalid Local Label Reference\n");
         return 1;
@@ -177,11 +185,11 @@ int add_local_labelref(Mc_stream_t* local_labels, int16_t* stride, const Token n
         fprintf(stderr, "[ERROR] Invalid Local Label Reference, Missing '.' After '@' Preffix\n");
         return 1;
     }
-    Label* lp = get_label(local_labels, (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1});
+    Label* lp = get_label(labeler, (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1});
     if(!lp){
         if(stride) *stride = 0;
         return add_label(
-            local_labels,
+            labeler,
             (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1},
             (Token){.value.as_uint = refposition, .type = TKN_ULIT}
         );
@@ -228,11 +236,11 @@ Label* get_missing_local_label(Mc_stream_t* local_labels){
     return NULL;
 }
 
-int solve_local_label(Mc_stream_t* local_labels, void* program, const Token name, uint64_t label_pos){
+int solve_local_label(Labeler* labeler, void* program, const Token name, uint64_t label_pos){
 
-    Label* lp = get_label(local_labels, name);
+    Label* lp = get_label(labeler, name);
     if(!lp){
-        return add_label_with_flag(local_labels, name, (Token){.value.as_uint = label_pos, .type = TKN_INST_POSITION, .size = 0}, LABELFLAG_RESOLVED);
+        return add_label_with_flag(labeler, name, (Token){.value.as_uint = label_pos, .type = TKN_INST_POSITION, .size = 0}, LABELFLAG_RESOLVED);
     }
 
     Label label = get_label_from_raw_data(lp);
@@ -270,6 +278,11 @@ int solve_local_label(Mc_stream_t* local_labels, void* program, const Token name
     put_label_in_raw_data(label, lp);
 
     return 0;
+}
+
+void destroy_labeler(Labeler labeler){
+    if(labeler.labels.data)         mc_destroy_stream(labeler.labels);
+    if(labeler.local_labels.data)   mc_destroy_stream(labeler.local_labels);
 }
 
 #endif

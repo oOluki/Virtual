@@ -109,21 +109,23 @@ is_prime:
 	PUSH RD
 	MOV RB RA
 	MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
-	EQ RD RB RC
-	JMPF RD 0xfff5; i: -11
 	SMLU RD RB RC
-	JMPF RD 0xffee; i: -18
+	JMPF RD 0xfff0; i: -16
+	MOVV RC 0x04; (u: 4; i: 4; f: 0.000000)
+	SMLU RD RB RC
+	JMPF RD 0xfff2; i: -14
 	CASTFU RA RA
-	CALL 0xffe5; i: -27
+	CALL 0xffe4; i: -28
 	CASTUF RA RA
+	MOVV RC 0x02; (u: 2; i: 2; f: 0.000000)
 	DIVU RD RB RA
 	MUL RD RD RA
 	EQ RD RD RB
-	JMPF RD 0xffe7; i: -25
+	JMPF RD 0xffe5; i: -27
 	DEC RA 0x1; u: 1
 	SMLU RD RA RC
 	JMPFN RD 0xfffa; i: -6
-	JMP 0xffe8; -24
+	JMP 0xffe6; -26
 	MOVV RB 0x0a; (u: 10; i: 10; f: 0.000000)
 	DUMPCHAR RB R0 R0
 	POP RE
@@ -139,10 +141,10 @@ primes:
 	SMLU RD RB RC
 	JMPFN RD 0xfff4; i: -12
 	MOV RA RB
-	CALL 0xffde; i: -34
+	CALL 0xffdc; i: -36
 	JMPFN RA 0x7; i: 7
 	MOV RA R0
-	CALL 0xff97; i: -105
+	CALL 0xff95; i: -107
 	MOVV RD 0x2c; (u: 44; i: 44; f: 0.000000)
 	DUMPCHAR RD R0 R0
 	MOVV RD 0x20; (u: 32; i: 32; f: 0.000000)
