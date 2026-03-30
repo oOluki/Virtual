@@ -21,22 +21,25 @@ is_prime:
     MOV RB RA
 
     MOVV RC 2
-    EQ   RD RB RC
-    JMPF RD @is_prime_ret_true
     SMLU RD RB RC
     JMPF RD @is_prime_ret_false
+    MOVV RC 4
+    SMLU RD RB RC
+    JMPF RD @is_prime_ret_true
 
     CASTFU RA RA
     CALL @sqrt
     CASTUF RA RA
 
+    MOVV RC 2
+
     loop:
         DIVU RD RB RA
-	MUL  RD RD RA
-	EQ   RD RD RB
-	JMPF RD @is_prime_ret_false
-	DEC  RA 1
-	SMLU RD RA RC
+        MUL  RD RD RA
+        EQ   RD RD RB
+        JMPF RD @is_prime_ret_false
+        DEC  RA 1
+        SMLU RD RA RC
     JMPFN RD @loop
     JMP @is_prime_ret_true
 %unlabel loop
