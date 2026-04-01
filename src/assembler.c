@@ -69,7 +69,7 @@ int write_exe(const Mc_stream_t* program, const char* path, uint64_t entry_point
 
 #ifdef _WIN32
 // assembles program in input_path to output_path
-int assemble(char* input_path, char* output_path, int export_labels){
+int assemble(char* input_path, char* output_path, int export_all_labels){
 
     // changing file separator to default '/'
     for(size_t i = 0; input_path[i]; i+=1){
