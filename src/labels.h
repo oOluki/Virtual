@@ -6,6 +6,8 @@
 enum LabelFlags{
     LABELFLAG_NONE      = 0,
     LABELFLAG_RESOLVED  = 1 << 0,
+    LABELFLAG_EXPORT    = 1 << 1,
+    LABELFLAG_IMPORT    = 1 << 2
 };
 
 enum LabelerFlags{
@@ -20,6 +22,7 @@ typedef struct Label
     uint32_t   str_size;
     uint8_t    type;
     uint8_t    flags;
+    uint64_t   inst_position;
     TokenValue definition;
 } Label;
 
@@ -31,7 +34,7 @@ typedef struct Labeler
 } Labeler;
 
 
-#define SIZEOF_LABEL (14 + sizeof(TokenValue))
+#define SIZEOF_LABEL (22 + sizeof(TokenValue))
 
 static inline Label get_label_from_raw_data(const void* data){
     return (Label){
@@ -40,7 +43,8 @@ static inline Label get_label_from_raw_data(const void* data){
         .str_size           = ((uint32_t*) data)[2],
         .type               = ((uint8_t *) data)[3 * 4],
         .flags              = ((uint8_t *) data)[3 * 4 + 1],
-        .definition.as_uint = *(uint64_t*)((uint8_t *) (data) + 3 * 4 + 2)
+        .inst_position      = *(uint64_t*)((uintptr_t) (data) + 3 * 4 + 2),
+        .definition.as_uint = *(uint64_t*)((uintptr_t) (data) + 3 * 4 + 2 + 8)
     };
 }
 
@@ -51,7 +55,8 @@ static inline void put_label_in_raw_data(const Label label, void* data){
     u32buffer[2] = label.str_size;
     *(uint8_t*)(u32buffer + 3) = label.type;
     *((uint8_t*)(u32buffer + 3) + 1) = label.flags;
-    *(uint64_t*)((uint8_t*)(u32buffer + 3) + 2) = label.definition.as_uint;
+    *(uint64_t*)((uint8_t*)(u32buffer + 3) + 2) = label.inst_position;
+    *(uint64_t*)((uint8_t*)(u32buffer + 3) + 2 + 8) = label.definition.as_uint;
 }
 
 static inline const char* get_label_name(const void* label){
@@ -64,8 +69,7 @@ static inline const char* get_label_def_as_str(const void* label){
     return (const char*)((uint8_t*)(label) + l.definition.as_uint + sizeof(uint32_t));  
 }
 
-Label* get_label(const Labeler* labeler, const Token label_tkn){
-    const Mc_stream_t* const labels = (label_tkn.value.as_str[0] == '.')? &labeler->local_labels : &labeler->labels;
+Label* _get_label(const Mc_stream_t* labels, const Token label_tkn){
     for(size_t i = 0; i < labels->size; ){
         const uint8_t* data = (uint8_t*)(labels->data) + i;
         const Label label = get_label_from_raw_data(data);
@@ -76,7 +80,7 @@ Label* get_label(const Labeler* labeler, const Token label_tkn){
                 },
                 label_tkn,
                 0
-            )
+            ) && (label_tkn.type == label.type || (label.type != TKN_ENDEXPORT && label_tkn.type != TKN_ENDEXPORT))
         ){
             return (Label*) data;
         }
@@ -90,7 +94,12 @@ Label* get_label(const Labeler* labeler, const Token label_tkn){
     return NULL;
 }
 
+Label* get_label(const Labeler* labeler, const Token label_tkn){
+    return _get_label((label_tkn.value.as_str[0] == '.')? &labeler->local_labels : &labeler->labels, label_tkn);
+}
+
 int remove_label(Labeler* labeler, const Token label_token){
+    if(label_token.value.as_str[0] == '.') return 1;
     Label* const label_ptr = get_label(labeler, label_token);
     if(label_ptr == NULL) return 1;
     const Label label = get_label_from_raw_data(label_ptr);
@@ -101,7 +110,7 @@ int remove_label(Labeler* labeler, const Token label_token){
     return 0;
 }
 
-int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token definition, uint8_t flags){
+int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token definition, uint64_t inst_position, uint8_t flags){
 
     if(get_label(labeler, label_tkn)){
         fprintf(stderr, "[ERROR] Label Already Exists\n");
@@ -116,6 +125,7 @@ int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token def
         .size = add_def_as_str? SIZEOF_LABEL + label_tkn.size + definition.size + sizeof(uint32_t) : SIZEOF_LABEL + label_tkn.size,
         .str = SIZEOF_LABEL,
         .str_size = label_tkn.size,
+        .inst_position = inst_position,
         .type = definition.type,
         .flags = flags,
         .definition.as_uint = add_def_as_str? SIZEOF_LABEL + label_tkn.size : definition.value.as_uint
@@ -131,6 +141,8 @@ int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token def
 
     put_label_in_raw_data(label, data);
 
+    
+
     memcpy((uint8_t*)(data) + label.str, label_tkn.value.as_str, label_tkn.size);
 
     const uint32_t definition_size = (uint32_t) definition.size;
@@ -141,8 +153,8 @@ int add_label_with_flag(Labeler* labeler, const Token label_tkn, const Token def
     return 0;
 }
 
-static inline int add_label(Labeler* labeler, const Token label_tkn, const Token definition){
-    return add_label_with_flag(labeler, label_tkn, definition, LABELFLAG_NONE);
+static inline int add_label(Labeler* labeler, const Token label_tkn, const Token definition, uint64_t inst_position){
+    return add_label_with_flag(labeler, label_tkn, definition, inst_position, LABELFLAG_NONE);
 }
 
 
@@ -155,10 +167,10 @@ Token resolve_token(const Labeler* labeler, const Token token){
         return (Token){
             .value.as_str = (char*)((uint8_t*)(label_ptr) + label.definition.as_uint + sizeof(uint32_t)),
             .size = *(uint32_t*)((uint8_t*)(label_ptr) + label.definition.as_uint),
-            .type = TKN_STR
+            .type = label.type
         };
     return (Token){
-        .value = label.definition,
+        .value = (label.type == TKN_INST_POSITION)? (TokenValue){.as_uint = label.inst_position} : label.definition,
         .size  = 0,
         .type  = label.type
     };
@@ -191,7 +203,8 @@ int add_local_labelref(Labeler* labeler, int16_t* stride, const Token name, uint
         return add_label(
             labeler,
             (Token){.value.as_str = name.value.as_str + 1, .type = TKN_RAW, .size = name.size - 1},
-            (Token){.value.as_uint = refposition, .type = TKN_ULIT}
+            (Token){.value.as_uint = refposition, .type = TKN_ULIT},
+            refposition
         );
     }
     Label label = get_label_from_raw_data(lp);
@@ -240,7 +253,7 @@ int solve_local_label(Labeler* labeler, void* program, const Token name, uint64_
 
     Label* lp = get_label(labeler, name);
     if(!lp){
-        return add_label_with_flag(labeler, name, (Token){.value.as_uint = label_pos, .type = TKN_INST_POSITION, .size = 0}, LABELFLAG_RESOLVED);
+        return add_label_with_flag(labeler, name, (Token){.value.as_uint = label_pos, .type = TKN_INST_POSITION, .size = 0}, label_pos, LABELFLAG_RESOLVED);
     }
 
     Label label = get_label_from_raw_data(lp);

@@ -338,8 +338,8 @@ int print_inst(FILE* output, Inst inst, char** buff){
     #undef L2
 }
 
-int disassembler_invalid_label(const uint8_t* labels, uint64_t current_label){
-    const Label label = get_label_from_raw_data(labels + current_label);
+int disassembler_invalid_label(uint64_t current_label){
+    const Label label = get_label_from_raw_data((void*) current_label);
     fprintf(
         stderr,
         "[ERROR] Corrupted File: Invalid Label:\n"
@@ -348,17 +348,17 @@ int disassembler_invalid_label(const uint8_t* labels, uint64_t current_label){
         "   name: %s\n"
         "   type: %"PRIu8"\n",
         label.size,
-        (const char*)(labels + current_label + label.str),
+        (const char*)(current_label + label.str),
         label.type
     );
     if(label.type == TKN_STR)
-        fprintf(stderr, "    definition: %s\n", (const char*)(labels + current_label + label.definition.as_uint + sizeof(uint64_t)));
+        fprintf(stderr, "    definition: %s\n", (const char*)(current_label + label.definition.as_uint + sizeof(uint64_t)));
     else
         fprintf(stderr, "    definition: %"PRIx64"\n", label.definition.as_uint);
     return 1;
 }
 
-int disassemble_handle_label(FILE* output, const void* _label, uint64_t* queried_stop){
+int disassemble_handle_label(FILE* output, const void* _label){
     const Label label = get_label_from_raw_data(_label);
     const char* name = (const char*)((uint8_t*) _label) + label.str;
     switch (label.type)
@@ -367,25 +367,28 @@ int disassemble_handle_label(FILE* output, const void* _label, uint64_t* queried
     case TKN_STR:{
         const uint64_t str_len = *(uint64_t*)((uint8_t*)(_label) + label.definition.as_uint);
         const char* str = (char*) ((uint8_t*)(_label) + label.definition.as_uint + sizeof(uint32_t));
-        fprintf(output, "%clabel %.*s %.*s\n", '%', label.str_size, name, (int) str_len, str);
+        fprintf(output, "%s %.*s %.*s\n", (label.flags & LABELFLAG_EXPORT)? "%export" : "%label", label.str_size, name, (int) str_len, str);
     }   break;
     case TKN_ILIT:
-        fprintf(output, "%clabel %.*s %"PRIi64"\n", '%', label.str_size, name, label.definition.as_int);
+        fprintf(output, "%s %.*s %"PRIi64"\n", (label.flags & LABELFLAG_EXPORT)? "%export" : "%label", label.str_size, name, label.definition.as_int);
         break;
     case TKN_ULIT:
-        fprintf(output, "%clabel %.*s %"PRIu64"\n", '%', label.str_size, name, label.definition.as_uint);
+        fprintf(output, "%s %.*s %"PRIu64"\n", (label.flags & LABELFLAG_EXPORT)? "%export" : "%label", label.str_size, name, label.definition.as_uint);
         break;
     case TKN_FLIT:
-        fprintf(output, "%clabel %.*s %lf\n", '%', label.str_size, name, label.definition.as_float);
+        fprintf(output, "%s %.*s %lf\n", (label.flags & LABELFLAG_EXPORT)? "%export" : "%label", label.str_size, name, label.definition.as_float);
         break;
     case TKN_CHAR:
-        fprintf(output, "%clabel %.*s \'%c\'\n", '%', label.str_size, name, label.definition.as_char);
+        fprintf(output, "%s %.*s \'%c\'\n", (label.flags & LABELFLAG_EXPORT)? "%export" : "%label", label.str_size, name, label.definition.as_char);
         break;
     case TKN_EMPTY:
         fprintf(output, "%clabelv %.*s\n", '%', label.str_size, name);
         break;
     case TKN_INST_POSITION:
-        *queried_stop = label.definition.as_uint;
+        fprintf(output, "%s%.*s:\n", (label.flags & LABELFLAG_EXPORT)? "%export " : "", (int) label.str_size, name);
+        break;
+    case TKN_ENDEXPORT:
+        fprintf(output, "%cendexport %.*s\n", '%', (int) label.str_size, name);
         break;
     
     default:
@@ -434,18 +437,12 @@ int disassemble(
         fprintf(output, "\n\n");
     }
 
-    uint64_t queried_stop = inst_count;
-    uint64_t last_label = 0;
-    
-    for(uint64_t current_label = last_label; current_label < labels_byte_size && queried_stop == inst_count; ){
-        const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
-        if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
-            disassembler_invalid_label((uint8_t*) labels, current_label);
-            return 1;
-        }
-        last_label = current_label;
-        current_label += label.size;
+    Label label = {.inst_position = 0};
+    if(labels_byte_size > SIZEOF_LABEL){
+        label = get_label_from_raw_data(labels);
     }
+    uintptr_t current_label = (uintptr_t) labels;
+    uintptr_t end_label = current_label + labels_byte_size;
 
     char charbuff[24];
 
@@ -458,56 +455,46 @@ int disassemble(
     int status = 0;
     uint64_t i = 0;
     
-    while (queried_stop < entry_point && i < entry_point && last_label < labels_byte_size)
+    while (label.inst_position < entry_point && i < entry_point && current_label < end_label)
     {
-        for(; i < queried_stop && i < inst_count && !status; i+=1){
+        for(; i < label.inst_position && i < inst_count && !status; i+=1){
             status = print_inst(output, program[i], buff);
         }
         if(status || i == inst_count) break;
-        const Label l = get_label_from_raw_data(((uint8_t*) labels) + last_label);
-        fprintf(output, "%.*s:\n", (int) l.str_size, (const char*)(((uint8_t*) labels) + last_label + l.str));
-        for(uint64_t current_label = last_label; current_label < labels_byte_size && i == queried_stop; ){
-            const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
-            if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
-                disassembler_invalid_label(((uint8_t*) labels), current_label);
+        for(
+            ;
+            current_label < end_label && i == (label = get_label_from_raw_data((void*) current_label)).inst_position;
+            current_label += label.size
+        ){
+            if(label.size == 0 || disassemble_handle_label(output, (void*) current_label)){
+                disassembler_invalid_label(current_label);
                 return 1;
             }
-            last_label = current_label;
-            current_label += label.size;
         }
-        if(i == queried_stop) break;
+        if(i == label.inst_position) break;
     }
     
     for( ; (i < entry_point) && !status; i += 1)
         status = print_inst(output, program[i], buff);
     if(!status) fprintf(output, "%s\n", "%start");
 
-    while (i < inst_count && last_label < labels_byte_size && i < queried_stop)
+    while (current_label < end_label)
     {
-        for(; i < queried_stop && i < inst_count && !status; i+=1){
+        for(; i < label.inst_position && i < inst_count && !status; i+=1){
             status = print_inst(output, program[i], buff);
         }
         if(status || i == inst_count) break;
-        const Label label = get_label_from_raw_data(((uint8_t*) labels) + last_label);
-        fprintf(output, "%.*s:\n", (int) label.str_size, (const char*)(((uint8_t*) labels) + last_label + label.str));
-        for(uint64_t current_label = last_label; current_label < labels_byte_size && i == queried_stop; ){
-            const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
-            if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
-                disassembler_invalid_label((uint8_t*) labels, current_label);
+        for(
+            ;
+            current_label < end_label && i == (label = get_label_from_raw_data((void*) current_label)).inst_position;
+            current_label += label.size
+        ){
+            if(label.size == 0 || disassemble_handle_label(output, (void*) current_label)){
+                disassembler_invalid_label(current_label);
                 return 1;
             }
-            last_label = current_label;
-            current_label += label.size;
         }
-    }
-    for(uint64_t current_label = last_label; current_label < labels_byte_size; ){
-        const Label label = get_label_from_raw_data(((uint8_t*) labels) + current_label);
-        if(label.size == 0 || disassemble_handle_label(output, ((uint8_t*) labels) + current_label, &queried_stop)){
-            disassembler_invalid_label((uint8_t*) labels, current_label);
-            return 1;
-        }
-        last_label = current_label;
-        current_label += label.size;
+        if(i == label.inst_position) break;
     }
 
     for( ; (i < inst_count) && !status; i += 1)

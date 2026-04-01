@@ -90,25 +90,26 @@ const char* get_token_type_str(int type){
 
     switch (type)
     {
-    case TKN_NONE:              return "TOKEN_NONE";
-    case TKN_RAW:               return "TOKEN_RAW";
-    case TKN_INST:              return "TOKEN_INST";
-    case TKN_REG:               return "TOKEN_REG";
-    case TKN_NUM:               return "TOKEN_NUM";
-    case TKN_ILIT:              return "TOKEN_ILIT";
-    case TKN_ULIT:              return "TOKEN_ULIT";
-    case TKN_FLIT:              return "TOKEN_FLIT";
-    case TKN_STR:               return "TOKEN_STR";
-    case TKN_CHAR:              return "TOKEN_CHAR";
-    case TKN_SPECIAL_SYM:       return "TOKEN_SPECIAL_SYM";
-    case TKN_MACRO_INST:        return "TOKEN_MACRO_INST";
-    case TKN_LABEL_REF:         return "TOKEN_LABEL_REF";
-    case TKN_EMPTY:             return "TOKEN_EMPTY";
-    case TKN_ADDR_LABEL_REF:    return "TOKEN_ADDR_LABEL_REF";
-    case TKN_STATIC_SIZE:       return "TOKEN_STATIC_SIZE";
-    case TKN_UNRESOLVED_LABEL:  return "TKN_UNRESOLVED_LABEL";
-    case TKN_INST_POSITION:     return "TKN_INST_POSITION";
-    default:                    return "TOKEN_ERROR";
+    case TKN_NONE:                  return "TOKEN_NONE";
+    case TKN_RAW:                   return "TOKEN_RAW";
+    case TKN_INST:                  return "TOKEN_INST";
+    case TKN_REG:                   return "TOKEN_REG";
+    case TKN_NUM:                   return "TOKEN_NUM";
+    case TKN_ILIT:                  return "TOKEN_ILIT";
+    case TKN_ULIT:                  return "TOKEN_ULIT";
+    case TKN_FLIT:                  return "TOKEN_FLIT";
+    case TKN_STR:                   return "TOKEN_STR";
+    case TKN_CHAR:                  return "TOKEN_CHAR";
+    case TKN_SPECIAL_SYM:           return "TOKEN_SPECIAL_SYM";
+    case TKN_MACRO_INST:            return "TOKEN_MACRO_INST";
+    case TKN_LABEL_REF:             return "TOKEN_LABEL_REF";
+    case TKN_EMPTY:                 return "TOKEN_EMPTY";
+    case TKN_ADDR_LABEL_REF:        return "TOKEN_ADDR_LABEL_REF";
+    case TKN_STATIC_SIZE:           return "TOKEN_STATIC_SIZE";
+    case TKN_UNRESOLVED_LABEL:      return "TKN_UNRESOLVED_LABEL";
+    case TKN_INST_POSITION:         return "TKN_INST_POSITION";
+    case TKN_ENDEXPORT:             return "TKN_ENDEXPORT";
+    default:                        return "TOKEN_ERROR";
     }
 
 }
@@ -352,7 +353,7 @@ Operand parse_op_literal(Token token){
 
 int push_to_static(Mc_stream_t* static_memory, const Token token){
 
-    if(token.type != TKN_STR && token.type != TKN_RAW){
+    if(token.type != TKN_STR && token.type != TKN_RAW || !static_memory){
         return 1;
     }
     if(token.type == TKN_STR){
@@ -476,7 +477,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tMissing Definition For '%.*s' Label\n\n", arg1.size, arg1.value.as_str);
             return 1;
         }
-        if(add_label(&parser->labeler, arg1, arg2)){
+        if(add_label(&parser->labeler, arg1, arg2, parser->program->size / sizeof(Inst))){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s %.*s'\n\tNOT: You Can Not Redifine Already Labeled Labels\n\n",
                 "%label",
@@ -492,7 +493,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
             REPORT_ERROR(parser, "\n\tLabel Identifier Is Either Missing Or Invalid%c\n\n", ' ');
             return 1;
         }
-        if(add_label(&parser->labeler, arg1, (Token){.type = TKN_EMPTY})){
+        if(add_label(&parser->labeler, arg1, (Token){.type = TKN_EMPTY}, parser->program->size / sizeof(Inst))){
             REPORT_ERROR(
                 parser, "\n\tInvalid Label Or Definition '%s %.*s'\n\tNOTE: You Can Not Relabel\n\n",
                 "%label", arg1.size, arg1.value.as_str
@@ -605,7 +606,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
                 next = get_next_token(parser->tokenizer);
             }
 
-            if(add_label(&parser->labeler, token, definition)){
+            if(add_label(&parser->labeler, token, definition, parser->program->size / sizeof(Inst))){
                 REPORT_ERROR(
                     parser, "\n\t%.*s Could Not Add Label '%.*s', It's Invalid Or It Already Exists\n",
                     macro.size, macro.value.as_str,
@@ -618,6 +619,76 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         }
         return 0;
     }
+    if(COMP_TKN(macro, MKTKN("%import"))){
+        const Token what = get_next_token(parser->tokenizer);
+        if(what.type != TKN_RAW){
+            REPORT_ERROR(parser, "\n\tInvalid label import identifier '%.*s'\n\n", what.size, what.value.as_str);
+            return 1;
+        }
+        if(add_label_with_flag(&parser->labeler, what, (Token){}, parser->program->size / sizeof(Inst), LABELFLAG_IMPORT)){
+            REPORT_ERROR(parser, "\n\tCould not add label '%.*s'\n\n", macro.size, macro.value.as_str);
+            return 1;
+        }
+        return 0;
+    }
+    if(COMP_TKN(macro, MKTKN("%export"))){
+        const Token what = get_next_token(parser->tokenizer);
+        if(what.type != TKN_RAW){
+            REPORT_ERROR(parser, "\n\tInvalid label export identifier '%.*s'\n\n", what.size, what.value.as_str);
+            return 1;
+        }
+        const Token next_token = get_next_token(parser->tokenizer);
+        Token def = (Token){.type = TKN_INST_POSITION, .size = 0, .value.as_uint = parser->program->size / sizeof(Inst)};
+        if(next_token.type != TKN_SPECIAL_SYM || next_token.value.as_char != ':'){
+            if(next_token.type == TKN_ERROR){
+                REPORT_ERROR(parser, "\n\tCould not add label '%.*s', missing definition\n\n", what.size, what.value.as_str);
+                return 1;
+            }
+            if(next_token.type == TKN_STR){
+                REPORT_ERROR(parser, "\n\tCould not add label '%.*s', can't export strings just yet\n\n", what.size, what.value.as_str);
+                return 1;
+            }
+            else def = resolve_token(&parser->labeler, next_token);
+        }
+        if(add_label_with_flag(&parser->labeler, what, def, parser->program->size / sizeof(Inst), LABELFLAG_EXPORT)){
+            REPORT_ERROR(parser, "\n\tCould not add label '%.*s'\n\n", what.size, what.value.as_str);
+            return 1;
+        }
+        return 0;
+    }
+    if(COMP_TKN(macro, MKTKN("%endexport"))){
+        const Token what = get_next_token(parser->tokenizer);
+        if(what.type != TKN_RAW || what.size < 1){
+            REPORT_ERROR(parser, "\n\tInvalid label export identifier '%.*s'\n\n", what.size, what.value.as_str);
+            return 1;
+        }
+        Label* l = _get_label(&parser->labeler.labels, what);
+        if(!l){
+            REPORT_ERROR(parser, "\n\tCould not find label '%.*s'\n\n", what.size, what.value.as_str);
+            return 1;
+        }
+        Label label = get_label_from_raw_data(l);
+        if(label.type != TKN_INST_POSITION || !(label.flags & LABELFLAG_EXPORT)){
+            REPORT_ERROR(parser, "\n\tLabel '%.*s' is not fit for exporting\n\n", label.str_size, ((char*) l) + label.str);
+            return 1;
+        }
+        l = (Label*) ((uintptr_t) l - (uintptr_t) parser->labeler.labels.data);
+        if(
+            add_label_with_flag(
+                &parser->labeler,
+                (Token){.type = TKN_ENDEXPORT, .size = what.size, .value = what.value},
+                (Token){.type = TKN_ENDEXPORT, .size = 0, .value.as_uint = label.inst_position},
+                parser->program->size / sizeof(Inst), LABELFLAG_EXPORT
+            )
+        ){
+            REPORT_ERROR(parser, "\n\tCould not endexport of '%.*s' label\n\n", label.str_size, ((char*) l) + label.str);
+            return 1;
+        }
+        l = (Label*) ((uintptr_t) l + (uintptr_t) parser->labeler.labels.data);
+        label.definition.as_uint = parser->program->size / sizeof(Inst);
+        put_label_in_raw_data(label, l);
+        return 0;
+    }
     if(COMP_TKN(macro, MKTKN("%endif"))){
         if(parser->macro_if_depth == 0){
             REPORT_ERROR(parser, "\n\tNo Macro If Statement Matches To Match This %.*s\n\n", macro.size, macro.value.as_str);
@@ -627,7 +698,7 @@ int parse_macro(Parser* parser, const Token macro, StringView* include_path){
         return 0;
     }
     if(COMP_TKN(macro, MKTKN("%start"))){
-        parser->entry_point = parser->program->size / 4;
+        parser->entry_point = parser->program->size / sizeof(Inst);
         return 0;
     }
 
@@ -918,7 +989,7 @@ int parse_file(Parser* parser, Mc_stream_t* files_stream){
             const Token next_token = get_next_token(parser->tokenizer);
             if((next_token.type == TKN_SPECIAL_SYM) && (token.type == TKN_RAW)){
                 if(next_token.value.as_char == ':'){
-                    if(add_label(&parser->labeler, token, (Token){.value.as_uint = parser->program->size / 4, .type = TKN_INST_POSITION}))
+                    if(add_label(&parser->labeler, token, (Token){.value.as_uint = parser->program->size / sizeof(Inst), .type = TKN_INST_POSITION}, parser->program->size / sizeof(Inst)))
                     {
                         REPORT_ERROR(
                             parser,

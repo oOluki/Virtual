@@ -78,7 +78,7 @@ dump_int:
     PUSH RC
     
     SMLI RC RB R0
-    JMPF RC @dump_int
+    JMPF RC @dump_int_neg
 
     CALL @dump_uint
     POP RC

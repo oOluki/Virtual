@@ -138,9 +138,15 @@ int assemble(const char* input_path, const char* output_path, int export_all_lab
     if(static_memory.size){
         add_virtual_file_field(&vfile, VIRTUAL_FILE_STATIC_FIELD_NAME, static_memory.size, static_memory.data);
     }
+    
     if(parser.labeler.labels.size && export_all_labels){
         add_virtual_file_field(&vfile, VIRTUAL_FILE_LABELS_FIELD_NAME, parser.labeler.labels.size, parser.labeler.labels.data);
     }
+    /*const char* s = (char*) get_virtual_file_field(vfile, VIRTUAL_FILE_LABELS_FIELD_NAME);
+    s += (*(uint64_t*) s) - 1;
+    for(printf("%p\n", s); *s <= 'z' && *s>='a'; s--){
+        printf("%2x: '%c'\n", *s, *s);
+    }*/
     add_virtual_file_field(&vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME, program.size, program.data);
 
     if(vfsave(vfile, output_path? output_path : "output.out")){
