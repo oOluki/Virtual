@@ -60,6 +60,14 @@ int parse_rside_expression(){
 }
 
 
+Expr* get_expr(int expr){
+    if(expr < 0 || expr >= parser.expressions.size / sizeof(Expr))
+        report_internal_error(
+            "attempted to get non existent expression(%i), there were %i expressions",
+            expr, (int) (parser.expressions.size / sizeof(Expr))
+        );
+    return da_element(&parser.expressions, expr, Expr);
+}
 
 
 

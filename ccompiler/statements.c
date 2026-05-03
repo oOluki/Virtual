@@ -10,13 +10,17 @@ static inline int push_stmt(const Statement stmt){
     return out;
 }
 
+int push_decl_stmt(int symbol){
+    return push_stmt((Statement){.kind = STMT_DECL, .stmt.decl = symbol});
+}
+
 int push_expr_stmt(int lexpr, int middle, int rexpr){
     return push_stmt(
         (Statement){.kind = STMT_EXPR, .stmt.expr.left = lexpr, .stmt.expr.op = middle, .stmt.expr.right = rexpr}
     );
 }
-int push_comp_stmt(int comp){
-    return push_stmt((Statement){.kind = STMT_COMP, .stmt.comp = comp});
+int push_comp_stmt(int start, int end){
+    return push_stmt((Statement){.kind = STMT_COMP, .stmt.comp.start = start, .stmt.comp.end = end});
 }
 int push_select_stmt(int if_expr, int if_stmt, int else_stmt){
     return push_stmt(
@@ -31,6 +35,12 @@ int push_iter_stmt(int cond, int iter_stmt){
 }
 int push_jump_stmt(int jmp_keyword, int jmp_expr){
     return push_stmt((Statement){.kind = STMT_JMP, .stmt.jmp.jmp = jmp_keyword, .stmt.jmp.jmp_expr = jmp_expr});
+}
+
+static int parse_vardecl_statement(int first_identifier){
+    const Token name = expect(TKNTYPE_RAW);
+    const int var = declare_symbol(make_basic_var(name.value.str, first_identifier));
+    return push_decl_stmt(var);
 }
 
 int parse_expression_statement(const Token first){
@@ -50,6 +60,10 @@ int parse_expression_statement(const Token first){
 
 int parse_compound_statement(){
 
+    const int start = parser.statements.size / sizeof(Statement);
+
+    const int out = push_comp_stmt(start, 0);
+
     Token token = next_token();
 
     for(; token.type != TKNTYPE_NONE && token.type != '}'; token = next_token()){
@@ -62,6 +76,7 @@ int parse_compound_statement(){
             if(_type != TYPE_ERROR){
                 const Token name = expect(TKNTYPE_RAW);
                 const int var = declare_symbol(make_basic_var(name.value.str, _type));
+                push_decl_stmt(var);
                 if(peek(0).type == '='){
                     skip(1);
                     push_expr_stmt(push_primary_expr(name), '=', parse_rside_expression());
@@ -87,7 +102,9 @@ int parse_compound_statement(){
         report_error("missing closing %c", '}');
     }
 
-    return 0;
+    get_stmt(out)->stmt.comp.end = parser.statements.size / sizeof(Statement);
+
+    return out;
 }
 
 
@@ -117,7 +134,14 @@ int parse_jump_statement(int jmp_keyword){
     return 0;
 }
 
-
+Statement* get_stmt(int stmt){
+    if(stmt < 0 || stmt >= parser.statements.size / sizeof(Statement))
+        report_internal_error(
+            "attempted to get non existent statement(%i), there were %i statements",
+            stmt, (int) (parser.statements.size / sizeof(Statement))
+        );
+    return da_element(&parser.statements, stmt, Statement);
+}
 
 
 #endif // =====================  END OF FILE STATEMENTS_C ===========================

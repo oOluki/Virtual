@@ -6,6 +6,25 @@
 
 Tokenizer tokenizer;
 
+const char* get_type_str(int _type){
+    switch (_type)
+    {
+    case TYPE_VOID:     return "TYPE_VOID";
+    case TYPE_CHAR:     return "TYPE_CHAR";
+    case TYPE_UCHAR:    return "TYPE_UCHAR";
+    case TYPE_INT:      return "TYPE_INT";
+    case TYPE_UINT:     return "TYPE_UINT";
+    case TYPE_FLOAT:    return "TYPE_FLOAT";
+    case TYPE_DOUBLE:   return "TYPE_DOUBLE";
+    case TYPE_PTR:      return "TYPE_PTR";
+    case TYPE_VAR:      return "TYPE_VAR";
+    case TYPE_FUNC:     return "TYPE_FUNC";
+    case TYPE_ERROR:    return "TYPE_ERROR";
+    default:
+        report_internal_error("type %i not implemented", _type);
+        return NULL;
+    }
+}
 
 Str read_file(const char* file){
 

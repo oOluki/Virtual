@@ -9,6 +9,7 @@ static inline const char* get_stmtkind_str(int stmtkind){
     switch (stmtkind)
     {
     case STMT_NONE:     return "STMT_NONE";
+    case STMT_DECL:     return "STMT_DECL";
     case STMT_EXPR:     return "STMT_EXPR";
     case STMT_COMP:     return "STMT_COMP";
     case STMT_SELECT:   return "STMT_SELECT";
@@ -35,21 +36,32 @@ static inline const char* get_exprkind_str(int exprkind){
     }
 }
 
-static int display_bin_expression(const BinExpr expr, int identation){
-    TODO("display_bin_expression");
+static inline void indent(int indentation){
+    for(int i = 0; i < indentation; i+=1)
+        putchar(' ');
+}
+
+static int display_expression(int expr, int indentation);
+
+static int display_bin_expression(const BinExpr expr, int indentation){
+    printf("%*c%s\n", indentation, ' ', get_tkntype_str(expr.op));
+    display_expression(expr.left, indentation);
+    display_expression(expr.right, indentation);
     return 0;
 }
 
 static int display_expression(int expr, int indentation){
     const Expr* const e = da_element(&parser.expressions, expr, Expr);
-    printf("%*c%s:\n", indentation, '\t', get_exprkind_str(e->kind));
+    indent(indentation);
+    printf("%s:\n", get_exprkind_str(e->kind));
     switch (e->kind)
     {
     case EXPRTYPE_NONE:
         break;
     case EXPRTYPE_PRIMARY:
-        printf("%*c", indentation + 1, '\t');
+        indent(indentation + 2);
         print_token((Token){.type = e->expr.primary.kind, .value = e->expr.primary.value});
+        printf("\n");
         break;
     case EXPRTYPE_POSTFIX:
         TODO("EXPRTYPE_POSTFIX");
@@ -58,9 +70,7 @@ static int display_expression(int expr, int indentation){
         TODO("EXPRTYPE_POSTFIX");
         break;
     case EXPRTYPE_BINARY:
-        printf("%s\n", get_tkntype_str(e->expr.bin.op));
-        display_expression(e->expr.bin.left, indentation + 1);
-        display_expression(e->expr.bin.right, indentation + 1);
+        display_bin_expression(e->expr.bin, indentation + 2);
         break;
     case EXPRTYPE_CONDITIONAL:
         TODO("EXPRTYPE_CONDITIONAL");
@@ -70,20 +80,99 @@ static int display_expression(int expr, int indentation){
         report_internal_error("expression kind %i not implemented", e->kind);
         return 1;
     }
+    return 0;
+}
+
+static int display_sym_flags(int flags){
+    if(flags & SYMFLAG_PLACEHOLDER)
+        return 0;
+
+    if(flags & SYMFLAG_STATIC)
+        printf("static ");
+    else if(flags & SYMFLAG_EXTERN)
+        printf("extern ");
+    
+    if(flags & SYMFLAG_INLINE){
+        printf("inline ");
+    }
+
+    if(flags & SYMFLAG_CONST){
+        printf("const ");
+    }
+    else {
+        printf("var ");
+    }
+
+    if(flags & SYMFLAG_UNSIGNED){
+        printf("unsigned ");
+    }
+
+    return 0;
+}
+
+static int display_symvar(const Str name, const Variable* var){
+    display_sym_flags(var->flags);
+    printf(
+        "%.*s%c %*c",
+        name.size, name.cstr,
+        (name.size > 0)? ':' : ' ',
+        var->pointer_counter, (var->pointer_counter > 0)? '*' : ' '
+    );
+
+    switch (var->_type)
+    {
+    case VARTYPE_BASIC:
+        printf("%s", get_type_str(var->var.basic._type));
+        break;
+    case VARTYPE_ARR:
+        printf("%s[%i]", get_type_str(var->var.arr.base_type), var->var.arr.array_len);
+        break;
+    
+    default:
+        report_internal_error("variable type %i not implemented", var->_type);
+        break;
+    }
+    return 0;
+}
+
+static int display_sym(const Symbol* sym, int indentation){
+    indent(indentation);
+    if(sym->_type == TYPE_VAR){
+        display_symvar(sym->name, &sym->symbol.var);
+        printf("\n");
+    }
+    else if(sym->_type == TYPE_FUNC){
+        printf("func %.*s(", sym->name.size, sym->name.cstr);
+        for(int i = 0; i < sym->symbol.func.argc; i+=1){
+            display_symvar((Str){}, sym->symbol.func.args + 1);
+            printf(", ");
+        }
+        printf(") -> "); display_symvar((Str){}, &sym->symbol.func.ret);
+        printf("\n");
+    }
+    else{
+        report_internal_error("symbol type %i not implemented", sym->_type);
+    }
+    return 0;
 }
 
 static int display_stmt(int stmt, int indentation){
     const Statement* s = da_element(&parser.statements, stmt, Statement);
-    printf("%*c%s:\n", indentation, '\t', get_stmtkind_str(s->kind));
+    indent(indentation);
+    printf("%s:\n", get_stmtkind_str(s->kind));
     switch (s->kind)
     {
     case STMT_NONE:
         break;
+    case STMT_DECL:
+        display_sym(da_element(&parser.symbols, s->stmt.decl, Symbol), indentation + 2);
+        break;
     case STMT_EXPR:
-        display_bin_expression(s->stmt.expr, indentation + 1);
+        display_bin_expression(s->stmt.expr, indentation + 2);
         break;
     case STMT_COMP:
-        display_stmt(s->stmt.comp, indentation + 1);
+        indent(indentation + 2);
+        printf("block(%i, %i)\n", s->stmt.comp.start, s->stmt.comp.end);
         break;
     case STMT_SELECT:
         //display_select_stmt(s->stmt.comp, indentation + 1);
@@ -93,9 +182,11 @@ static int display_stmt(int stmt, int indentation){
         //display_iter_stmt(s->stmt.comp, indentation + 1);
         TODO("STMT_ITER");
         break;
-    case STMT_JMP:
-        //display_jmp_stmt(s->stmt.comp, indentation + 1);
-        TODO("STMT_JMP");
+    case STMT_JMP:{
+        indent(indentation + 2);
+        printf("%s\n", get_keyword_str(s->stmt.jmp.jmp));
+        if(s->stmt.jmp.jmp_expr >= 0) display_expression(s->stmt.jmp.jmp_expr, indentation + 2);
+    }
         break;
         
     default:
@@ -230,12 +321,40 @@ int keyword_type(int keyword){
     }
 }
 
-static inline int decl_func(Str name, Variable ret, int argc, Variable* argv){
+const char* get_keyword_str(int keyword){
+    switch(keyword){
+    case KEYW_NONE:     return "KEYW_NONE";
+    case KEYW_CONST:    return "KEYW_CONST";
+    case KEYW_STATIC:   return "KEYW_STATIC";
+    case KEYW_INLINE:   return "KEYW_INLINE";
+    case KEYW_EXTERN:   return "KEYW_EXTERN";
+    case KEYW_VOID:     return "KEYW_VOID";
+    case KEYW_CHAR:     return "KEYW_CHAR";
+    case KEYW_INT:      return "KEYW_INT";
+    case KEYW_FLOAT:    return "KEYW_FLOAT";
+    case KEYW_DOUBLE:   return "KEYW_DOUBLE";
+    case KEYW_RETURN:   return "KEYW_RETURN";
+    case KEYW_GOTO:     return "KEYW_GOTO";
+    case KEYW_CONTINUE: return "KEYW_CONTINUE";
+    case KEYW_BREAK:    return "KEYW_BREAK";
+    case KEYW_IF:       return "KEYW_IF";
+    case KEYW_ELSE:     return "KEYW_ELSE";
+    case KEYW_SWITCH:   return "KEYW_SWITCH";
+    case KEYW_FOR:      return "KEYW_FOR";
+    case KEYW_WHILE:    return "KEYW_WHILE";
+    case KEYW_DO:       return "KEYW_DO";
+    default:
+        report_internal_error("keyword %i not implemented", keyword);
+        return NULL;
+    }
+}
 
+static inline int decl_func(Str name, Variable ret, int argc, Variable* argv){
+    ret.flags = SYMFLAG_PLACEHOLDER;
     return declare_symbol(
         (Symbol){
             .name = name,
-            .type = TYPE_FUNC,
+            ._type = TYPE_FUNC,
             .symbol.func = (Function){
                 .argc = argc,
                 .args = argv,
@@ -251,12 +370,6 @@ int parse_file(const char* file){
     tokenizer.src = read_file(file).cstr;
     tokenizer.src_file_name = file;
     tokenizer.line = 1;
-
-    //expect_cstr(tokenizer, "int");
-    //expect_cstr(tokenizer, "main");
-    //expect(tokenizer, '(');
-    //expect(tokenizer, ')');
-    //expect(tokenizer, '{');
 
     for(Token token = next_token(tokenizer); token.type != TKNTYPE_NONE; token = next_token(tokenizer)){
 
@@ -278,6 +391,7 @@ int parse_file(const char* file){
                     
                     if(peek(0).type == '{'){
                         skip(1);
+                        push_decl_stmt(f);
                         da_element(&parser.symbols, f, Symbol)->symbol.func.body = parse_compound_statement();
                     }
                     else{

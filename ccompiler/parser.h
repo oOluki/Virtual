@@ -35,7 +35,18 @@ enum VariableType{
     VARTYPE_NONE = 0,
     VARTYPE_BASIC,
     VARTYPE_ARR,
+
+};
+
+enum SymFlag{
+    SYMFLAG_NONE        = 0,
+    SYMFLAG_CONST       = 1 << 0,
+    SYMFLAG_STATIC      = 1 << 1,
+    SYMFLAG_EXTERN      = 1 << 2,
+    SYMFLAG_UNSIGNED    = 1 << 3,
+    SYMFLAG_INLINE      = 1 << 4,
     
+    SYMFLAG_PLACEHOLDER = 1 << 7
 };
 
 enum ExprType{
@@ -49,6 +60,7 @@ enum ExprType{
 
 enum StatementType {
     STMT_NONE = 0,
+    STMT_DECL,
     STMT_EXPR,
     STMT_COMP,
     STMT_SELECT,
@@ -156,7 +168,7 @@ typedef struct Function
 typedef struct Symbol
 {
     Str name;
-    int type;
+    int _type;
     union SymbolData
     {
         Function func;
@@ -232,7 +244,11 @@ typedef struct Statement
     int kind;
     union
     {
-        int         comp;
+        struct{
+            int start;
+            int end;
+        }           comp;
+        int         decl;
         BinExpr     expr;
         SelStmt     sel;
         IterStmt    iter;
@@ -253,7 +269,7 @@ typedef struct Parser
 
 int display_tree(int start, int end);
 
-#define make_basic_var(NAME, TYPE) ((Symbol){.name = NAME, .type = TYPE_VAR, .symbol.var = (Variable){._type = VARTYPE_BASIC, .var.basic._type = (TYPE)}})
+#define make_basic_var(NAME, TYPE) ((Symbol){.name = NAME, ._type = TYPE_VAR, .symbol.var = (Variable){._type = VARTYPE_BASIC, .var.basic._type = (TYPE)}})
 
 int declare_symbol(const Symbol symbol);
 
@@ -270,6 +286,7 @@ int get_keyword(Token token);
 
 int keyword_type(int keyword);
 
+const char* get_keyword_str(int keyword);
 
 // expressions
 
@@ -283,19 +300,25 @@ int parse_lside_expression(const Token token);
 
 int parse_rside_expression();
 
+Expr* get_expr(int expr);
+
 // statements
 
+int push_decl_stmt(int symbol);
 int push_expr_stmt(int lexpr, int middle_op, int rexpr);
-int push_comp_stmt(int comp);
+int push_comp_stmt(int start, int end);
 int push_select_stmt(int if_expr, int if_stmt, int else_stmt);
 int push_iter_stmt(int cond, int iter_stmt);
 int push_jump_stmt(int jmp_keyword, int jmp_expr);
 
+int parse_decl_statement(int first_identifier);
 int parse_expression_statement(const Token first);
 int parse_compound_statement();
 int parse_selection_statement(int if_switch);
 int parse_iteration_statement(int for_while_do);
 int parse_jump_statement(int jmp_keyword);
+
+Statement* get_stmt(int stmt);
 
 // ...
 

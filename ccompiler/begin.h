@@ -90,6 +90,7 @@ typedef union TokenValue{
     Str             str;
 } TokenValue;
 
+const char* get_type_str(int _type);
 
 Str read_file(const char* file);
 
