@@ -1,0 +1,66 @@
+#ifndef EXPRESSION_C
+#define EXPRESSION_C
+
+#include "parser.h"
+
+static inline int push_expr(const Expr expr){
+    DyArr* const da__ = &parser.expressions;
+    const int out = da__->size / sizeof(Expr);
+    da_append(da__, expr, Expr);
+    return out;
+}
+
+int push_primary_expr(const Token token){
+    if(token.type != TKNTYPE_RAW && token.type != TKNTYPE_STR && !is_token_literal(token.type)){
+        report_error("expected primary expression, got %s instead", get_tkntype_str(token.type));
+    }
+    return push_expr((Expr){.kind = EXPRTYPE_PRIMARY, .expr.primary.kind = token.type, .expr.primary.value = token.value});
+}
+
+int push_postfix_expr(int left, int postop, int right){
+    return push_expr((Expr){.kind = EXPRTYPE_POSTFIX, .expr.postfix.left = left, .expr.postfix.middle = postop, .expr.postfix.right = right});
+}
+int push_unary_expr(int what, int expr){
+    return push_expr((Expr){.kind = EXPRTYPE_UNARY, .expr.unary.what = what, .expr.unary.expr = expr});
+}
+int push_binary_expr(int left, int binop, int right){
+    return push_expr((Expr){.kind = EXPRTYPE_BINARY, .expr.bin.left = left, .expr.bin.op = binop, .expr.bin.right = right});
+}
+int push_cond_expr(int cond_expr, int if_expr, int else_expr){
+    return push_expr((Expr){.kind = EXPRTYPE_CONDITIONAL, .expr.cond.cond = cond_expr, .expr.cond.if_ = if_expr, .expr.cond.else_ = else_expr});
+}
+
+
+static int validade_lvalue(int lvalue){
+    return lvalue >= 0;
+}
+
+int parse_lside_expression(const Token token){
+
+    if(token.type != TKNTYPE_RAW){
+        report_error("expected variable name, got %s instead", get_tkntype_str(token.type));
+    }
+
+    const int sym = find_symbol(token.value.str, 1);
+
+    return push_primary_expr(token);
+}
+
+int parse_rside_expression(){
+
+    const Token token = next_token();
+
+    if(!is_token_literal(token.type) && token.type != TKNTYPE_RAW){
+        report_error("expected literal or variable, got %s instead", get_tkntype_str(token.type));
+    }
+
+    expect(';');
+
+    return push_primary_expr(token);
+}
+
+
+
+
+
+#endif // =====================  END OF FILE EXPRESSION_C ===========================
