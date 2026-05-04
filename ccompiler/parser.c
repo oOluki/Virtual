@@ -51,7 +51,7 @@ static int display_bin_expression(const BinExpr expr, int indentation){
 }
 
 static int display_expression(int expr, int indentation){
-    const Expr* const e = da_element(&parser.expressions, expr, Expr);
+    const Expr* const e = da_element(parser.expressions, expr, Expr);
     indent(indentation);
     printf("%s:\n", get_exprkind_str(e->kind));
     switch (e->kind)
@@ -157,7 +157,7 @@ static int display_sym(const Symbol* sym, int indentation){
 }
 
 static int display_stmt(int stmt, int indentation){
-    const Statement* s = da_element(&parser.statements, stmt, Statement);
+    const Statement* s = da_element(parser.statements, stmt, Statement);
     indent(indentation);
     printf("%s:\n", get_stmtkind_str(s->kind));
     switch (s->kind)
@@ -165,7 +165,7 @@ static int display_stmt(int stmt, int indentation){
     case STMT_NONE:
         break;
     case STMT_DECL:
-        display_sym(da_element(&parser.symbols, s->stmt.decl, Symbol), indentation + 2);
+        display_sym(da_element(parser.symbols, s->stmt.decl, Symbol), indentation + 2);
         break;
     case STMT_EXPR:
         display_bin_expression(s->stmt.expr, indentation + 2);
@@ -206,19 +206,17 @@ int display_tree(int start, int end){
 
 int declare_symbol(const Symbol symbol){
     const int out = parser.symbols.size / sizeof(Symbol);
-    DyArr* const da__ = &parser.symbols;
-    da_append(da__, symbol, Symbol);
+    da_append(parser.symbols, symbol, Symbol);
     return out;
 }
 
 int find_symbol(const Str name, int required){
-    const DyArr* const da__ = &parser.symbols;
-    if(da__->data) for(
-        const Symbol* x = (const Symbol*) ((uintptr_t) da__->data + da__->size - sizeof(Symbol));
-        (uintptr_t) x >= (uintptr_t) da__->data;
+    if(parser.symbols.data) for(
+        const Symbol* x = (const Symbol*) ((uintptr_t) parser.symbols.data + parser.symbols.size - sizeof(Symbol));
+        (uintptr_t) x >= (uintptr_t) parser.symbols.data;
         x-=1){
         if(compare_str(x->name, name)){
-            return (int) (((uintptr_t) (x) - (uintptr_t) (da__->data)) / sizeof(Symbol));
+            return (int) (((uintptr_t) (x) - (uintptr_t) (parser.symbols.data)) / sizeof(Symbol));
         }
     }
     if(required){
@@ -226,57 +224,6 @@ int find_symbol(const Str name, int required){
     }
     return -1;
 }
-
-// print Intermediate Interpretation Argument
-int print_iia(IIArg iia){
-    switch (iia.type)
-    {
-    case IIATYPE_NONE:
-        return 0;
-    case IIATYPE_ULIT:
-        printf("%u", iia.value.u);
-        return 0;
-    case IIATYPE_ILIT:
-        printf("%i", iia.value.i);
-        return 0;
-    case IIATYPE_FLIT:
-        printf("%f", iia.value.f);
-        return 0;
-    case IIATYPE_VAR:
-        printf("%.*s", iia.value.str.size, iia.value.str.cstr);
-        return 0;
-    case IIATYPE_ERROR:
-    default:
-        printf("ERR");
-        return 1;
-    }
-}
-
-// print Intermediate Interpretation Instruction
-int print_iii(III iii){
-    int status = 0;
-    switch (iii.iiiop)
-    {
-    case IIIOP_NONE:
-        printf("NOP()");
-        return 0;
-    case IIIOP_RET:
-        printf("RET(");
-        status = print_iia(iii.arg[0]);
-        printf(")");
-        return status;
-    case IIIOP_EXIT:
-        printf("EXIT(");
-        status = print_iia(iii.arg[0]);
-        printf(")");
-        return status;
-    
-    default:
-        printf("ERROR(%i)", iii.iiiop);
-        return 1;
-    }
-}
-
 
 int get_keyword(Token token){
 
@@ -380,6 +327,10 @@ int parse_file(const char* file){
                 const Token name = expect(TKNTYPE_RAW);
                 if(peek(0).type == '('){ // parse function arguments
                     skip(1);
+                    if(peek(0).type != ')'){
+                        printf("in %s:%i:%i:\n", tokenizer.src_file_name, tokenizer.line, tokenizer.column);
+                        TODO(function argument parsing);
+                    }
                     expect(')');
                     const int f = decl_func(
                         name.value.str,
@@ -392,20 +343,24 @@ int parse_file(const char* file){
                     if(peek(0).type == '{'){
                         skip(1);
                         push_decl_stmt(f);
-                        da_element(&parser.symbols, f, Symbol)->symbol.func.body = parse_compound_statement();
+                        da_element(parser.symbols, f, Symbol)->symbol.func.body = parse_compound_statement();
                     }
                     else{
                         expect(';');
                     }
                 }
-                else if(peek(0).type == '='){
-                    const int lval = push_primary_expr(name);
-                    skip(1);
-                    const int rval = parse_rside_expression();
-                    push_expr_stmt(lval, '=', rval);
-                }
                 else{
-                    expect(';');
+                    const int var = declare_symbol(make_basic_var(name.value.str, _type));
+                    push_decl_stmt(var);
+                    if(peek(0).type == '='){
+                        const int lval = push_primary_expr(name);
+                        skip(1);
+                        const int rval = parse_rside_expression();
+                        push_expr_stmt(lval, '=', rval);
+                    }
+                    else{
+                        expect(';');
+                    }
                 }
             }
             else{

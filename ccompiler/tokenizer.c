@@ -63,7 +63,7 @@ int compare_str(Str str1, Str str2){
     return 1;
 }
 
-int comp_str_cstr(Str str, const char* cstr){
+int comp_str_cstr(const Str str, const char* cstr){
     size_t i = 0;
     for(; i < str.size && cstr[i]; i+=1){
         if(str.cstr[i] != cstr[i]) return 0;
@@ -91,6 +91,15 @@ void* da_back(DyArr* da, size_t size){
     }
     da->size -= size;
     return (void*) (((uint8_t*) da->data) + da->size);
+}
+
+void* da_get(const DyArr da, size_t index, int require){
+    if(index >= da.size){
+        if(require)
+            report_internal_error("list index(%zu) out of range(%zu)", index, da.size);
+        return NULL;
+    }
+    return (void*) ((uintptr_t) (da.data) + index);
 }
 
 int special_character(char c){
@@ -175,13 +184,14 @@ const char* get_tkntype_str(int tkntype){
         case TKNTYPE_MM:  return "--";
         case TKNTYPE_DE:  return "/=";
         case TKNTYPE_XE:  return "^=";
-        case TKNTYPE_NE:  return "~=";
+        case TKNTYPE_NE:  return "!=";
         case TKNTYPE_AE:  return "&=";
         case TKNTYPE_OE:  return "|=";
         case TKNTYPE_SRE: return ">>=";
         case TKNTYPE_SLE: return "<<=";
         case TKNTYPE_AAE: return "&&=";
         case TKNTYPE_OOE: return "||=";
+        case TKNTYPE_FLIPE:  return "~=";
     
     default:
         return "TKNTYPE_ERROR";
@@ -264,6 +274,7 @@ int is_token_operand(int tkntype){
         case TKNTYPE_SLE:
         case TKNTYPE_AAE:
         case TKNTYPE_OOE:
+        case TKNTYPE_FLIPE:
             return tkntype;
     
     default:
@@ -280,6 +291,7 @@ int is_token_assign(int tkntype){
         case TKNTYPE_DE:
         case TKNTYPE_XE:
         case TKNTYPE_NE:
+        case TKNTYPE_FLIPE:
         case TKNTYPE_AE:
         case TKNTYPE_OE:
         case TKNTYPE_SRE:
@@ -300,13 +312,14 @@ int toncat_operand(int op1, int op2){
         case '*':  if(op2 == '=') return TKNTYPE_TE; else return 0;
         case '/':  if(op2 == '=') return TKNTYPE_DE; else return 0;
         case '^':  if(op2 == '=') return TKNTYPE_XE; else return 0;
-        case '~':  if(op2 == '=') return TKNTYPE_NE; else return 0;
+        case '!':  if(op2 == '=') return TKNTYPE_NE; else return 0;
         case '>':  if(op2 == '=') return TKNTYPE_GE; else if(op2 == op1) return TKNTYPE_SR; else return 0;
         case '<':  if(op2 == '=') return TKNTYPE_LE; else if(op2 == op1) return TKNTYPE_SL; else return 0;
         case '+':  if(op2 == '=') return TKNTYPE_PE; else if(op2 == op1) return TKNTYPE_PP; else return 0;
         case '-':  if(op2 == '=') return TKNTYPE_ME; else if(op2 == op1) return TKNTYPE_MM; else return 0;
         case '&':  if(op2 == '=') return TKNTYPE_AE; else if(op2 == op1) return TKNTYPE_AA; else return 0;
         case '|':  if(op2 == '=') return TKNTYPE_OE; else if(op2 == op1) return TKNTYPE_OO; else return 0;
+        case '~':  if(op2 == '=')  return TKNTYPE_FLIPE;
         case TKNTYPE_SR: if(op2 == '=') return TKNTYPE_SRE;
         case TKNTYPE_SL: if(op2 == '=') return TKNTYPE_SLE;
         case TKNTYPE_OO: if(op2 == '=') return TKNTYPE_OOE;
@@ -358,30 +371,28 @@ int tokenize_cstr_numeric(TokenValue* value, const char* cstr, int* len){
     int dot        = 0;
     size_t i = 0;
 
-    for(i += *cstr == '-'; cstr[i] <= '9' && cstr[i] >= '0'; i+=1)
+    for(; cstr[i] <= '9' && cstr[i] >= '0'; i+=1)
     {
         before_dot = (before_dot * 10) + (cstr[i] - '0');
     }
     if(cstr[i] == '.'){
-        dot = i++;
+        dot = ++i;
     }
     for(; cstr[i] <= '9' && cstr[i] >= '0'; i+=1){
         after_dot = (after_dot * 10) + (cstr[i] - '0');
     }
     if(len) *len = i;
     if(dot){
-        value->f = (float) before_dot;
-        float decimal = (float) (after_dot);
-        for(int j = 0; j < dot; j+=1){
-            decimal /= 10;
+        int decimal = 1;
+        for(int j = dot; j < i; j+=1){
+            decimal *= 10;
         }
-        value->f += decimal;
+        value->f = (double) (before_dot) + (double) (after_dot) / (double) (decimal);
+        if(len && (cstr[i] == 'f' || cstr[i] == 'F' || cstr[i] == 'l' || cstr[i] == 'L'))
+            *len += 1;
         return TKNTYPE_FLOAT;
     }
-    if(*cstr == '-'){
-        value->i = -before_dot;
-        return TKNTYPE_INT;
-    }
+
     value->u = before_dot;
     return TKNTYPE_UINT;
 }
@@ -395,7 +406,7 @@ static int concat_token(int tkntype){
     {
         if(cat1 == TKNTYPE_NONE && cat2 == TKNTYPE_NONE)
             break;
-        const int t1 = tokenizer.src[tokenizer.pos + len];
+        const int t1 = tokenizer.src[tokenizer.pos + len + 1];
         if(t1 == cat1 || t1 == cat2){
             tkntype = toncat_operand(tkntype, t1);
             len += 1;

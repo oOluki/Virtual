@@ -4,9 +4,8 @@
 #include "parser.h"
 
 static inline int push_expr(const Expr expr){
-    DyArr* const da__ = &parser.expressions;
-    const int out = da__->size / sizeof(Expr);
-    da_append(da__, expr, Expr);
+    const int out = parser.expressions.size / sizeof(Expr);
+    da_append(parser.expressions, expr, Expr);
     return out;
 }
 
@@ -51,9 +50,19 @@ int parse_rside_expression(){
     const Token token = next_token();
 
     if(!is_token_literal(token.type) && token.type != TKNTYPE_RAW){
-        report_error("expected literal or variable, got %s instead", get_tkntype_str(token.type));
+        fprintf(
+            stderr,
+            "in %s:%i:%i: expected literal or variable, got %s instead\n",
+            tokenizer.src_file_name, tokenizer.line, tokenizer.column, get_tkntype_str(token.type)
+        );
+        TODO(parse_rside_expression);
     }
 
+    if(is_token_operand(peek(0).type)){
+        next_token();
+        printf("in %s:%i:%i:\n", tokenizer.src_file_name, tokenizer.line, tokenizer.column);
+        TODO(recursive right side expressions);
+    }
     expect(';');
 
     return push_primary_expr(token);
@@ -66,7 +75,7 @@ Expr* get_expr(int expr){
             "attempted to get non existent expression(%i), there were %i expressions",
             expr, (int) (parser.expressions.size / sizeof(Expr))
         );
-    return da_element(&parser.expressions, expr, Expr);
+    return da_element(parser.expressions, expr, Expr);
 }
 
 

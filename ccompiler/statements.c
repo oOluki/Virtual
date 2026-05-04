@@ -4,9 +4,8 @@
 #include "parser.h"
 
 static inline int push_stmt(const Statement stmt){
-    DyArr* const da__ = &parser.statements;
-    const int out = da__->size / sizeof(Statement);
-    da_append(da__, stmt, Statement);
+    const int out = parser.statements.size / sizeof(Statement);
+    da_append(parser.statements, stmt, Statement);
     return out;
 }
 
@@ -140,7 +139,7 @@ Statement* get_stmt(int stmt){
             "attempted to get non existent statement(%i), there were %i statements",
             stmt, (int) (parser.statements.size / sizeof(Statement))
         );
-    return da_element(&parser.statements, stmt, Statement);
+    return da_element(parser.statements, stmt, Statement);
 }
 
 

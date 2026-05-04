@@ -26,7 +26,7 @@ enum TokenType{
     TKNTYPE_SEMICOLUMN  = ';',
     TKNTYPE_COLUMN      = ':',
 
-    TKNTYPE_XOR         = 256,
+    TKNTYPE_XOR         = 1 << (sizeof(char) * 8),
     TKNTYPE_SL,
     TKNTYPE_SR,
     TKNTYPE_PP,
@@ -48,6 +48,7 @@ enum TokenType{
     TKNTYPE_SLE,
     TKNTYPE_SRE,
     TKNTYPE_NE,
+    TKNTYPE_FLIPE,
 
 };
 

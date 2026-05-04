@@ -68,15 +68,6 @@ enum StatementType {
     STMT_JMP
 };
 
-enum IntermediateInterpretationInstructionOPCode {
-    IIIOP_NONE,
-
-    IIIOP_VARDECL,
-
-    IIIOP_RET,
-
-    IIIOP_EXIT,
-};
 
 enum What {
 
@@ -89,31 +80,6 @@ enum What {
 
     VAR_DECLARATION,    
 };
-
-enum IntermediateInterpretationArgumentType{
-    IIATYPE_NONE = 0,
-    IIATYPE_ULIT,
-    IIATYPE_ILIT,
-    IIATYPE_FLIT,
-    IIATYPE_VAR,
-
-    IIATYPE_ERROR
-
-};
-
-
-typedef struct IntermediateInterpretationArgument
-{
-    int   type;
-    TokenValue value;
-} IIArg;
-
-typedef struct IntermediateInterpretationInstruction
-{
-    int     iiiop;
-    IIArg   arg[3];
-
-} III;
 
 typedef union VariableValue
 {
@@ -274,13 +240,6 @@ int display_tree(int start, int end);
 int declare_symbol(const Symbol symbol);
 
 int find_symbol(const Str name, int required);
-
-// print Intermediate Interpretation Argument
-int print_iia(IIArg iia);
-
-// print Intermediate Interpretation Instruction
-int print_iii(III iii);
-
 
 int get_keyword(Token token);
 

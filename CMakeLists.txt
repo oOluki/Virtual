@@ -8,6 +8,7 @@ add_executable(vcc ccompiler/main.c
     ccompiler/statements.c
     ccompiler/expressions.c
     ccompiler/tokenizer.c
-    ccompiler/parser.c)
+    ccompiler/parser.c
+    ccompiler/builder.c)
 
 add_compile_definitions(-DVERSION=\"${PROJECT_VERSION}\")
