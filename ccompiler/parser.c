@@ -356,6 +356,7 @@ int parse_file(const char* file){
                         const int lval = push_primary_expr(name);
                         skip(1);
                         const int rval = parse_rside_expression();
+                        expect(';');
                         push_expr_stmt(push_binary_expr(lval, '=', rval));
                     }
                     else{

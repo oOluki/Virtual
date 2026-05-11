@@ -62,11 +62,9 @@ int parse_rside_expression(){
 
     if(is_token_operand(peek(0).type)){
         const int binop = next_token().type;
-        expr = push_binary_expr(push_primary_expr(token), binop, push_primary_expr(next_token()));
+        expr = push_binary_expr(push_primary_expr(token), binop, parse_rside_expression());
     }
     else expr = push_primary_expr(token);
-    
-    expect(';');
 
     return expr;
 }

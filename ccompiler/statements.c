@@ -50,6 +50,7 @@ int parse_expression_statement(const Token first){
     }
     else if(is_token_assign(t.type)){
         const int rval = parse_rside_expression();
+        expect(';');
         return push_expr_stmt(push_binary_expr(lval, t.type, rval));
     }
     else
@@ -79,6 +80,7 @@ int parse_compound_statement(){
                 if(peek(0).type == '='){
                     skip(1);
                     push_expr_stmt(push_binary_expr(push_primary_expr(name), '=', parse_rside_expression()));
+                    expect(';');
                 }
                 else{
                     expect(';');
@@ -86,6 +88,7 @@ int parse_compound_statement(){
             }
             else if(keyword == KEYW_RETURN){
                 parse_jump_statement(keyword);
+                expect(';');
             }
         }
         else if(token.type == TKNTYPE_RAW){
