@@ -330,22 +330,36 @@ enum IntermediateInterpretationArgumentType{
 };
 
 
-typedef struct IntermediateInterpretationArgument
-{
-    int   type;
-    TokenValue value;
-} IIArg;
-
 typedef struct IntermediateInterpretationInstruction
 {
     IIIOpCode   iiiop;
     int         arg[3];
 } III;
 
+typedef struct IntermediateInterpretationArgument
+{
+    int   type;
+    union
+    {
+        char            c;
+        unsigned char   uc;
+        int             i;
+        unsigned int    u;
+        float           f;
+        double          lf;
+        void*           p;
+        size_t          zu;
+        char*           cstr;
+        Str             str;
+        TokenValue      tknv;
+        III             iii;
+    } value;
+} IIArg;
+
 typedef struct Builder
 {
     size_t scope;
-    DyArr  iiis;
+    DyArr  iii_index;
     DyArr  iias;
 
 } Builder;
@@ -357,9 +371,11 @@ const char* get_iiiop_str(int iiiop);
 int get_iiiop_from_str(const Str str);
 
 // print Intermediate Interpretation Argument
+// returns 0 on success or 1 on failure
 int print_iia(const IIArg iia);
 
 // print Intermediate Interpretation Instruction
+// returns 0 on success or 1 on failure
 int print_iii(const III iii);
 
 

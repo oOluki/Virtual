@@ -47,7 +47,9 @@ int parse_lside_expression(const Token token){
 
 int parse_rside_expression(){
 
-    const Token token = next_token();
+    Token token = next_token();
+
+    int expr = 0;
 
     if(!is_token_literal(token.type) && token.type != TKNTYPE_RAW){
         fprintf(
@@ -59,13 +61,14 @@ int parse_rside_expression(){
     }
 
     if(is_token_operand(peek(0).type)){
-        next_token();
-        printf("in %s:%i:%i:\n", tokenizer.src_file_name, tokenizer.line, tokenizer.column);
-        TODO(recursive right side expressions);
+        const int binop = next_token().type;
+        expr = push_binary_expr(push_primary_expr(token), binop, push_primary_expr(next_token()));
     }
+    else expr = push_primary_expr(token);
+    
     expect(';');
 
-    return push_primary_expr(token);
+    return expr;
 }
 
 

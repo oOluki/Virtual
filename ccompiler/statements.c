@@ -13,9 +13,9 @@ int push_decl_stmt(int symbol){
     return push_stmt((Statement){.kind = STMT_DECL, .stmt.decl = symbol});
 }
 
-int push_expr_stmt(int lexpr, int middle, int rexpr){
+int push_expr_stmt(int expr){
     return push_stmt(
-        (Statement){.kind = STMT_EXPR, .stmt.expr.left = lexpr, .stmt.expr.op = middle, .stmt.expr.right = rexpr}
+        (Statement){.kind = STMT_EXPR, .stmt.expr = expr}
     );
 }
 int push_comp_stmt(int start, int end){
@@ -46,11 +46,11 @@ int parse_expression_statement(const Token first){
     const int lval = parse_lside_expression(first);
     const Token t = next_token();
     if(t.type == ';'){
-        return push_expr_stmt(lval, TKNTYPE_NONE, -1);
+        return push_expr_stmt(lval);
     }
     else if(is_token_assign(t.type)){
         const int rval = parse_rside_expression();
-        return push_expr_stmt(lval, t.type, rval);
+        return push_expr_stmt(push_binary_expr(lval, t.type, rval));
     }
     else
         report_error("invalid expression%c", ' ');
@@ -78,7 +78,7 @@ int parse_compound_statement(){
                 push_decl_stmt(var);
                 if(peek(0).type == '='){
                     skip(1);
-                    push_expr_stmt(push_primary_expr(name), '=', parse_rside_expression());
+                    push_expr_stmt(push_binary_expr(push_primary_expr(name), '=', parse_rside_expression()));
                 }
                 else{
                     expect(';');

@@ -215,7 +215,7 @@ typedef struct Statement
             int end;
         }           comp;
         int         decl;
-        BinExpr     expr;
+        int         expr;
         SelStmt     sel;
         IterStmt    iter;
         JmpStmt     jmp;
@@ -264,7 +264,7 @@ Expr* get_expr(int expr);
 // statements
 
 int push_decl_stmt(int symbol);
-int push_expr_stmt(int lexpr, int middle_op, int rexpr);
+int push_expr_stmt(int expr);
 int push_comp_stmt(int start, int end);
 int push_select_stmt(int if_expr, int if_stmt, int else_stmt);
 int push_iter_stmt(int cond, int iter_stmt);

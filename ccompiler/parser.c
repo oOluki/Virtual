@@ -168,7 +168,7 @@ static int display_stmt(int stmt, int indentation){
         display_sym(da_element(parser.symbols, s->stmt.decl, Symbol), indentation + 2);
         break;
     case STMT_EXPR:
-        display_bin_expression(s->stmt.expr, indentation + 2);
+        display_expression(s->stmt.expr, indentation + 2);
         break;
     case STMT_COMP:
         indent(indentation + 2);
@@ -356,7 +356,7 @@ int parse_file(const char* file){
                         const int lval = push_primary_expr(name);
                         skip(1);
                         const int rval = parse_rside_expression();
-                        push_expr_stmt(lval, '=', rval);
+                        push_expr_stmt(push_binary_expr(lval, '=', rval));
                     }
                     else{
                         expect(';');

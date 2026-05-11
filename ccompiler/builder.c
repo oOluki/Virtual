@@ -123,38 +123,42 @@ int get_iiiop_from_str(const Str str){
     return IIIOP_ERROR;
 }
 
-// print Intermediate Interpretation Argument
 int print_iia(const IIArg iia){
     switch (iia.type)
     {
     case IIATYPE_NONE:
         return 0;
     case IIATYPE_ULIT:
-        return printf("%u", iia.value.u);
+        printf("%u", iia.value.u);
+        return 0;
     case IIATYPE_ILIT:
-        return printf("%i", iia.value.i);
+        printf("%i", iia.value.i);
+        return 0;
     case IIATYPE_FLIT:
-        return printf("%f", iia.value.f);
+        printf("%f", iia.value.f);
+        return 0;
     case IIATYPE_ZULIT:
-        return printf("%zu", iia.value.zu);
+        printf("%zu", iia.value.zu);
+        return 0;
     case IIATYPE_SLIT:
     case IIATYPE_RAW:
-        return printf("%.*s", iia.value.str.size, iia.value.str.cstr);
+        printf("%.*s", iia.value.str.size, iia.value.str.cstr);
+        return 0;
     case IIATYPE_SYM:{
         const Symbol* const s = da_element(parser.symbols, iia.value.zu, const Symbol);
-        return printf("%.*s", s->name.size, s->name.cstr);
+        printf("%.*s", s->name.size, s->name.cstr);
     }
+        return 0;
     case IIATYPE_III:
-        return print_iii(*(III*) iia.value.p);
+        return print_iii(iia.value.iii);
     case IIATYPE_ERROR:
     default:
         report_internal_error("iia %i not implemented", iia.type);
-        return 1;
+        return -1;
     }
 }
 
 
-// print Intermediate Interpretation Instruction
 int print_iii(const III iii){
     printf("%s(", get_iiiop_str(iii.iiiop));
     int i = 0;
@@ -166,6 +170,7 @@ int print_iii(const III iii){
         print_iia(*(const IIArg*) da_element(builder.iias, iii.arg[i], IIArg));
     }
     printf(")");
+    return 0;
 }
 
 static inline int push_iia(const IIArg iia){
@@ -176,16 +181,25 @@ static inline int push_iia(const IIArg iia){
 
 static inline int push_iii(int op, int arg1, int arg2, int arg3){
 
-    const III iii = (III){
-        .iiiop  = op,
-        .arg[0] = arg1,
-        .arg[1] = arg2,
-        .arg[2] = arg3
-    };
-    const int index = builder.iiis.size / sizeof(III);
-    da_append(builder.iiis, iii, III);
+    const int iiaindex = da_len(builder.iias, IIArg);
 
-    return index;
+    const IIArg iia = (IIArg){
+        .type = IIATYPE_III,
+        .value.iii = (III){
+            .iiiop  = op,
+            .arg[0] = arg1,
+            .arg[1] = arg2,
+            .arg[2] = arg3
+        }
+    };
+
+    da_append(builder.iias, iia, IIArg)
+
+    const int iiindex = da_len(builder.iii_index, int);
+
+    da_append(builder.iii_index, iiaindex, int);
+
+    return iiindex;
 }
 
 static int interpret_expression(int expr);
@@ -205,21 +219,25 @@ static int interpret_cond_expr(int cond_expr, int if_expr, int else_expr){
     TODO(interpret_cond_expr);
     return 0;
 }
+
+// \returns the index of the iiarg allocated
 static int interpret_expression(int expr){
     const Expr* const e = get_expr(expr);
     switch (e->kind)
     {
     case EXPRTYPE_PRIMARY:
-        return push_iia((IIArg){.type = e->expr.primary.kind, .value = e->expr.primary.value});
+        return push_iia((IIArg){.type = e->expr.primary.kind, .value.tknv = e->expr.primary.value});
     case EXPRTYPE_POSTFIX:
         TODO(EXPRTYPE_POSTFIX);
         break;
     case EXPRTYPE_UNARY:
         TODO(EXPRTYPE_UNARY);
         break;
-    case EXPRTYPE_BINARY:
-        TODO(EXPRTYPE_BINARY);
-        break;
+    case EXPRTYPE_BINARY:{
+        const int iiindex = interpret_binary_expr(e->expr.bin.left, e->expr.bin.op, e->expr.bin.right);
+        int iia; da_pop(&builder.iii_index, iia, const int);
+        return iia;
+    }
     case EXPRTYPE_CONDITIONAL:
         TODO(EXPRTYPE_CONDITIONAL);
         break;
@@ -248,8 +266,16 @@ int interpret(){
             );
         }
             break;
-        case STMT_EXPR:
-            interpret_binary_expr(stmt->stmt.expr.left, stmt->stmt.expr.op, stmt->stmt.expr.right);
+        case STMT_EXPR:{
+            const int iiaindex = interpret_expression(stmt->stmt.expr);
+            const IIArg iia = *da_element(builder.iias, iiaindex, const IIArg);
+            if(iia.type == IIATYPE_III){
+                push_iii(iia.value.iii.iiiop, iia.value.iii.arg[0], iia.value.iii.arg[1], iia.value.iii.arg[2]);
+            }
+            else {
+                push_iii(IIIOP_NOP, iiaindex, -1, -1);
+            }
+        }
             break;
         case STMT_COMP:
             push_iii(IIIOP_OPENSCOPE, push_iia((IIArg){.type = IIATYPE_ZULIT, .value.zu = builder.scope}), -1, -1);
