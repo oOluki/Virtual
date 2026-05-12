@@ -468,11 +468,28 @@ Token next_token(){
     for(char trimming = 1; trimming; ){
         for(
             ;
-            src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n' || src[tokenizer.pos] == '\r';
+            src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n'
+#ifdef _WIN32
+            || src[tokenizer.pos] == '\r'
+#endif // END OF #ifdef _WIN32
+            ;
             tokenizer.pos += 1
         ){
             const char c = src[tokenizer.pos];
             const int column_skip = (src[tokenizer.pos] == '\t')? 4 : 1;
+#ifdef _WIN32
+            if(src[tokenizer.pos] == '\r'){
+                tokenizer.pos += 1;
+                tokenizer.column += 1;
+                if(src[tokenizer.pos] == '\n'){
+                    tokenizer.line += 1;
+                    tokenizer.column = 1;
+                    tokenizer.pos += 1;
+                    continue;
+                }
+                continue;
+            }
+#endif // END OF #ifdef _WIN32
             tokenizer.line   += c == '\n';
             tokenizer.column  = (c == '\n' || c == '\r')? 1 : tokenizer.column + column_skip;
         }
@@ -487,6 +504,19 @@ Token next_token(){
             }
             else if(src[tokenizer.pos + 1] == '*'){/**/
                 for(; src[tokenizer.pos] != '\0'; tokenizer.pos += 1){
+#if _WIN32
+                    if(src[tokenizer.pos] == '\r'){
+                        tokenizer.pos += 1;
+                        tokenizer.column += 1;
+                        if(src[tokenizer.pos + 1] == '\n'){
+                            tokenizer.line += 1;
+                            tokenizer.column = 1;
+                            tokenizer.pos += 1;
+                            continue;
+                        }
+                        continue;
+                    }
+#endif // END OF #ifdef _WIN32
                     if(src[tokenizer.pos] == '\n'){
                         tokenizer.column = 1;
                         tokenizer.line += 1;
