@@ -1,0 +1,87 @@
+program
+     translation_unit
+          declaration
+               VarType var_name =? var_value;
+               RetType (*var_name)(VarType var_name?...) =? var_value;
+               RetType func_name(varible_declarations...);
+               label_name:
+          function_definition
+               RetType func_name(varible_declarations...) compound_statement
+
+statement
+     expression_statement
+          expression...
+     compound_statement
+          {statements...}
+     selection_statement
+          if_statements
+               if(expression) compound_statement
+               else? compound_statement
+          switch_statements
+               switch(expression)
+               {
+                    case constant_expression: compound_statement jump_statement?
+                    default: compound_statement jump_statement?
+               }
+     iteration_statement
+          for(expression_statement or variable_declaration; expression; expression) compound_statement
+          while(expression) compound_statement
+          do compound_statement while(expression)
+     jump_statement
+          return expression;
+          break;
+          continue;
+          goto label_name;
+
+
+
+expressions in hierarchy order
+     primary
+          var_name
+          number
+          string_literal
+     postfix
+          f(x)
+          a[i]
+          x++
+          p->field
+          s.field
+     unary
+          ++x
+          --x
+          *x
+          &x
+          +x
+          -x
+          !x
+          ~x
+          sizeof(x)
+     binary
+          a + b
+          x << 3
+          a && b
+          x == y
+     assignment_expression
+          x = y
+          x += 1
+     conditional_expression
+          expression? expression : expression
+
+
+expression hierarchy
+     assignment
+     conditional
+     logical OR
+     logical AND
+     bitwise OR
+     bitwise XOR
+     bitwise AND
+     equality
+     relational
+     shift
+     additive
+     multiplicative
+     cast
+     unary
+     postfix
+     primary

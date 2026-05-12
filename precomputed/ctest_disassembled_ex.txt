@@ -1,0 +1,38 @@
+	MOV RA R0
+	MOVV16 RA 0x522a; (u: 21034; i: 21034; f: 0.000000)
+	MOVV16 RA2 0x40a0; (u: 16544; i: 16544; f: 0.000000)
+	MOV RX RA
+	RET
+	INC RSP 0x1; u: 1
+	INC RSP 0x4; u: 4
+	MOVV RA 0x10; (u: 16; i: 16; f: 0.000000)
+	STACK_PUT RA 0x04; (u: 4; i: 4; f: 0.000000)
+	INC RSP 0x4; u: 4
+	STACK_GET RD 0x08; (u: 8; i: 8; f: 0.000000)
+	MOVV RE 0x01; (u: 1; i: 1; f: 0.000000)
+	ADD RC RD RE
+	MOV RB RC
+	STACK_PUT RB 0x04; (u: 4; i: 4; f: 0.000000)
+	STACK_GET RH 0x08; (u: 8; i: 8; f: 0.000000)
+	MOVV RK 0x01; (u: 1; i: 1; f: 0.000000)
+	STACK_GET RN 0x04; (u: 4; i: 4; f: 0.000000)
+	STACK_GET RO 0x08; (u: 8; i: 8; f: 0.000000)
+	MUL RM RN RO
+	MOV RL RM
+	DIVU RJ RK RL
+	MOV RI RJ
+	ADD RG RH RI
+	MOV RF RG
+	STACK_PUT RF 0x04; (u: 4; i: 4; f: 0.000000)
+	STACK_GET RP 0x09; (u: 9; i: 9; f: 0.000000)
+	STACK_PUT RP 0x08; (u: 8; i: 8; f: 0.000000)
+	STACK_GET RX 0x04; (u: 4; i: 4; f: 0.000000)
+	DEC RSP 0x8; u: 8
+	RET
+%start
+	MOV RA R0
+	MOVV16 RA 0x06; (u: 6; i: 6; f: 0.000000)
+	SUB RA RA RIP
+	DEC RA 0x2; u: 2
+	CALL RA
+	HALT RX

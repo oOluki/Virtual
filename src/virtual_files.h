@@ -3,7 +3,6 @@
 
 #include "core.h"
 #include "virtual.h"
-#include "labels.h"
 
 #define VIRTUAL_FILE_MAGIC_NUMBER "VF:"
 

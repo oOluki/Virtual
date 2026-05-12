@@ -1,8 +1,9 @@
 #ifndef _VDEBUG_HEADER
 #define _VDEBUG_HEADER
 
-#include "core.c"
-#include "parser.h"
+#include "core.h"
+#include "assembler.c"
+#include "parser.c"
 #include "disassembler.c"
 
 enum DebugUserPromptCode{
@@ -689,7 +690,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         debugger->parser.tokenizer->column = 0;
         debugger->parser.tokenizer->line = 0;
         const Token inst_tkn = get_next_token(debugger->parser.tokenizer);
-        const InstProfile inst_profile = get_inst_profile(inst_tkn);
+        const uint8_t instop = get_inst_op(inst_tkn);
+        const InstProfile inst_profile = (InstProfile){.opcode = instop, .op_profile = get_inst_profile(instop)};
 
         if(inst_profile.opcode == INST_ERROR){
             fprintf(
