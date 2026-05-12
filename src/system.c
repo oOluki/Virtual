@@ -10,6 +10,7 @@
 #else
 
 #include "core.h"
+#include "virtual.h"
 #include "system.h"
 
 typedef struct VSystem

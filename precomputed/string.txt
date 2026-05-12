@@ -52,10 +52,10 @@ dump_uint:
 	POP RB
 	POP RC
 	RET
-dump_ih:
+dump_int:
 	PUSH RC
 	SMLI RC RB R0
-	JMPF RC 0xfffe; i: -2
+	JMPF RC 0xfff6; i: -10
 	CALL 0xffea; i: -22
 	POP RC
 	RET

@@ -53,14 +53,14 @@ dump_uint:
 	POP RC
 	RET
 dump_int:
-%labelv _VMATH_IN
 	PUSH RC
 	SMLI RC RB R0
-	JMPF RC 0xfffe; i: -2
+	JMPF RC 0xfff6; i: -10
 	CALL 0xffea; i: -22
 	POP RC
 	RET
-Q_rsqrt:
+%labelv _VMATH_IN
+%export Q_rsqrt:
 	PUSH RB
 	PUSH RC
 	PUSH RF
@@ -87,7 +87,8 @@ Q_rsqrt:
 	POP RC
 	POP RB
 	RET
-sqrt:
+%endexport Q_rsqrt
+%export sqrt:
 	PUSH RB
 	CALL 0xffe5; i: -27
 	MOVV RB 0x01; (u: 1; i: 1; f: 0.000000)
@@ -96,6 +97,7 @@ sqrt:
 	POP RB
 	RET
 %start
+%endexport sqrt
 	STATIC 0x0
 	POP RB
 	MOV RA R0

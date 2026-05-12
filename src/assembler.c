@@ -69,7 +69,7 @@ int write_exe(const Mc_stream_t* program, const char* path, uint64_t entry_point
 
 #ifdef _WIN32
 // assembles program in input_path to output_path
-int assemble(char* input_path, char* output_path, int export_labels){
+int assemble(char* input_path, char* output_path, int export_all_labels){
 
     // changing file separator to default '/'
     for(size_t i = 0; input_path[i]; i+=1){
@@ -82,7 +82,7 @@ int assemble(char* input_path, char* output_path, int export_labels){
 #else
 
 // assembles program in input_path to output_path
-int assemble(const char* input_path, const char* output_path, int export_labels){
+int assemble(const char* input_path, const char* output_path, int export_all_labels){
 
 #endif
 
@@ -98,24 +98,22 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
 
     Mc_stream_t static_memory = mc_create_stream(0, 0);
 
-    Mc_stream_t labels = mc_create_stream(0, 0);
-    Mc_stream_t local_labels = mc_create_stream(0, 0);
-
     Tokenizer tokenizer = (Tokenizer){
         .data = (char*)((uint8_t*)(files.data) + sizeof(uint32_t) + *(uint32_t*)(files.data) + 1),
         .line = 0, .column = 0, .pos = 0
     };
 
-    Parser parser;
+    Parser parser = {};
     parser.file_path = (char*)((uint8_t*)(files.data) + sizeof(uint32_t));
     parser.file_path_size = *(uint32_t*)(files.data);
-    parser.labels = &labels;
-    parser.local_labels = &local_labels;
+    parser.labeler.labels       = mc_create_stream(0, 0);
+    parser.labeler.local_labels = mc_create_stream(0, 0);
+    parser.labeler.flags        = LABELERFLAG_LOCAL_LABEL_SUPPORT;
     parser.static_memory = &static_memory;
     parser.program = &program;
     parser.tokenizer = &tokenizer;
     parser.entry_point = 0;
-    parser.flags = export_labels? EXEFLAG_LABELS_INCLUDED : EXEFLAG_NONE;
+    parser.flags = export_all_labels? EXEFLAG_LABELS_INCLUDED : EXEFLAG_NONE;
     parser.macro_if_depth = 0;
     
     int status = parse_file(&parser, &files);
@@ -140,9 +138,15 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
     if(static_memory.size){
         add_virtual_file_field(&vfile, VIRTUAL_FILE_STATIC_FIELD_NAME, static_memory.size, static_memory.data);
     }
-    if(labels.size && export_labels){
-        add_virtual_file_field(&vfile, VIRTUAL_FILE_LABELS_FIELD_NAME, labels.size, labels.data);
+    
+    if(parser.labeler.labels.size && export_all_labels){
+        add_virtual_file_field(&vfile, VIRTUAL_FILE_LABELS_FIELD_NAME, parser.labeler.labels.size, parser.labeler.labels.data);
     }
+    /*const char* s = (char*) get_virtual_file_field(vfile, VIRTUAL_FILE_LABELS_FIELD_NAME);
+    s += (*(uint64_t*) s) - 1;
+    for(printf("%p\n", s); *s <= 'z' && *s>='a'; s--){
+        printf("%2x: '%c'\n", *s, *s);
+    }*/
     add_virtual_file_field(&vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME, program.size, program.data);
 
     if(vfsave(vfile, output_path? output_path : "output.out")){
@@ -154,9 +158,8 @@ int assemble(const char* input_path, const char* output_path, int export_labels)
 
     if(program.data)        mc_destroy_stream(program);
     if(static_memory.data)  mc_destroy_stream(static_memory);
-    if(labels.data)         mc_destroy_stream(labels);
-    if(local_labels.data)   mc_destroy_stream(local_labels);
     if(files.data)          mc_destroy_stream(files);
+    destroy_labeler(parser.labeler);
 
     return status;
 }

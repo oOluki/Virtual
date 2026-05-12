@@ -9,8 +9,7 @@
 ; the first 6 return values are passed through registers, similar to how arguments are passed
 ; the rest is passed through the stack
 
-
-Q_rsqrt:
+%export Q_rsqrt:
     ;; saving register values
     PUSH RB
     PUSH RC
@@ -46,9 +45,9 @@ Q_rsqrt:
     POP RC
     POP RB
     RET
+%endexport Q_rsqrt
 
-
-sqrt:
+%export sqrt:
     PUSH RB
     CALL @Q_rsqrt
     MOVV RB 1
@@ -56,7 +55,7 @@ sqrt:
     DIVF RA RB RA
     POP RB
     RET
-
+%endexport sqrt
 
 
 

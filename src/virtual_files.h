@@ -148,14 +148,12 @@ int vfopen(VirtualFile* vfile, const char* path, const char** required_fields, c
     VIRTUAL_DEBUG_LOG("accounting for endianess inconsistancies\n");
 
     if((vfile->file_flags & VIRTUAL_FILE_INTERNAL_FLAG_IS_LITTLE_ENDIAN) && !is_little_endian()){
-        vfile->vfile_type        = mc_swap16(vfile->vfile_type);
-        //vfile->field_count       = mc_swap64(vfile->field_count);
-        vfile->file_data_size    = mc_swap64(vfile->file_data_size);
+        vfile->vfile_type = mc_swap16(vfile->vfile_type);
     }
 
     VIRTUAL_DEBUG_LOG(
         "done reading header data\n"
-        "vfile_flags: %"PRIx8"  vxflag: %"PRIx8" vfile_type: %"PRIu16"  vfileds: %"PRIu64"  vdata_size: %"PRIu64"\n",
+        "vfile_flags: %"PRIx8"  vxflag: %"PRIx8" vfile_type: %"PRIu16"  vfields: %"PRIu64"  vdata_size: %"PRIu64"\n",
         vfile->file_flags, vfile->xflag, vfile->vfile_type, vfile->field_count, vfile->file_data_size
     );
 
@@ -234,6 +232,8 @@ int vfopen(VirtualFile* vfile, const char* path, const char** required_fields, c
             DEFER_ERROR("missing required field '%s'\n", required_fields[0]);
     }
 
+    vfile->file_data_size = stream.size;
+
     if(vfile->field_count){
         VIRTUAL_DEBUG_LOG("allocating fields\n");
         vfile->fields = mc_stream_aligned(
@@ -276,7 +276,7 @@ int vfopen(VirtualFile* vfile, const char* path, const char** required_fields, c
 
 // \param name the fields name (up to 8 characters including null termination), if the name is already in data pass NULL
 // \param data_size the data size in bytes
-int add_virtual_file_field(VirtualFile* vfile, const char* name, uint64_t data_size, void* data){
+int add_virtual_file_field(VirtualFile* vfile, const char* name, uint64_t data_size, const void* data){
     
     VIRTUAL_DEBUG_LOG("addind field '%s' to '%s'\n",name, vfile->name);
 
@@ -306,11 +306,9 @@ int add_virtual_file_field(VirtualFile* vfile, const char* name, uint64_t data_s
         fields[i] = vfile->fields[i];
     }
     
-    const uint64_t field_size = (name)?
-        name_len + 1 + data_size + sizeof(field_size)
-                        :
-        name_len + data_size + sizeof(field_size);
+    const uint64_t field_size = name_len + (!!name) + data_size + sizeof(field_size);
 
+    // the alignment padding of this step had to be later summed to the vfile->file_data_size
     const uintptr_t field_ptr = (uintptr_t) mc_stream_aligned(&stream, &field_size, sizeof(field_size), 8);
 
     fields[vfile->field_count++] = (uint64_t) (field_ptr - (uintptr_t) (stream.data));
@@ -322,7 +320,8 @@ int add_virtual_file_field(VirtualFile* vfile, const char* name, uint64_t data_s
     mc_stream(&stream, data, data_size);
     vfile->fields = (uint64_t*) mc_stream_aligned(&stream, fields, vfile->field_count * sizeof(fields[0]), sizeof(fields[0]));
 
-    vfile->file_data_size += field_size;
+    const unsigned int alignment_padding_correction = ((8 - (vfile->file_data_size % 8)) % 8);
+    vfile->file_data_size += field_size + alignment_padding_correction;
     vfile->data = stream.data;
 
     free(fields);
@@ -415,6 +414,13 @@ int vfsave(const VirtualFile vfile, const char* path){
         return 1;
     }
 
+    uint64_t data_size = 0;
+
+    for(uint64_t i = 0; i < vfile.field_count; i+=1){
+        const void* field = (void*) (((uintptr_t) vfile.data) + vfile.fields[i]);
+        data_size += *(uint64_t*) field;
+    }
+
     if(fwrite(VIRTUAL_FILE_MAGIC_NUMBER, 1, sizeof(VIRTUAL_FILE_MAGIC_NUMBER), f) != sizeof(VIRTUAL_FILE_MAGIC_NUMBER))
         DEFER_ERROR("failed to write magic_number\n");
 
@@ -426,13 +432,13 @@ int vfsave(const VirtualFile vfile, const char* path){
         DEFER_ERROR("failed to write virtual_file_type\n");
     if(fwrite(&vfile.field_count, 1 ,    sizeof(vfile.field_count)   , f) != sizeof(vfile.field_count))
         DEFER_ERROR("failed to write field_count\n");
-    if(fwrite(&vfile.file_data_size , 1, sizeof(vfile.file_data_size), f) != sizeof(vfile.file_data_size))
+    if(fwrite(&data_size , 1, sizeof(data_size), f) != sizeof(vfile.file_data_size))
         DEFER_ERROR("failed to write file_data_size\n");
 
     for(uint64_t i = 0; i < vfile.field_count; i+=1){
         const void* field = (void*) (((uintptr_t) vfile.data) + vfile.fields[i]);
         uint64_t field_size = *(uint64_t*) field;
-        const char* const id = ((uint8_t*) field) + sizeof(field_size);
+        const char* const id = (char*) (((uint8_t*) field) + sizeof(field_size));
         VIRTUAL_DEBUG_LOG("writing field '%s' of size %"PRIu64"\n", id, field_size);
         if(fwrite(field, 1, field_size, f) != field_size)
             DEFER_ERROR("failed to write field %"PRIu64 "\n", i);

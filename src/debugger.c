@@ -1,8 +1,9 @@
 #ifndef _VDEBUG_HEADER
 #define _VDEBUG_HEADER
 
-#include "core.c"
-#include "parser.h"
+#include "core.h"
+#include "assembler.c"
+#include "parser.c"
 #include "disassembler.c"
 
 enum DebugUserPromptCode{
@@ -66,7 +67,6 @@ typedef struct Debugger
     Mc_stream_t stream;
     uint8_t*    signals;
     uint64_t    breakpoint_count;
-    Mc_stream_t labels;
 
     Inst*       program;
     uint64_t    program_size;
@@ -383,6 +383,17 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     VPU* const vpu = debugger->vpu;
     uint64_t i      = (width < center)? center - width : 0;
     uint64_t finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+    const uint64_t ip = GET_REG(vpu->register_space, RIP)->as_uint64;
+
+    uintptr_t current_label = (uintptr_t) debugger->parser.labeler.labels.data;
+    uintptr_t end_label = ((uintptr_t) debugger->parser.labeler.labels.data) + debugger->parser.labeler.labels.size;
+    end_label *= (debugger->parser.labeler.labels.data != NULL);
+    Label label = {.inst_position = 0};
+    for(; current_label < end_label; current_label+=label.size){
+        label = get_label_from_raw_data((const void*) current_label);
+        if(label.inst_position >= i) break;
+    }
+
 
     char charbuff[30];
     char* buff[3] = {
@@ -394,12 +405,8 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
     int digit_len_max = 1;
     for(uint64_t psize = debugger->program_size; psize / 10; psize /= 10) digit_len_max += 1;
 
-    uint64_t    label_ip;
-    const char* label_ip_str = NULL;
-    int         label_ip_strlen;
-    int         found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, i) > 0;
-
     if(debugger->output == stdout) printf("\x1B[2J\x1B[H\n");
+
     fprintf(
         debugger->output,
         "inst: %"PRIu64" / %"PRIu64"    stack: %"PRIu64"  breakpoints: %"PRIu64"  status: %i\n",
@@ -409,44 +416,75 @@ int debug_display_inst(Debugger* debugger, uint64_t center, uint64_t width){
         debugger->breakpoint_count,
         debugger->vpu->status
     );
-    for(; i < finish && i < GET_REG(vpu->register_space, RIP)->as_uint64; i+=1){
-        for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-            fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
-            width = (width > 0)? width - 1 : width;
-            finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+
+    while (i < ip && current_label < end_label)
+    {
+        for(; i < label.inst_position && i < finish && i < ip; i+=1){
+            if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK)
+                fputc('!', debugger->output);
+            else
+                fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
+            print_inst(debugger->output, vpu->program[i], buff);
         }
-        if(i >= finish) break;
-        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-        else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program[i], buff);
-    }
-    for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-        fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-        found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
-        width = (width > 0)? width - 1 : width;
-        finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
-    }
-    if(i == GET_REG(vpu->register_space, RIP)->as_uint64 && i < finish){
-        fprintf(debugger->output, "*");
-        if(i >= debugger->program_size){
-            fputc('\n', debugger->output);
-        } else{
-            if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-            print_inst(debugger->output, debugger->program[i++], buff);
+        if(i == finish) break;
+        for(
+            ;
+            current_label < end_label && i == (label = get_label_from_raw_data((void*) current_label)).inst_position;
+            current_label += label.size
+        ){
+            if(label.size == 0 || disassemble_handle_label(debugger->output, (void*) current_label)){
+                disassembler_invalid_label(current_label);
+                return 1;
+            }
+            finish -= (finish > 0);
         }
+        if(i == label.inst_position) break;
     }
-    for(; i < finish; i+=1){
-        for(uint64_t lip = i + 1; found_label_ip && i == label_ip && i < finish; lip+=1){
-            fprintf(debugger->output, "%.*s:\n", label_ip_strlen, label_ip_str);
-            found_label_ip = get_labelpos_to(&label_ip, &label_ip_strlen, &label_ip_str, &debugger->labels, lip) > 0;
-            width = (width > 0)? width - 1 : width;
-            finish = (center + width < debugger->program_size)? center + width : debugger->program_size;
+    
+    for( ; i < ip && i < finish; i+=1){
+        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK)
+            fputc('!', debugger->output);
+        else
+            fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
+        print_inst(debugger->output, vpu->program[i], buff);
+    }
+    if(i == ip){
+        fputc('*', debugger->output);
+        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK)
+            fputc('!', debugger->output);
+        print_inst(debugger->output, vpu->program[i++], buff);
+    }
+
+    while (current_label < end_label)
+    {
+        for(; i < label.inst_position && i < finish; i+=1){
+            if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK)
+                fputc('!', debugger->output);
+            else
+                fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
+            print_inst(debugger->output, vpu->program[i], buff);
         }
-        if(i >= finish) break;
-        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK) fprintf(debugger->output, "!");
-        else fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
-        print_inst(debugger->output, debugger->program[i], buff);
+        if(i == finish) break;
+        for(
+            ;
+            current_label < end_label && i >= (label = get_label_from_raw_data((void*) current_label)).inst_position;
+            current_label += label.size
+        ){
+            if(label.size == 0 || disassemble_handle_label(debugger->output, (void*) current_label)){
+                disassembler_invalid_label(current_label);
+                return 1;
+            }
+            finish -= (finish > 0);
+        }
+        if(i == label.inst_position) break;
+    }
+
+    for( ; i < finish; i += 1){
+        if(debugger->signals[i] & DEBUG_SIGNAL_BREAK_MASK)
+            fputc('!', debugger->output);
+        else
+            fprintf(debugger->output, "%*"PRIu64"- ", digit_len_max, i);
+        print_inst(debugger->output, vpu->program[i], buff);
     }
     return 0;
 }
@@ -652,7 +690,8 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         debugger->parser.tokenizer->column = 0;
         debugger->parser.tokenizer->line = 0;
         const Token inst_tkn = get_next_token(debugger->parser.tokenizer);
-        const InstProfile inst_profile = get_inst_profile(inst_tkn);
+        const uint8_t instop = get_inst_op(inst_tkn);
+        const InstProfile inst_profile = (InstProfile){.opcode = instop, .op_profile = get_inst_profile(instop)};
 
         if(inst_profile.opcode == INST_ERROR){
             fprintf(
@@ -975,18 +1014,21 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
         break;;
     case DUPC_SHOW_LABEL:{
         if(argc <= 1){
-            for(uint64_t i = 0; i < debugger->labels.size; ){
-                const Label* label_ptr = (Label*) (((uintptr_t) debugger->labels.data) + i);
+            for(uint64_t i = 0; i < debugger->parser.labeler.labels.size; ){
+                const Label* label_ptr = (Label*) (((uintptr_t) debugger->parser.labeler.labels.data) + i);
                 const Label  label = get_label_from_raw_data(label_ptr);
                 fprintf(
                     debugger->output,
                     "label at %"PRIu64" of size %"PRIu32":\n"
                     "\tname: %.*s\n"
+                    "\tinst_pos: %"PRIu64"\n"
                     "\ttype: %"PRIu8" \'%s\'\n"
+                    "\tflags: %"PRIx8"\n"
                     "\tdefinition: ",
                     i, label.size,
                     (int) label.str_size, (char*) (get_label_name(label_ptr)),
-                    label.type, get_token_type_str(label.type)
+                    label.inst_position,
+                    label.type, get_token_type_str(label.type), label.flags
                 );
                 if(label.type == TKN_STR || label.type == TKN_RAW){
                     fprintf(debugger->output, "%.*s\n", (int)(*(uint64_t*)((uint8_t*)(label_ptr) + label.definition.as_uint)),
@@ -1012,14 +1054,14 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                     return 1;
                 }
                 EXPECT(argv[i], TKN_ULIT, label_position);
-                if(label_position.value.as_uint64 >= debugger->labels.size){
+                if(label_position.value.as_uint64 >= debugger->parser.labeler.labels.size){
                     fprintf(debugger->output, "No label at %"PRIu64", labels total size = %"PRIu64"\n",
-                        label_position.value.as_uint64, debugger->labels.size);
+                        label_position.value.as_uint64, debugger->parser.labeler.labels.size);
                 }
-                label_ptr = (Label*) (((uintptr_t) debugger->labels.data) + label_position.value.as_uint64);
+                label_ptr = (Label*) (((uintptr_t) debugger->parser.labeler.labels.data) + label_position.value.as_uint64);
             }
             else{
-                label_ptr = get_label(debugger->parser.labels, get_token_from_cstr(argv[i]));
+                label_ptr = get_label(&debugger->parser.labeler, get_token_from_cstr(argv[i]));
             }
             if(!label_ptr){
                 fprintf(debugger->output, "Could not find label '%s'\n", argv[i]);
@@ -1030,11 +1072,14 @@ int perform_user_prompt(Debugger* debugger, int code, int argc, char** argv){
                 debugger->output,
                 "label at %"PRIuPTR" of size %"PRIu32":\n"
                 "\tname: %.*s\n"
+                "\tinst_pos: %"PRIu64"\n"
                 "\ttype: %"PRIu8" \'%s\'\n"
+                "\tflags: %"PRIx8"\n"
                 "\tdefinition: ",
-                ((uintptr_t) label_ptr) - ((uintptr_t) debugger->labels.data), label.size,
+                ((uintptr_t) label_ptr) - ((uintptr_t) debugger->parser.labeler.labels.data), label.size,
                 (int) label.str_size, (char*) (get_label_name(label_ptr)),
-                label.type, get_token_type_str(label.type)
+                label.inst_position,
+                label.type, get_token_type_str(label.type), label.flags
             );
             if(label.type == TKN_STR || label.type == TKN_RAW){
                 fprintf(debugger->output, "%.*s\n", (int)(*(uint64_t*)((uint8_t*)(label_ptr) + label.definition.as_uint)),
@@ -1191,7 +1236,7 @@ int debug(const char* input_file, int argc, char** argv){
         _labels = (void*) (((uintptr_t) _labels) + sizeof(uint64_t) + sizeof(VIRTUAL_FILE_LABELS_FIELD_NAME));
     }
 
-    Mc_stream_t labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
+    //Mc_stream_t labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
 
     void* static_memory = get_virtual_file_field(vfile, VIRTUAL_FILE_STATIC_FIELD_NAME);
     uint64_t static_memory_size = 0;
@@ -1230,11 +1275,10 @@ int debug(const char* input_file, int argc, char** argv){
         .line = 0, .column = 0, .pos = 0
     };
 
-    Parser parser;
+    Parser parser = {};
     parser.file_path = "stdin";
     parser.file_path_size = sizeof("stdin") - sizeof("");
-    parser.labels = &labels;
-    parser.local_labels = NULL;
+    parser.labeler.labels = (Mc_stream_t){.data = _labels, .size = labels_size, .capacity = 0, .alignment = 8};
     parser.static_memory = NULL;
     parser.program = &dstream;
     parser.tokenizer = &tokenizer;
@@ -1249,7 +1293,6 @@ int debug(const char* input_file, int argc, char** argv){
         .output = stdout,
         .err = stderr,
         .is_active = 1,
-        .labels = labels,
         .parser = parser,
         .program = vpu.program,
         .program_size = program_size,
@@ -1323,6 +1366,7 @@ int debug(const char* input_file, int argc, char** argv){
     mc_destroy_stream(dstream);
     free(debugger.signals);
     vfclose(vfile);
+    if(debugger.parser.labeler.labels.data != _labels) destroy_labeler(parser.labeler);
     VIRTUAL_DEBUG_LOG("debugging complete\n");
     return vpu.status;
 }

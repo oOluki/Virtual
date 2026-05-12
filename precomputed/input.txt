@@ -55,11 +55,11 @@ dump_uint:
 dump_int:
 	PUSH RC
 	SMLI RC RB R0
-	JMPF RC 0xfffe; i: -2
+	JMPF RC 0xfff6; i: -10
 	CALL 0xffea; i: -22
 	POP RC
 	RET
-read_linœ:
+read_line:
 	PUSH RD
 	PUSH RE
 	PUSH RF
