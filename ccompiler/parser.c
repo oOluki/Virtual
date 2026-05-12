@@ -334,7 +334,7 @@ int parse_file(const char* file){
     tokenizer.src_file_name = file;
     tokenizer.line = 1;
 
-    for(Token token = next_token(tokenizer); token.type != TKNTYPE_NONE; token = next_token(tokenizer)){
+    for(Token token = next_token(); token.type != TKNTYPE_NONE; token = next_token()){
 
         const int keyword = get_keyword(token);
         if(keyword != KEYW_NONE){

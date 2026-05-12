@@ -438,7 +438,7 @@ int vfsave(const VirtualFile vfile, const char* path){
     for(uint64_t i = 0; i < vfile.field_count; i+=1){
         const void* field = (void*) (((uintptr_t) vfile.data) + vfile.fields[i]);
         uint64_t field_size = *(uint64_t*) field;
-        const char* const id = ((uint8_t*) field) + sizeof(field_size);
+        const char* const id = (char*) (((uint8_t*) field) + sizeof(field_size));
         VIRTUAL_DEBUG_LOG("writing field '%s' of size %"PRIu64"\n", id, field_size);
         if(fwrite(field, 1, field_size, f) != field_size)
             DEFER_ERROR("failed to write field %"PRIu64 "\n", i);

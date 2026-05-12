@@ -480,10 +480,9 @@ Token next_token(){
 #ifdef _WIN32
             if(src[tokenizer.pos] == '\r'){
                 tokenizer.pos += 1;
-                tokenizer.column += 1;
+                tokenizer.column = 1;
                 if(src[tokenizer.pos] == '\n'){
                     tokenizer.line += 1;
-                    tokenizer.column = 1;
                     tokenizer.pos += 1;
                     continue;
                 }
@@ -533,7 +532,11 @@ Token next_token(){
                 break;
             }
         }
-        if(src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n' || src[tokenizer.pos] == '\r')
+        if(src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n'
+#ifdef _WIN32
+            || src[tokenizer.pos] == '\r'
+#endif // END OF #ifdef _WIN32
+        )
             continue;
         if(src[tokenizer.pos] != '/') break;
         if(src[tokenizer.pos + 1] != '/' && src[tokenizer.pos + 1] != '*') break;
