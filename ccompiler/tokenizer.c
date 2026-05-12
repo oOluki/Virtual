@@ -468,13 +468,13 @@ Token next_token(){
     for(char trimming = 1; trimming; ){
         for(
             ;
-            src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n';
+            src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n' || src[tokenizer.pos] == '\r';
             tokenizer.pos += 1
         ){
             const char c = src[tokenizer.pos];
             const int column_skip = (src[tokenizer.pos] == '\t')? 4 : 1;
             tokenizer.line   += c == '\n';
-            tokenizer.column  = (c == '\n')? 1 : tokenizer.column + column_skip;
+            tokenizer.column  = (c == '\n' || c == '\r')? 1 : tokenizer.column + column_skip;
         }
         while(src[tokenizer.pos] == '/'){
             if(src[tokenizer.pos + 1] == '/'){
@@ -503,7 +503,8 @@ Token next_token(){
                 break;
             }
         }
-        if(src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n') continue;
+        if(src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n' || src[tokenizer.pos] == '\r')
+            continue;
         if(src[tokenizer.pos] != '/') break;
         if(src[tokenizer.pos + 1] != '/' && src[tokenizer.pos + 1] != '*') break;
     }
