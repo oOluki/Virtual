@@ -388,7 +388,10 @@ int parse_file(const char* file){
             parse_expression_statement(token);
         }
         else{
-            report_error("invalid syntax%c", ' ');
+            const int len = (tokenizer.pos > 10)? 10 : (int) tokenizer.pos;
+            const char* cstr = tokenizer.src + tokenizer.pos - len;
+            
+            report_error("invalid syntax:\n'%.*s'", len, cstr);
         }
 
 

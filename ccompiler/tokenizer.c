@@ -490,26 +490,39 @@ Token next_token(){
             }
 #endif // END OF #ifdef _WIN32
             tokenizer.line   += c == '\n';
-            tokenizer.column  = (c == '\n' || c == '\r')? 1 : tokenizer.column + column_skip;
+            tokenizer.column  = (c == '\n')? 1 : tokenizer.column + column_skip;
         }
         while(src[tokenizer.pos] == '/'){
             if(src[tokenizer.pos + 1] == '/'){
-                for(; src[tokenizer.pos] != '\n' && src[tokenizer.pos] != '\0'; tokenizer.pos += 1)
+                for(; src[tokenizer.pos] != '\n' && src[tokenizer.pos] != '\0'; tokenizer.pos += 1){
+#ifdef _WIN32
+                    if(src[tokenizer.pos] == '\r'){
+                        tokenizer.pos += 1;
+                        tokenizer.column = 1;
+                        if(src[tokenizer.pos] == '\n'){
+                            tokenizer.line += 1;
+                            tokenizer.pos += 1;
+                            break;
+                        }
+                        continue;
+                    }
+#endif // END OF #ifdef _WIN32
                     tokenizer.column += 1;
+                }
                 if(src[tokenizer.pos] == '\n'){
                     tokenizer.column = 1;
                     tokenizer.line += 1;
+                    tokenizer.pos += 1;
                 }
             }
             else if(src[tokenizer.pos + 1] == '*'){/**/
-                for(; src[tokenizer.pos] != '\0'; tokenizer.pos += 1){
-#if _WIN32
+                for(tokenizer.pos+=1; src[tokenizer.pos] != '\0'; tokenizer.pos += 1){
+#ifdef _WIN32
                     if(src[tokenizer.pos] == '\r'){
                         tokenizer.pos += 1;
-                        tokenizer.column += 1;
-                        if(src[tokenizer.pos + 1] == '\n'){
+                        tokenizer.column = 1;
+                        if(src[tokenizer.pos] == '\n'){
                             tokenizer.line += 1;
-                            tokenizer.column = 1;
                             tokenizer.pos += 1;
                             continue;
                         }
@@ -519,6 +532,7 @@ Token next_token(){
                     if(src[tokenizer.pos] == '\n'){
                         tokenizer.column = 1;
                         tokenizer.line += 1;
+                        tokenizer.pos += 1;
                         continue;
                     }
                     if(src[tokenizer.pos] == '*' && src[tokenizer.pos + 1] == '/'){
