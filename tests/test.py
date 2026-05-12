@@ -239,7 +239,7 @@ else:
             print("disassembled " + example + " does assemble back to original executable")
             failed_ctest += 1
             continue
-        if False == cmpf(BUILD_DIR + PATH_SEP + "tmp.txt", PRECOMP_DIR + PATH_SEP + "ctest_" + example.removesuffix(".c") + ".txt", 'r'):
+        if False == cmpf(BUILD_DIR + PATH_SEP + "tmp.txt", PRECOMP_DIR + PATH_SEP + "ctest_disassembled_" + example.removesuffix(".c") + ".txt", 'r'):
             print("disassembled " + example + " does match expected")
             failed_ctest += 1
             continue

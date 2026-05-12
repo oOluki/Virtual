@@ -153,7 +153,7 @@ int main(int argc, char** argv){
     }
 
     VirtualFile vfile = create_virtual_file(
-        output_file_path, EXEFLAG_NONE, VIRTUAL_FILE_TYPE_EXE,
+        output_file_path, EXEFLAG_LABELS_INCLUDED, VIRTUAL_FILE_TYPE_EXE,
         0, 0, NULL, NULL
     );
     if(add_virtual_file_field(&vfile, VIRTUAL_FILE_PROGRAM_FIELD_NAME, builder.assembly.size, builder.assembly.data)){
