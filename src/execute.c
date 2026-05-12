@@ -2,6 +2,7 @@
 #define _VPU_EXE
 
 #include "core.h"
+#include "core.c"
 #include "lexer.h"
 #include "system.h"
 #include <stdlib.h>
