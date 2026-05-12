@@ -30,7 +30,7 @@ const char* get_type_str(int _type){
 
 Str read_file(const char* file){
 
-    FILE* f = fopen(file, "r");
+    FILE* f = fopen(file, "rb");
     Str str;
 
     if(!f){
