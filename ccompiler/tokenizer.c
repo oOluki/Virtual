@@ -33,6 +33,11 @@ Str read_file(const char* file){
     FILE* f = fopen(file, "r");
     Str str;
 
+    if(!f){
+        fprintf(stderr, "[ERROR] failed to open '%s'\n", file);
+        exit(EXIT_FAILURE);
+    }
+
     if(fseek(f, 0, SEEK_END)){
         report_error(__FILE__ ":%i:56: failed to open '%s', failed to fseek", __LINE__, file);
     }
@@ -459,24 +464,55 @@ Token next_token(){
         return out;
     }
 
+    const char* const src = tokenizer.src;
+    for(char trimming = 1; trimming; ){
+        for(
+            ;
+            src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n';
+            tokenizer.pos += 1
+        ){
+            const char c = src[tokenizer.pos];
+            const int column_skip = (src[tokenizer.pos] == '\t')? 4 : 1;
+            tokenizer.line   += c == '\n';
+            tokenizer.column  = (c == '\n')? 1 : tokenizer.column + column_skip;
+        }
+        while(src[tokenizer.pos] == '/'){
+            if(src[tokenizer.pos + 1] == '/'){
+                for(; src[tokenizer.pos] != '\n' && src[tokenizer.pos] != '\0'; tokenizer.pos += 1)
+                    tokenizer.column += 1;
+                if(src[tokenizer.pos] == '\n'){
+                    tokenizer.column = 1;
+                    tokenizer.line += 1;
+                }
+            }
+            else if(src[tokenizer.pos + 1] == '*'){/**/
+                for(; src[tokenizer.pos] != '\0'; tokenizer.pos += 1){
+                    if(src[tokenizer.pos] == '\n'){
+                        tokenizer.column = 1;
+                        tokenizer.line += 1;
+                        continue;
+                    }
+                    if(src[tokenizer.pos] == '*' && src[tokenizer.pos + 1] == '/'){
+                        tokenizer.pos += 2;
+                        tokenizer.column += 2;
+                        break;
+                    }
+                }
+            }
+            else{
+                break;
+            }
+        }
+        if(src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n') continue;
+        if(src[tokenizer.pos] != '/') break;
+        if(src[tokenizer.pos + 1] != '/' && src[tokenizer.pos + 1] != '*') break;
+    }
+
     Token token = (Token){
         .file = tokenizer.src_file_name,
         .line = tokenizer.line,
         .column = tokenizer.column
     };
-
-    for(
-        const char* const src = tokenizer.src;
-        src[tokenizer.pos] == ' ' || src[tokenizer.pos] == '\t' || src[tokenizer.pos] == '\n';
-        tokenizer.pos += 1
-    ){
-        const char c = src[tokenizer.pos];
-        const int column_skip = (src[tokenizer.pos] == '\t')? 4 : 1;
-        token.line   += c == '\n';
-        token.column  = (c == '\n')? 1 : token.column + column_skip;
-        tokenizer.line   += c == '\n';
-        tokenizer.column  = (c == '\n')? 1 : tokenizer.column + column_skip;
-    }
 
     int len = 0;
     token.type = tokenize_cstr(&token.value, tokenizer.src + tokenizer.pos, &len);

@@ -37,6 +37,7 @@ ASSEMBLE    = VPU + " -assemble"
 DISASSEMBLE = VPU + " -disassemble"
 RUN         = VPU + " -execute"
 DEBUG       = VPU + " -debug -0"
+CC          = BUILD_DIR + PATH_SEP + "vcc"
 
 def run_process(*command, text=True, shell=False, _input=None):
     cmd = ""
@@ -164,7 +165,12 @@ def test_example(example_path: str) -> int:
     return err_status
     
 
-examples = [f for f in os.listdir(EXAMPLES_DIR) if os.path.isfile(os.path.join(EXAMPLES_DIR, f))]
+example_folder = [f for f in os.listdir(EXAMPLES_DIR) if os.path.isfile(os.path.join(EXAMPLES_DIR, f))]
+
+examples = [e for e in example_folder if e.split('.')[-1] == 'txt']
+
+cexamples = [e for e in example_folder if e.split('.')[-1] == 'c']
+
 test_count = len(examples)
 failed_tests = 0
 
@@ -179,6 +185,73 @@ else:
         failed_tests += precompute(EXAMPLES_DIR + PATH_SEP + example)
     
     print(str(failed_tests) + " precomputes failed out of " + str(test_count) + " (" + str(100 * (float(failed_tests) / float(test_count))) + "%)"  if failed_tests > 0 else "all precomputes were successfull")
+
+
+if PRECOMPUTE:
+    print("\n\nstarting precompute of c tests...")
+    failed_ctest = 0
+    for example in cexamples:
+        EXAMPLE = EXAMPLES_DIR + PATH_SEP + example
+        process = run_process(CC, EXAMPLE, "-o", PRECOMP_DIR + PATH_SEP + "ctest_" + example.removesuffix(".c") + ".out")
+        if process.returncode:
+            print("Could not compile " + example)
+            print("stderr: " + process.stderr.decode(ENCODING))
+            failed_ctest += 1
+            continue
+        process = run_process(DISASSEMBLE, PRECOMP_DIR + PATH_SEP + "ctest_" + example.removesuffix(".c") + ".out", "-o", PRECOMP_DIR + PATH_SEP + "ctest_disassembled_" + example.removesuffix(".c") + ".txt")
+        if process.returncode:
+            print("Could not disassemble " + "ctest_" + example.removesuffix(".c"))
+            print("stderr: " + process.stderr.decode(ENCODING))
+            failed_ctest += 1
+            continue
+    if failed_ctest == 0:
+        print(f"all precomputes were successfull")
+    else:
+        print(f"{failed_ctest} cprecomputes failed out of {len(cexamples)} ({100.0 * failed_ctest / len(cexamples)})")
+    failed_tests += failed_ctest
+
+
+else:
+    print("\n\nstarting c tests...")
+    failed_ctest = 0
+    for example in cexamples:
+        EXAMPLE = EXAMPLES_DIR + PATH_SEP + example
+        process = run_process(CC, EXAMPLE, "-o", BUILD_DIR + PATH_SEP + "tmp.out")
+        if process.returncode:
+            print("Could not compile " + example)
+            print("stderr: " + process.stderr.decode(ENCODING))
+            failed_ctest += 1
+            continue
+        process = run_process(DISASSEMBLE, BUILD_DIR + PATH_SEP + "tmp.out", "-o", BUILD_DIR + PATH_SEP + "tmp.txt")
+        if process.returncode:
+            print("Could not disassemble " + BUILD_DIR + PATH_SEP + "tmp.out" + " for " + example + " test")
+            print("stderr: " + process.stderr.decode(ENCODING))
+            failed_ctest += 1
+            continue
+        process = run_process(ASSEMBLE, BUILD_DIR + PATH_SEP + "tmp.txt", "-o", BUILD_DIR + PATH_SEP + "tmp.bin")
+        if process.returncode:
+            print("Could not assemble disassembled " + BUILD_DIR + PATH_SEP + "tmp.txt" + " for " + example + " test")
+            print("stderr: " + process.stderr.decode(ENCODING))
+            failed_ctest += 1
+            continue
+        process = run_process(DISASSEMBLE, BUILD_DIR + PATH_SEP + "tmp.out", "-o", BUILD_DIR + PATH_SEP + "tmp.txt")
+        if False == cmpf(BUILD_DIR + PATH_SEP + "tmp.out", BUILD_DIR + PATH_SEP + "tmp.bin", 'rb'):
+            print("disassembled " + example + " does assemble back to original executable")
+            failed_ctest += 1
+            continue
+        if False == cmpf(BUILD_DIR + PATH_SEP + "tmp.txt", PRECOMP_DIR + PATH_SEP + "ctest_" + example.removesuffix(".c") + ".txt", 'r'):
+            print("disassembled " + example + " does match expected")
+            failed_ctest += 1
+            continue
+        if False == cmpf(BUILD_DIR + PATH_SEP + "tmp.out", PRECOMP_DIR + PATH_SEP + "ctest_" + example.removesuffix(".c") + ".out", 'rb'):
+            print("compiled " + example + " does match expected")
+            failed_ctest += 1
+            continue
+    if failed_ctest == 0:
+        print(f"all ctests were successfull")
+    else:
+        print(f"{failed_ctest} ctests failed out of {len(cexamples)} ({100.0 * failed_ctest / len(cexamples)})")
+    failed_tests += failed_ctest
 
 
 if PRECOMPUTE:
@@ -328,7 +401,13 @@ else:
 
 if debug_test_failed:
     print("*Debug test failed ***")
+    failed_tests += 1
 else:
     print("Degub test was successfull")
+
+if failed_tests:
+    print(f"in total {failed_tests} failed out of {len(cexamples) + len(examples) + 1} ({100.0 * failed_tests / (len(cexamples) + len(examples) + 1)})")
+else:
+    print("all tests were successfull")
 
 exit(failed_tests != 0 or debug_test_failed)
