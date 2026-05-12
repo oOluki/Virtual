@@ -52,12 +52,12 @@ int parse_rside_expression(){
     int expr = 0;
 
     if(!is_token_literal(token.type) && token.type != TKNTYPE_RAW){
-        fprintf(
-            stderr,
+        if(token.type == '(')
+            TODO(token.type == '(');
+        report_error(
             "in %s:%i:%i: expected literal or variable, got %s instead\n",
             tokenizer.src_file_name, tokenizer.line, tokenizer.column, get_tkntype_str(token.type)
         );
-        TODO(parse_rside_expression);
     }
 
     if(is_token_operand(peek(0).type)){

@@ -11,9 +11,11 @@ const char* get_type_str(int _type){
     {
     case TYPE_VOID:     return "TYPE_VOID";
     case TYPE_CHAR:     return "TYPE_CHAR";
-    case TYPE_UCHAR:    return "TYPE_UCHAR";
+    //case TYPE_UCHAR:    return "TYPE_UCHAR";
+    case TYPE_SHORT:    return "TYPE_SHORT";
     case TYPE_INT:      return "TYPE_INT";
-    case TYPE_UINT:     return "TYPE_UINT";
+    case TYPE_LONG:     return "TYPE_LONG";
+    //case TYPE_UINT:     return "TYPE_UINT";
     case TYPE_FLOAT:    return "TYPE_FLOAT";
     case TYPE_DOUBLE:   return "TYPE_DOUBLE";
     case TYPE_PTR:      return "TYPE_PTR";

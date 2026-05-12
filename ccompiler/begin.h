@@ -32,17 +32,17 @@
         }\
         *(TYPE*) (((uint8_t*) (da).data) + (da).size) = (X);\
         (da).size += sizeof(TYPE);\
-    } while (0);
+    } while (0)
 
 #define da_for_each(da, X, TYPE, BLOCK) do{\
         for(TYPE* X = (TYPE* const) (da).data; X < ((uint8_t*) (da).data) + (da).size; X+=1){\
             BLOCK;\
         }\
-    } while (0);
+    } while (0)
 
 #define da_pop(da, X, TYPE) do{\
         X = *(TYPE*) da_back(da, sizeof(TYPE));\
-    } while (0);
+    } while (0)
 
 #define da_element(da, index, TYPE) (((TYPE*) da_get((da), (index) * sizeof(TYPE), 1)))
 
@@ -50,13 +50,15 @@
 
 enum Types {
     TYPE_VOID = 0,
+    //TYPE_UCHAR,
     TYPE_CHAR,
-    TYPE_UCHAR,
+    //TYPE_UINT,
+    TYPE_SHORT,
     TYPE_INT,
-    TYPE_UINT,
+    TYPE_LONG,
+    TYPE_PTR,
     TYPE_FLOAT,
     TYPE_DOUBLE,
-    TYPE_PTR,
 
     TYPE_VAR,
     TYPE_FUNC,
@@ -92,6 +94,8 @@ typedef union TokenValue{
 } TokenValue;
 
 const char* get_type_str(int _type);
+
+size_t get_type_size(int _type);
 
 Str read_file(const char* file);
 

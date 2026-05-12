@@ -113,6 +113,7 @@ typedef struct Variable
 {
     int _type;
     int flags;
+    size_t mempos;
     union
     {
         Bvar    basic;
@@ -233,7 +234,9 @@ typedef struct Parser
     DyArr       instructions;
 } Parser;
 
-int display_tree(int start, int end);
+size_t get_var_size(const Variable var);
+
+int display_tree(FILE* f, int start, int end);
 
 #define make_basic_var(NAME, TYPE) ((Symbol){.name = NAME, ._type = TYPE_VAR, .symbol.var = (Variable){._type = VARTYPE_BASIC, .var.basic._type = (TYPE)}})
 
