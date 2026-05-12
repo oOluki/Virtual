@@ -479,9 +479,8 @@ Token next_token(){
             const int column_skip = (src[tokenizer.pos] == '\t')? 4 : 1;
 #ifdef _WIN32
             if(src[tokenizer.pos] == '\r'){
-                tokenizer.pos += 1;
                 tokenizer.column = 1;
-                if(src[tokenizer.pos] == '\n'){
+                if(src[tokenizer.pos + 1] == '\n'){
                     tokenizer.line += 1;
                     tokenizer.pos += 1;
                     continue;
