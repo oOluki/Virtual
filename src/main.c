@@ -29,10 +29,10 @@ static inline void help(const char* main_executable){
         "   --help:         displays this help message\n"
         "   --version:      displays current version\n"
         "   --inst:         displays instructions desciptions and examples\n"
-        "   -assemble:      assemble mode\n"
-        "   -disassemble:   disassemble mode\n"
-        "   -execute:       execute mode\n"
-        "   -debug:         debug mode\n"
+        "   -assemble or -a:      assemble mode\n"
+        "   -disassemble or -r:   disassemble mode\n"
+        "   -execute or -e:       execute mode\n"
+        "   -debug or -d:         debug mode\n"
         "   -o <output>:    choose <output> as output file\n"
         "   -i <input>:     choose <input> as input file\n"
         "   -args:          marks the beggining of the arguments to pass to the virtual machine executable\n"
@@ -95,19 +95,19 @@ int main(int argc, char** argv){
             }
             return 0;
         }
-        if(mc_compare_str(argv[i], "-assemble", 0)){
+        if(mc_compare_str(argv[i], "-assemble", 0) || mc_compare_str(argv[i], "-a", 0)){
             mode |= MODE_ASSEMBLE;
             continue;
         }
-        if(mc_compare_str(argv[i], "-disassemble", 0)){
+        if(mc_compare_str(argv[i], "-disassemble", 0) || mc_compare_str(argv[i], "-r", 0)){
             mode |= MODE_DISASSEMBLE;
             continue;
         }
-        if(mc_compare_str(argv[i], "-execute", 0)){
+        if(mc_compare_str(argv[i], "-execute", 0) || mc_compare_str(argv[i], "-e", 0)){
             mode |= MODE_EXECUTE;
             continue;
         }
-        if(mc_compare_str(argv[i], "-debug", 0)){
+        if(mc_compare_str(argv[i], "-debug", 0) || mc_compare_str(argv[i], "-d", 0)){
             mode |= MODE_DEBUG;
             continue;
         }
