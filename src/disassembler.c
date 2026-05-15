@@ -2,13 +2,12 @@
 #define _VPU_DISASSEMBLER
 
 #include "core.h"
-#include "lexer.h"
 #include <stdio.h>
 #include <inttypes.h>
 #include <ctype.h>
 #include "labels.h"
+#include "disassembler.h"
 #include "virtual_files.h"
-#include "virtual.h"
 
 
 // \param buff should be an array of 3 buffers of size 8 bytes each

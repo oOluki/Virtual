@@ -1,6 +1,7 @@
 #ifndef _VPU_ASSEMBLER
 #define _VPU_ASSEMBLER
 
+#include "assembler.h"
 #include "virtual.h"
 #include "virtual_files.h"
 #include <stdio.h>

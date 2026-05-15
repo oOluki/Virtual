@@ -1,7 +1,8 @@
 #include "tokenizer.h"
 #include "parser.h"
 #include "builder.h"
-#include "../src/virtual_files.h"
+#include "../src/virtual_files.c"
+#include "../src/virtual.c"
 
 
 int main(int argc, char** argv){

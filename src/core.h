@@ -16,10 +16,10 @@
  * for valid instructions: <instruction_name> refers to INST_<instruction_name> in the enum OpCode
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 
 typedef enum OpCode{
@@ -374,6 +374,10 @@ typedef struct VPU
 #define GET_REG(register_space, POS) ((Register*)((uintptr_t)(register_space) + POS))
 
 #define GET_OP_HINT(INST) (INST >> 31)
+
+char* get_reg_str(int reg, char* output);
+
+int print_inst_description(FILE* output, int inst);
 
 int64_t perform_inst(VPU* vpu, Inst inst);
 

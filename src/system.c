@@ -7,6 +7,8 @@
 #include "core.h"
 #include "virtual.h"
 #include "system.h"
+#include <stdio.h>
+#include <string.h>
 
 typedef struct VSystem
 {

@@ -9,6 +9,10 @@
 // \returns 0 on success or 1 otherwise
 int print_inst(FILE* output, Inst inst, char** buff);
 
+int disassembler_invalid_label(uint64_t current_label);
+
+int disassemble_handle_label(FILE* output, const void* _label);
+
 // disassembles program in input_path, writing the result to output_path
 // \returns 0 on success or error identifier on failure
 int disassemble(
