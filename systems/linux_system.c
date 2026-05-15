@@ -1,8 +1,8 @@
 #ifndef VLINUX_SYSTEM_C
 #define VLINUX_SYSTEM_C
 
-#include "system.h"
-#include "core.h"
+#include "../src/system.h"
+#include "../src/core.h"
 #include <pthread.h>
 
 enum SystemThreadStates{
@@ -86,14 +86,14 @@ static char get_ascii_color(uint32_t color){
 // \returns 0 on success or non zero error code in failure
 int syscall(VPU* vpu, uint64_t call){
 
-    if(!vpu->system && !(call == SYS_GET_SYSTEM_SPECIFICATIONS || call == SYS_INITIALIZE))
+    if(!vpu->system && !(call == VSYS_GET_SYSTEM_SPECIFICATIONS || call == VSYS_INITIALIZE))
         return 1;
 
     void* const registers = vpu->register_space;
 
     switch (call)
     {
-    case SYS_GET_SYSTEM_SPECIFICATIONS:
+    case VSYS_GET_SYSTEM_SPECIFICATIONS:
         // system name goes in RA
         GET_REG(registers, RA)->as_uint64   = *(uint64_t*) "DEFAULT";
         // system bitsize architecture goes in RB
@@ -103,7 +103,7 @@ int syscall(VPU* vpu, uint64_t call){
         // system endianess goes in RD
         GET_REG(registers, RD)->as_uint8    = is_little_endian()? 1 : 0;
         return 0;
-    case SYS_INITIALIZE:{
+    case VSYS_INITIALIZE:{
         VSystem* const system = virtual_alloc(sizeof(VSystem));
         if(!system)
             return 1;
@@ -119,40 +119,40 @@ int syscall(VPU* vpu, uint64_t call){
         vpu->system = (void*) system;
     }
         return 0;
-    case SYS_CLOSE:
+    case VSYS_CLOSE:
         virtual_free(vpu->system);
         vpu->system = NULL;
         return 0;
     
     // heap
-    case SYS_MEMALLOC:
+    case VSYS_MEMALLOC:
         GET_REG(registers, RA)->as_ptr = virtual_alloc((size_t) GET_REG(registers, RA)->as_uint64);
         return 0;
-    case SYS_MEMFREE:
+    case VSYS_MEMFREE:
         virtual_free(GET_REG(registers, RA)->as_ptr);
         return 0;
     
     // file operations
-    case SYS_FOPEN:
+    case VSYS_FOPEN:
         GET_REG(registers, RA)->as_ptr = (uint8_t*) fopen(
             (const char*) GET_REG(registers, RA)->as_ptr,
             (const char*) GET_REG(registers, RB)->as_ptr
         );
         return 0;
-    case SYS_FCLOSE:
+    case VSYS_FCLOSE:
         GET_REG(registers, RA)->as_int32 = fclose((FILE*) GET_REG(registers, RA)->as_ptr);
         return 0;
-    case SYS_FSEEK:
+    case VSYS_FSEEK:
         GET_REG(registers, RA)->as_int32 = fseek(
             (FILE*) GET_REG(registers, RA)->as_ptr,
             (long)  GET_REG(registers, RB)->as_int64,
             (int)   GET_REG(registers, RC)->as_int32
         );
         return 0;
-    case SYS_FTELL:
+    case VSYS_FTELL:
         GET_REG(registers, RA)->as_int64 = ftell((FILE*) GET_REG(registers, RA)->as_ptr);
         return 0;
-    case SYS_FWRITE:
+    case VSYS_FWRITE:
         GET_REG(registers, RA)->as_uint64 = (uint64_t) fwrite(
             (void*)  GET_REG(registers, RA)->as_ptr,
             (size_t) GET_REG(registers, RB)->as_uint64,
@@ -160,7 +160,7 @@ int syscall(VPU* vpu, uint64_t call){
             (FILE*)  GET_REG(registers, RD)->as_ptr
         );
         return 0;
-    case SYS_FREAD:
+    case VSYS_FREAD:
         GET_REG(registers, RA)->as_uint64 = (uint64_t) fread(
             (void*)  GET_REG(registers, RA)->as_ptr,
             (size_t) GET_REG(registers, RB)->as_uint64,
@@ -168,19 +168,19 @@ int syscall(VPU* vpu, uint64_t call){
             (FILE*)  GET_REG(registers, RD)->as_ptr
         );
         return 0;
-    case SYS_FPUTC:
+    case VSYS_FPUTC:
         GET_REG(registers, RA)->as_int64 = fputc(GET_REG(registers, RA)->as_int8, (FILE*) GET_REG(registers, RB)->as_ptr);
         return 0;
-    case SYS_FGETC:
+    case VSYS_FGETC:
         GET_REG(registers, RA)->as_int64 = fgetc((FILE*) GET_REG(registers, RA)->as_ptr);
         return 0;
-    case SYS_IOE:
+    case VSYS_IOE:
         GET_REG(registers, RA)->as_ptr = stdin;
         GET_REG(registers, RB)->as_ptr = stdout;
         GET_REG(registers, RC)->as_ptr = stderr;
         return 0;
     
-    case SYS_NEW_THREAD:{
+    case VSYS_NEW_THREAD:{
         VSystem* const system = (VSystem*) vpu->system;
         if(system->thread_count + 1 >= system->thread_cap){
             GET_REG(registers, RA)->as_ptr = NULL;
@@ -211,7 +211,7 @@ int syscall(VPU* vpu, uint64_t call){
         }
     }
         return 0;
-    case SYS_WAIT_THREAD:{
+    case VSYS_WAIT_THREAD:{
         VSystem* const system = (VSystem*) vpu->system;
         _VThread* const thread = (_VThread*) GET_REG(vpu->register_space, RA)->as_ptr;
         int r = 0;
@@ -228,7 +228,7 @@ int syscall(VPU* vpu, uint64_t call){
         }
         return thread_found? r : 1;
     }
-    case SYS_DETACH_THREAD:{
+    case VSYS_DETACH_THREAD:{
         VSystem* const system = (VSystem*) vpu->system;
         _VThread* const thread = (_VThread*) GET_REG(vpu->register_space, RA)->as_ptr;
         int thread_found = 0;
@@ -243,17 +243,17 @@ int syscall(VPU* vpu, uint64_t call){
         }
         return pthread_detach(thread->handle);
     }
-    case SYS_SLEEP:
+    case VSYS_SLEEP:
         return 0;
 
-    case SYS_GET_DISPLAY_FRAMEBUFFER:{
+    case VSYS_GET_DISPLAY_FRAMEBUFFER:{
         const VSystem* const system = (const VSystem*) vpu->system;
         GET_REG(registers, RA)->as_ptr = (uint8_t*) system->display;
         *(uint32_t*) (vpu->register_space + RB ) = system->display_width;
         *(uint32_t*) (vpu->register_space + RB4) = system->display_height;
     }
         return 0;
-    case SYS_DISPLAY_UPDATE:{
+    case VSYS_DISPLAY_UPDATE:{
         VSystem* const system = vpu->system;
         printf("\x1B[2J\x1B[H\n");
         for(uint32_t i = 0; i < system->display_height; i+=1){

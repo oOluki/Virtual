@@ -1,13 +1,8 @@
 #ifndef VSYSTEM_C
 #define VSYSTEM_C
 
-#ifdef SDL_SYSTEM
 
-    #include "sdl2_system.c"
-
-#elif defined(CUSTOM_SYSTEM)
-
-#else
+#ifndef CUSTOM_SYSTEM
 
 #include "core.h"
 #include "virtual.h"

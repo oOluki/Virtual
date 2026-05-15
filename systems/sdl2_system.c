@@ -1,7 +1,7 @@
 #ifndef SDL2_VSYSTEM_C
 #define SDL2_VSYSTEM_C
 
-#include "system.h"
+#include "../src/system.h"
 #include <SDL2/SDL.h>
 
 enum SystemThreadStates{
