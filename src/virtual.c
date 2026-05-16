@@ -83,14 +83,14 @@ int mc_compare_str(const char* str1, const char* str2, int _only_compare_till_fi
     return (str1[i] == str2[i]) || (_only_compare_till_first_null && (!str1[i] || !str2[i]));
 }
 
-inline uint16_t mc_swap16(uint16_t x){
+uint16_t mc_swap16(uint16_t x){
     return (
         ((x & 0X00FF) >> 8)  |
         ((x & 0XFF00) >> 24)
     );
 }
 
-inline uint32_t mc_swap32(uint32_t x){
+uint32_t mc_swap32(uint32_t x){
     return (
         ((x & 0X000000FF) << 24) |
         ((x & 0X0000FF00) << 8)  |
@@ -99,7 +99,7 @@ inline uint32_t mc_swap32(uint32_t x){
     );
 }
 
-inline uint64_t mc_swap64(uint64_t x){
+uint64_t mc_swap64(uint64_t x){
     return (
         ((x & 0x00000000000000FFULL) << 56) |
         ((x & 0x000000000000FF00ULL) << 40) |

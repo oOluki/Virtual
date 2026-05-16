@@ -4,6 +4,7 @@
 #include "core.h"
 #include "disassembler.h"
 #include "debugger.h"
+#include <string.h>
 
 // executes raw program and passes argc and argv to the executing program
 int execute(const char* input_file, int argc, char** argv){

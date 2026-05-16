@@ -30,12 +30,12 @@ inline void put_label_in_raw_data(const Label label, void* data){
     *(uint64_t*)((uint8_t*)(u32buffer + 3) + 2 + 8) = label.definition.as_uint;
 }
 
-inline const char* get_label_name(const void* label){
+const char* get_label_name(const void* label){
     const Label l = get_label_from_raw_data(label);
     return (const char*)((uint8_t*)(label) + l.str);  
 }
 
-inline const char* get_label_def_as_str(const void* label){
+const char* get_label_def_as_str(const void* label){
     const Label l = get_label_from_raw_data(label);
     return (const char*)((uint8_t*)(label) + l.definition.as_uint + sizeof(uint32_t));  
 }
