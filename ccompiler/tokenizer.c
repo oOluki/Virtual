@@ -425,7 +425,7 @@ static int concat_token(int tkntype){
 }
 
 int tokenize_cstr(TokenValue* value, const char* cstr, int* len){
-    if(*cstr == '\0'){
+    if(*cstr == '\0' || *cstr == EOF){
         if(len) *len = 0;
         return TKNTYPE_NONE;
     }
